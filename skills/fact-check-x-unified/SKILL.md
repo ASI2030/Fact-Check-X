@@ -1,0 +1,140 @@
+---
+name: fact-check-x-unified
+description: Fact-Check-X 对外统一中文入口，轻量编排 1.0 多端无损聚合、可选的 1.1 知识点结构化对比和云端权威核验，生成可审计中间产物与 V8 定稿报告。用于完整事实核验、两家或多家 AI 回答对比、仅凭已知知识点直接权威核验，以及可下载可迁移的技能套件演示。
+---
+
+# Fact-Check-X 统一入口
+
+本技能只做编排，不内嵌三个业务层。它按以下顺序调用兄弟技能：
+
+1. `llm-answer-reference-compare`：1.0 多端回答与引用无损聚合。
+2. `fact-check-x-knowledge-compare`：1.1 本地知识点结构化对比，可选。
+3. `fact-check-x-authoritative-verify`：逐知识点并发权威核验与 V8 定稿报告。
+
+所有语义拆解和证据裁决由当前承载技能的智能体完成。脚本不调用任何模型 API。
+
+## 依赖定位
+
+四个技能放在同一目录时可直接运行。也可设置：
+
+```bash
+export FACTCHECK_SKILLS_DIR="<四个技能的父目录>"
+```
+
+检查依赖：
+
+```bash
+python3 scripts/fact_check_x.py locate
+```
+
+## 完整流程
+
+先用 1.0 采集 `results.json`，然后准备 1.1：
+
+```bash
+python3 scripts/fact_check_x.py prepare-comparison \
+  --results <results.json> \
+  --run-dir <run>
+```
+
+命令会同步生成 1.0 原始采集报告，在运行目录顶层生成 `01-capture-report.html`，并通过 `deliverables` 返回用户可见路径。调用方必须先用该路径发送真正的 Markdown 文件链接，再继续 1.1；禁止只显示反引号路径。
+
+默认交互模式下，调用方发送本阶段产物后必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，收到继续指令后才能进入下一阶段。只有用户在最初请求中明确要求完整自动跑完时才可连续执行，但各阶段产物仍须逐步展示。
+
+当前智能体读取 `<run>/comparison-task.json`，写入 `<run>/comparison-analysis.json`，再执行：
+
+拆解时，原子性同时约束知识点和各平台 `claim`。一个原句包含多个独立义务、条件、对象、数值或后果时必须拆点，每个 `claim` 只保留当前事实；平台独有的实质新增事实也要另起无锚点知识点，不能并入宽泛知识点后复用深知晓锚点免查。
+
+```bash
+python3 scripts/fact_check_x.py complete-comparison \
+  --results <results.json> \
+  --run-dir <run>
+```
+
+命令会在运行目录顶层生成 `02-comparison-report.html`，并通过 `deliverables` 返回路径；调用方必须把它作为独立可点击文件展示给用户。报告必须包含明确标为“未核验”的综合草案。默认交互模式下，用户确认继续后才能进入权威核验。
+
+生成每个知识点的独立云端请求并并发取证：
+
+```bash
+python3 scripts/fact_check_x.py prepare-authority --run-dir <run>
+python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 12
+```
+
+若存在非免查知识点但本机尚无可信搜索配置，`prepare-authority` 和 `search-authority` 会返回 `status=configuration_required`、`userPrompt` 与 `configuration.command` 并以非零状态退出。调用方先展示登录提示，再前台执行该命令。用户只需在自动打开的深知 MaaS 页面完成登录；组件会自动复用已有完整 Key，没有时创建 `Fact-Check-X` 专用 Key，验证后保存到 `~/.fact-check-x/credentials/trusted-search-key`。Codex、Claude Code、WorkBuddy 等载体共享该配置，检测到已有 Key 时直接跳过登录。配置成功后调用方自动重跑 `prepare-authority`，不得要求用户复制 Key、编辑 shell 配置、回复“已配置”，也不得改用深知晓来源或普通搜索绕过。
+
+只有可信搜索返回 401/403 时才把现有 Key 视为失效并进入自动配置。超时、断网或服务异常保留现有配置，并按服务异常进入待复核，不要求用户重新登录。
+
+`prepare-authority` 会写入 `authority-gate.json`。只有可信搜索批次正常完成、门禁状态变为 `searched` 后，`finalize-authority` 才允许运行；手工写 evidence 或 result 不能绕过。
+
+当前智能体逐个读取 `authority/requests` 与 `authority/evidence`，把裁决写入 `authority/assessments/<知识点ID>.json`，然后：
+
+免查模式下，`trustedAnchor.officialAnswer` 是当前知识点的权威结论；锚点证据列表用于来源追溯，不要求标题或截断摘录逐字复述该结论。平台主张与 `officialAnswer` 语义一致或可由其直接推出时，裁决为 `supported` 并引用有效锚点证据 ID。仅当平台主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。1.1 的引用忠实性与本阶段的事实正确性分别保留，不能因平台自身引用不足而拒绝判断已经被权威结论证实的主张。
+
+```json
+{
+  "authoritativeFinding": "由权威证据支持的知识点结论",
+  "verdicts": {
+    "<平台ID>": {
+      "verdict": "supported",
+      "reason": "主张与 E1 一致",
+      "evidenceIds": ["E1"]
+    }
+  }
+}
+```
+
+`verdict` 只能使用 `supported`、`contradicted` 或 `insufficient`，证据 ID 必须存在于当前 evidence 文件中。旧式顶层 `verdict`、`officialAnswer`、`platformAssessment` 会被拒绝。
+
+```bash
+python3 scripts/fact_check_x.py finalize-authority --run-dir <run>
+```
+
+任一命令返回 `status=needs_review` 时会以非零状态结束。调用方必须标记“待复核”并修正问题，不能宣称事实核验完成。`finalize-authority` 即使待复核，也会生成 `03-authority-report.html` 并通过 `deliverables` 返回；报告明确标记待复核且不提供尚不存在的最终报告链接。
+
+`finalize-authority` 完成裁决后会独立生成 `03-authority-report.html`，并通过
+`deliverables` 返回路径。调用方必须先展示这份权威报告；默认交互模式下，
+只有状态为 `completed` 且用户确认继续后才执行：
+
+```bash
+python3 scripts/fact_check_x.py deliver --results <results.json> --run-dir <run>
+```
+
+可信搜索返回 `no_evidence` 时必须同样进入 `needs_review`：空结果只表示本次没有取得可裁决材料，不能直接判成“编造”或完成核验。
+
+`deliver` 必须在运行目录顶层生成并返回四份独立可读报告：
+
+- `01-capture-report.html`：原始答案、参考文献与引用存证；
+- `02-comparison-report.html`：知识点结构化对比；
+- `03-authority-report.html`：逐知识点权威结论、官方证据和各平台裁决；
+- `04-final-report.html`：综合指标、关键发现与最终裁决定稿。
+
+缺少任一报告都不得生成或交付 `05-complete-report-package.zip`。
+
+最终保留：
+
+- `capture/results.json`、`capture/report.html`、`capture/report.md`；
+- `comparison-task.json`、`comparison-analysis.json`、`comparison.json`、`comparison.html`；
+- 每个知识点独立的 request、evidence、assessment、result；
+- `authority/batch.json`、`verification.json`、`report.html`、`pipeline.json`；
+- 四份阶段报告和 `05-complete-report-package.zip`。
+
+## 跳过 1.1
+
+1.1 是可选能力。已有结构化知识点时，可按云端技能的数据契约直接建立单知识点请求，独立调用 `fact-check-x-authoritative-verify`。统一入口不会强迫用户先采集多个 AI 回答。
+
+## 执行边界
+
+- 1.0 只采集，不核验；可用可信搜索全文参数补全平台已给出的同一来源正文，但不得新增或替换引用。
+- 1.1 只比较原答案与所附来源，不联网找真相。
+- 云端层只接收当前知识点；各家主张相同则不上传主张，不同才上传差异。
+- 深知晓已有合格官方锚点时不重复搜索。
+- 最终报告必须使用云端技能内的 V8 定稿渲染器。
+
+## 交付门禁
+
+```bash
+python3 tests/smoke_test.py
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" .
+```
+
+完整标准见 [验收标准](references/acceptance-criteria.md)。

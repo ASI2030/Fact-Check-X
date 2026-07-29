@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fact-Check-X 统一入口"
+  short_description: "轻量编排无损聚合、可选知识点对比、逐点权威核验与 V8 定稿报告"
+  default_prompt: "使用 $fact-check-x-unified 编排完整事实核验链路；语义工作由当前智能体完成，不调用外部模型接口。"

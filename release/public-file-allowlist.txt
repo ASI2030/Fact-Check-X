@@ -1,0 +1,36 @@
+# Fact-Check-X public source allowlist
+#
+# Only paths described below may enter the public repository. The audit script
+# applies additional deny rules for secrets, real user paths and runtime state.
+
+README.md
+README.en.md
+LICENSE
+NOTICE
+THIRD_PARTY_NOTICES.md
+TRADEMARKS.md
+SECURITY.md
+PRIVACY.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+CHANGELOG.md
+CITATION.cff
+.gitignore
+.gitattributes
+.github/**
+docs/**
+examples/**
+release/manifest.json
+release/public-file-allowlist.txt
+scripts/**
+tests/**
+skills/fact-check-x-complete/**
+skills/fact-check-x-unified/**
+skills/fact-check-x-authoritative-verify/**
+skills/fact-check-x-knowledge-compare/**
+skills/llm-answer-reference-compare/**
+
+# Always excluded, even if nested below an allowed path:
+# .git, .DS_Store, __pycache__, .pytest_cache, node_modules
+# browser profiles, sessions, Cookies, API Keys, .env files
+# real run outputs, reports, test results, feedback, backups and release receipts

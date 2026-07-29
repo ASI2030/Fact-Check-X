@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use Fact-Check-X in research or evaluation, please cite this software and the exact release."
+title: "Fact-Check-X"
+type: software
+authors:
+  - name: "Fact-Check-X contributors"
+abstract: "An evidence-first Agent Skills suite for reproducible answer capture, claim comparison, authoritative verification and auditable reporting."
+license: Apache-2.0
+repository-code: "https://github.com/ASI2030/Fact-Check-X"
+url: "https://github.com/ASI2030/Fact-Check-X"
+keywords:
+  - fact-checking
+  - agent-skills
+  - provenance
+  - evidence
+  - reproducibility

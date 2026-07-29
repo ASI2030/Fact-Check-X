@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "fact-check-x/public-release-source-manifest@1",
+  "status": "promoted_ready_for_publication",
+  "product": {
+    "nameZh": "全知晓",
+    "nameEn": "Fact-Check-X",
+    "repository": "https://github.com/ASI2030/Fact-Check-X"
+  },
+  "version": "1.0.0",
+  "tag": "v1.0.0",
+  "sourceCommitSha": null,
+  "sourceCommitRef": "v1.0.0",
+  "preparedAt": "2026-07-30T00:07:44+08:00",
+  "upstreamCandidate": {
+    "complete": {
+      "file": "fact-check-x-complete.zip",
+      "bytes": 273223,
+      "sha256": "007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6"
+    },
+    "suite": {
+      "file": "fact-check-x-suite.zip",
+      "sha256": "7d1eb58c0ba481373616b9e99e0a1ecff831b58db7262bb4472f0378cbba38a7"
+    },
+    "modules": [
+      {
+        "file": "llm-answer-reference-compare.zip",
+        "sha256": "acc97963cd696beccdfedc0f09bb3de8c47120563715895ea102d9858eb54c9b"
+      },
+      {
+        "file": "fact-check-x-knowledge-compare.zip",
+        "sha256": "54fe7af3c75a5a2f3115ddbdfb07afd8381c148af29b64496fdb8d74e6d239e5"
+      },
+      {
+        "file": "fact-check-x-authoritative-verify.zip",
+        "sha256": "6440aad6ef4fba7e853fdc62c4445c6ac7d56e2ef4520e587ea199b9e88585ac"
+      },
+      {
+        "file": "fact-check-x-unified.zip",
+        "sha256": "3a82f97aab45b28fb6742bee7650e686993cc6cba71250eb555f74cde4eefe8e"
+      }
+    ],
+    "packageManifest": {
+      "file": "fact-check-x-suite-manifest.json",
+      "sha256": "a0333189357bf954f12c436c283c43584a4a368cf7a55e25555cee65f4d4dbe0"
+    },
+    "reproducibleBuild": {
+      "status": "verified",
+      "independentArchiveHashMatches": 6
+    }
+  },
+  "officialPromotion": {
+    "status": "promoted",
+    "releaseId": "manual-20260729T160744Z-v10",
+    "completeSha256": "007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6",
+    "receiptSha256": "317a6dc7b65a4020da252a08054b5a62a74001e088226722071232619ec857ea",
+    "promotedAt": "2026-07-30T00:07:44+08:00"
+  },
+  "publicSourceExport": {
+    "basis": "allowlisted source synchronized to the formally promoted v1.0.0 package",
+    "rootLicense": "Apache-2.0",
+    "thirdPartyLicensePreserved": "skills/llm-answer-reference-compare/assets/tool/LICENSE",
+    "sanitization": [
+      "No real user path, session, Cookie, API Key, cache, node_modules, backup, feedback or release ledger is included.",
+      "Synthetic cross-platform path tests use non-user fixture paths.",
+      "No private-network default is embedded in the public report renderer."
+    ],
+    "skillSourceTreeSha256": "7819b0a1b9bc9dde87ce89b58466a2a6d5dfb9fd7cd5a06cdf3c87bd8a9bf9d4"
+  },
+  "publicArtifacts": [
+    {
+      "file": "llm-answer-reference-compare-v1.0.0.zip",
+      "sha256": "15998f6edf5ba527d3c08af532eb06c30c9d92e3eea5b63b149d5acddf60faa7"
+    },
+    {
+      "file": "fact-check-x-knowledge-compare-v1.0.0.zip",
+      "sha256": "973fe018a1c7554168d3ba56bdfcc37797799b058ccbc09cea62f117a2612840"
+    },
+    {
+      "file": "fact-check-x-authoritative-verify-v1.0.0.zip",
+      "sha256": "4becc5a11b35df72c3d1012584746b71e000477caaebcd2df940bc15c0ef0065"
+    },
+    {
+      "file": "fact-check-x-unified-v1.0.0.zip",
+      "sha256": "8884817bd3381744aff92bc1981db5606c37ffb4347f05e1bed0160cd03214d7"
+    },
+    {
+      "file": "fact-check-x-suite-v1.0.0.zip",
+      "sha256": "cc2f8c04d7e11a2718ac10015abd8f157d822f3a36ce3d80928a393e917e0edd"
+    },
+    {
+      "file": "fact-check-x-complete-v1.0.0.zip",
+      "sha256": "ca4099a5866f6c9089e47a7c5f66994a88b5261a832404e6ee3b45eeb82a0080"
+    }
+  ],
+  "supplyChain": {
+    "sha256Sums": {
+      "file": "SHA256SUMS",
+      "sha256": "6d94295bf6854a0b4e34704359dc78b99f03e90d228ae0c63e422574fe1fd8f8"
+    },
+    "signature": null,
+    "sbomSpdx": {
+      "file": "sbom.spdx.json",
+      "sha256": "5be0a9d1a1d9554e1f3e3836f5affc2a2fb921d0f052cf454eba8947b976867f"
+    },
+    "sbomCycloneDx": {
+      "file": "sbom.cdx.json",
+      "sha256": "f70feb255e0b69e80a3283b6459a8b31b6d12964ec103aebc581b7526f178b65"
+    },
+    "releaseManifest": {
+      "file": "release-manifest.json",
+      "sha256": "eaef255533a1f1bc6bbe0701913efedbcc5c36ae1140ef13a80bfbc556645ed1"
+    },
+    "provenance": null,
+    "immutableRelease": false
+  },
+  "publishGate": {
+    "githubUploadAllowed": true,
+    "visibilityChangeAllowed": true,
+    "marketplaceUploadAllowed": false,
+    "blockingReason": null
+  }
+}

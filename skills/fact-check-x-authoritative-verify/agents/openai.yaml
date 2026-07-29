@@ -1,0 +1,4 @@
+interface:
+  display_name: "云端权威核验"
+  short_description: "逐知识点并发可信搜索、深知晓免查、权威裁决与 V8 定稿报告"
+  default_prompt: "使用 $fact-check-x-authoritative-verify 对每个知识点独立取得权威证据，由当前智能体完成裁决并输出 V8 定稿事实核查报告。"

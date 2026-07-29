@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fact-Check-X 完整事实核验"
+  short_description: "一站式采集、对比、权威核验并生成可审计报告"
+  default_prompt: "请使用 Fact-Check-X 完整事实核验技能完成多端回答采集、知识点对比、权威核验和报告交付。"
