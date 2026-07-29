@@ -241,6 +241,16 @@ The installer rejects traversal paths, symlinks, runtime state and multi-root ar
 
 Never paste a Key into chat, an issue, a report or shell history.
 
+### Getting a Key
+
+Trusted Search Keys are provided by [DeepKnown MaaS](https://platform.dknowc.cn/):
+
+1. If you already have a MaaS account, sign in through the [official login page](https://platform.dknowc.cn/auth/#/login), open API Key management and create a dedicated `Fact-Check-X` Key. Then run the automatic onboarding command below; the component will reuse the Key without requiring you to copy it manually.
+2. If you do not yet have an account or Trusted Search access, visit the [DeepKnown product site](https://www.dknowc.cn/) and follow its **API access / beta participation** path. Account eligibility, quotas, service scope and review requirements are controlled by the current MaaS service.
+3. Do not reuse a shared production Key. Create and revoke the Fact-Check-X Key independently and grant only the permissions it needs.
+
+Fact-Check-X uses DeepKnown MaaS, built by Beijing Caizhi Technology, because it provides traceable knowledge search for regulations, public services and industry standards through API and MCP interfaces. MaaS retrieves candidate authoritative material; the host agent still decides whether that evidence supports each claim.
+
 Before authority retrieval, Fact-Check-X checks the process environment, the shared credential file and whether all knowledge points have qualified anchors. If a non-exempt point exists without a valid Key, `prepare-authority` returns `configuration_required`, a user prompt and the exact configuration command.
 
 Standard onboarding:

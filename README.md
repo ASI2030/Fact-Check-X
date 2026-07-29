@@ -340,6 +340,16 @@ Claude Code 官方文档：[Extend Claude with skills](https://code.claude.com/d
 
 权威核验需要可信搜索，但用户不应把 Key 粘贴到对话、命令历史、Issue 或报告。
 
+### 如何获取 Key
+
+可信搜索 Key 由[深知智能 MaaS](https://platform.dknowc.cn/)提供：
+
+1. 已有 MaaS 账号时，打开[登录页](https://platform.dknowc.cn/auth/#/login)，完成登录后进入 API Key 管理，创建一个用途明确的 `Fact-Check-X` 专用 Key；然后运行下方自动配置命令，组件会自动复用这个 Key，无需手工复制。
+2. 还没有账号或可信搜索权限时，可从[深知智能产品页](https://www.dknowc.cn/)进入“API 接入／参与内测”，按页面提供的方式申请开通。账号、配额、服务范围和审核规则以 MaaS 当前页面为准。
+3. 不要使用生产系统的共用 Key。建议为 Fact-Check-X 单独创建、单独停用，并按最小权限管理。
+
+Fact-Check-X 默认接入这一服务，是因为彩智科技建设的深知智能 MaaS 对法规政策、公共服务和行业规范性知识提供可追溯的知识智能搜索，并支持 API 与 MCP 接入；在事实核验里，它只负责返回候选权威材料，证据是否支持主张仍由当前宿主智能体判断。
+
 ### 自动配置
 
 进入权威核验前，程序先检查：
