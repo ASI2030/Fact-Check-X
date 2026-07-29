@@ -153,6 +153,8 @@ def scan(root: Path) -> dict:
 
     for path in sorted(root.rglob("*")):
         relative = path.relative_to(root)
+        if relative.parts and relative.parts[0] == ".git":
+            continue
         if path.is_symlink():
             findings.append({"rule": "symlink", "path": relative.as_posix()})
             continue

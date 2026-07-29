@@ -37,7 +37,7 @@ class PublicReleaseTest(unittest.TestCase):
         manifest = json.loads(
             (ROOT / "release" / "manifest.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(manifest["status"], "promoted_ready_for_publication")
+        self.assertEqual(manifest["status"], "published")
         self.assertEqual(
             manifest["upstreamCandidate"]["complete"]["sha256"],
             OFFICIAL_SHA,
@@ -46,7 +46,7 @@ class PublicReleaseTest(unittest.TestCase):
             manifest["officialPromotion"]["completeSha256"],
             OFFICIAL_SHA,
         )
-        self.assertTrue(manifest["publishGate"]["githubUploadAllowed"])
+        self.assertFalse(manifest["publishGate"]["githubUploadAllowed"])
 
     def test_build_is_reproducible_and_manifest_verifies(self):
         with tempfile.TemporaryDirectory(prefix="fcx-public-build-a-") as left_raw:

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "fact-check-x/public-release-source-manifest@1",
-  "status": "promoted_ready_for_publication",
+  "status": "published",
   "product": {
     "nameZh": "全知晓",
     "nameEn": "Fact-Check-X",
@@ -8,7 +8,7 @@
   },
   "version": "1.0.0",
   "tag": "v1.0.0",
-  "sourceCommitSha": null,
+  "sourceCommitSha": "d9d9a1986951f2138514e07a3588cc978531bb8f",
   "sourceCommitRef": "v1.0.0",
   "preparedAt": "2026-07-30T00:07:44+08:00",
   "upstreamCandidate": {
@@ -108,15 +108,15 @@
     },
     "releaseManifest": {
       "file": "release-manifest.json",
-      "sha256": "eaef255533a1f1bc6bbe0701913efedbcc5c36ae1140ef13a80bfbc556645ed1"
+      "sha256": "dbb13d97ed0cc03342223de8201aca08c521e1ca0e9f9cee02a9d53376642438"
     },
     "provenance": null,
     "immutableRelease": false
   },
   "publishGate": {
-    "githubUploadAllowed": true,
-    "visibilityChangeAllowed": true,
+    "githubUploadAllowed": false,
+    "visibilityChangeAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": null
+    "blockingReason": "v1.0.0 is published; subsequent artifacts require a new version."
   }
 }
