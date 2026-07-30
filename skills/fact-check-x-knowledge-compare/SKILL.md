@@ -1,6 +1,7 @@
 ---
 name: fact-check-x-knowledge-compare
 description: 在本地把多个 AI 原始回答拆成原子知识点，区分直接答案与补充参考，对齐各平台主张、差异、所附依据和来源忠实性，并生成可视化中间报告。不调用可信搜索或任何外部模型 API，语义分析由当前运行载体完成。
+license: Apache-2.0
 ---
 
 # 知识点结构化对比
