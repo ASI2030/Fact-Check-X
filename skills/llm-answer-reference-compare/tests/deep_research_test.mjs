@@ -8,6 +8,18 @@ import {
     builtInPlatforms
 } from "../assets/tool/dist/capture/platform-registry.js";
 
+assert.deepEqual(
+    builtInPlatforms.map((platform) => platform.name),
+    [
+        "doubao",
+        "yuanbao",
+        "deepseek",
+        "qianwen",
+        "dknowc-chat",
+        "dknowc-deep-research",
+        "generic",
+    ]
+);
 
 const config = builtInPlatforms.find(
     (platform) => platform.name === "dknowc-deep-research"

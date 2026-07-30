@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-事实核查报告 V8 渲染器（老板 2026-06-10 反馈 + 溯源增强）
+Fact-Check-X 平台表现与完整证据报告渲染器。
 
-老板 2026-06 定稿（干净 V8，对外可自证）：
+稳定指标口径：
   分母 N = 合法直接答案知识点（剔除补充参考 + 剔除编造）
   覆盖率 + 遗漏率 = 100%（分母 N）
   覆盖类下：准确率 + 幻觉率 = 100%（分母 = 直接答案覆盖数）
@@ -28,9 +28,9 @@ def _safe_href(u):
     return escape(s) if s.lower().startswith(("http://", "https://", "mailto:")) else ""
 
 p = argparse.ArgumentParser()
-p.add_argument('--analysis', default='/tmp/fc_analysis_v8.json')
+p.add_argument('--analysis', default='/tmp/fact-check-x-platform-analysis.json')
 p.add_argument('--result', default='/tmp/fc_result.json')
-p.add_argument('--topic', default='v8')
+p.add_argument('--topic', default='platform-report')
 p.add_argument('--out', default='')
 p.add_argument('--no-open', action='store_true')
 a = p.parse_args()
@@ -63,7 +63,7 @@ for _k in N_list:
                 'ts_confidence': _e.get('ts_confidence'), 'null_evidence': _ne,
             }
             break
-M = A.get('metrics_v8', {})
+M = A.get('platform_metrics', {})
 MT = A.get('metrics_by_tier', {})
 H2H = A.get('head_to_head', {})
 V = A.get('verdict', {})
@@ -75,7 +75,7 @@ SCRAPED = R.get('scraped', {})
 HEALTH = A.get('llm_health', {})
 APPEALS = A.get('appeals', [])
 
-TIER_META = {  # 角色标签（2026-06 老板：去三级，只标核心 / 直接相关；补充参考另区）
+TIER_META = {  # 角色标签只保留核心 / 直接相关；补充参考另区。
     "core":    ("核心", "#1e3a8a", "用户问的那个裁定性核心点（能不能/多久/多少钱）"),
     "support": ("直接相关", "#6366f1", "直接回答用户所问的其它知识点"),
     "edge":    ("补充参考", "#9ca3af", "相关但非用户所问，不计覆盖率"),
@@ -103,7 +103,7 @@ def tip(name):
 
 # 类别 → 颜色/图标/解释/中性外显标签（对外用描述性语言，正式术语进 tooltip 避免被攻击）
 CAT_STYLE = {
-    # 直接答案区四标签（2026-06 老板定稿，严格 4 类）
+    # 直接答案区保持四类稳定标签。
     "直接准确": ("#059669", "✅", "与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定", "直接正确"),
     "间接准确": ("#10b981", "☑", "忠实于其他非官方材料，且经官方源独立验证通过", "间接正确"),
     "巧合式幻觉": ("#f59e0b", "🎲", "无据/不符所附材料，但结果碰巧与官方一致（运气，不计准确）", "幻觉·结果巧合正确"),
@@ -119,7 +119,7 @@ def cat_norm(c):
         if c.startswith(k): return k
     # 历史标签兜底（旧数据兼容，统归到现行 5 类）
     if "诚实无规定" in c or "无据造规则" in c or "待核验" in c: return "编造式幻觉"
-    if "未核验" in c or "缺依据" in c: return "编造式幻觉"   # 2026-06 老板定稿：无官方材料=编造（含 DT 故障情形）
+    if "未核验" in c or "缺依据" in c: return "编造式幻觉"
     if "猜测" in c: return "巧合式幻觉"
     if "捏造" in c or "疑似" in c: return "编造式幻觉"
     if "误导" in c: return "误导式幻觉"
@@ -142,7 +142,7 @@ def _load_participants():
 _PREG = _load_participants()
 _PORDER = list(_PREG.keys())
 def get_sides():
-    keys = list((A.get("metrics_v8") or {}).keys()) or list((A.get("side_evaluation") or {}).keys()) or ["dknow", "doubao"]
+    keys = list((A.get("platform_metrics") or {}).keys()) or list((A.get("side_evaluation") or {}).keys()) or ["dknow", "doubao"]
     keys.sort(key=lambda k: (_PORDER.index(k) if k in _PORDER else 99, k))
     out = []
     for i, k in enumerate(keys):
@@ -218,7 +218,7 @@ def src_badge(reference, side=""):
     return '<span class="bcom">非官方来源</span>'
 
 def tier_breakdown(sk):
-    """2026-06 老板定稿：去掉三级分层，不再渲染分层小条。保留空函数避免旧调用报错。"""
+    """不渲染旧的三级分层小条；保留空函数兼容现有调用。"""
     return ""
 
 def _lr100(fracs):
@@ -279,7 +279,7 @@ VERDICT_STYLE = {
     "missing":       ("#6b7280", "ti-minus", "未直接回答"),
 }
 def verdict_block():
-    """2026-06 老板定稿：去掉真值状态/四要件/裁定层术语，只保留「核心问题 + 各家一句话结论」作上下文。"""
+    """只保留“核心问题 + 各家一句话结论”作为裁决上下文。"""
     if not V or not V.get("sides"): return ""
     cq = escape(V.get("core_question", query))
     cards = []
@@ -414,7 +414,7 @@ def tier_pill(k):
     lab, col, doc = TIER_META[t]
     return f'<span class="tierpill" style="color:{col};border-color:{col}" title="{escape(doc)}">{lab}</span>'
 
-# ── 角色 / 编造 判定（2026-06 老板模型：直接答案 vs 补充参考）──
+# ── 角色 / 编造判定：直接答案与补充参考分开计算 ──
 def _role(k):
     return (k.get("role") or "direct")
 
@@ -449,7 +449,7 @@ def kp_rows(roles=("direct",), exclude_fab=True):
                     f'<div class="verdictreason"><b>状态：</b>{reason}</div></td>'
                 )
             cn = cat_norm(e.get("category","答案遗漏"))
-            # 直接区严格 4 标签（2026-06 老板定稿）：编造式不在直接区显示，留到 ②-补③
+            # 直接答案区保持四类稳定标签；编造式单独进入补充分析区。
             if exclude_fab and cn == "编造式幻觉":
                 return (f'<td class="kc"{attrs}><span class="catpill" style="background:#9ca3af"'
                         ' title="该家在本知识点上凭空编造，详见下方「补充参考分析 · ③凭空编造」">· 见下方编造区</span></td>')
@@ -460,9 +460,9 @@ def kp_rows(roles=("direct",), exclude_fab=True):
             if ap:
                 locked += (f' <span class="appealtag" title="经申诉复核更正：{escape(ap.get("prev_category",""))}→{escape(ap.get("new_category",""))}'
                            f'｜复核 {escape(ap.get("reviewer",""))} {escape(ap.get("reviewed_at",""))}｜{escape(ap.get("rationale","")[:60])}">⚖ 经申诉更正</span>')
-            # 外显中性标签，正式术语进 tooltip（覆盖数为分母的 V8 分类）
+            # 外显中性标签，标准分类进入 tooltip。
             pill = (f'<span class="catpill" style="background:{col}" '
-                    f'title="判定条件：{escape(cdoc)}　｜　正式分类：{escape(cn)}（V8，覆盖数为分母）">{ic} {neutral}</span>')
+                    f'title="判定条件：{escape(cdoc)}　｜　标准分类：{escape(cn)}">{ic} {neutral}</span>')
             # 答案点 → 所附依据 → 官方验证 同列分组（一个证据块）
             reason = escape((e.get("verdict_reason") or "")[:180])
             return (f'<td class="kc"{attrs}>{pill}{locked}'
@@ -482,7 +482,7 @@ def kp_rows(roles=("direct",), exclude_fab=True):
     return "\n".join(out)
 
 def reference_analysis_html():
-    """补充参考分析（2026-06 老板）：只回答 3 问。
+    """补充参考分析只回答 3 个问题。
     ① 有价值的正确参考（reference 区 直接/间接准确）
     ② 幻觉式的参考提醒（reference 区 巧合/误导）
     ③ 凭空编造（任何区 编造，官方查无）"""
@@ -498,7 +498,7 @@ def reference_analysis_html():
         return items
     valuable = collect(lambda k, c: _role(k) == "reference" and not _kp_is_fab(k) and c in ACC)
     hallu_ref = collect(lambda k, c: _role(k) == "reference" and not _kp_is_fab(k) and c in HAL)
-    # 老板定稿：凭空编造无论直接答案式还是补充参考式、无论另一侧是否有锚点，都进③（直接区不再显示编造点）
+    # 凭空编造统一进入补充分析区，直接答案区不重复显示。
     fab_items = collect(lambda k, c: c == "编造式幻觉")
     def render(items, empty):
         if not items:
@@ -623,7 +623,7 @@ appeal_block = ('''
 </div>''' if _appeal_needed else '')
 
 html = f'''<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
-<title>事实核查报告 V8</title><style>
+<title>Fact-Check-X 平台表现与完整证据报告</title><style>
 *{{box-sizing:border-box}}
 body{{font-family:-apple-system,"PingFang SC",sans-serif;max-width:1440px;width:100%;margin:24px auto;padding:0 24px;color:#1f2937;line-height:1.6}}
 h1{{color:#1e3a8a;border-bottom:3px solid #e5e7eb;padding-bottom:10px}}
@@ -779,7 +779,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
 <ol class="f">{"".join(f"<li>{escape(x)}</li>" for x in findings)}</ol>
 
 <h2>④ 原始答案与参考文献（存证）</h2>
-<p class="muted small">评测的原始凭证：各平台 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对——包括拆解是否遗漏、该家说法（claim）是否忠实于原文。引用旁标注源类型（与正确源白名单 v1.0 同口径）。</p>
+<p class="muted small">评测的原始凭证：各平台 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对——包括拆解是否遗漏、该家说法（claim）是否忠实于原文。引用旁标注来源类型，并使用当前版本统一口径。</p>
 {"".join(raw_block(sk, sn, col) for sk, sn, col in SIDE)}
 
 <h2 id="metricdoc">⑤ 指标口径速查</h2>
@@ -787,9 +787,9 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   <thead><tr><th style="width:120px">指标</th><th style="width:110px">分母</th><th>定义</th><th style="width:30%">怎么读</th></tr></thead>
   <tbody>{metric_doc_rows()}</tbody>
 </table>
-<p class="muted small" style="margin-top:10px">知识点判定类别（②中的彩色标签）：外显用描述性中性文案，括号内为 V8 正式分类（鼠标悬停标签亦可见）</p>
+<p class="muted small" style="margin-top:10px">知识点判定类别（②中的彩色标签）：外显使用描述性中性文案，标准分类可在鼠标悬停标签时查看。</p>
 <table class="doc">
-  <thead><tr><th style="width:150px">外显标签</th><th style="width:96px">V8 正式分类</th><th>判定条件</th></tr></thead>
+  <thead><tr><th style="width:150px">外显标签</th><th style="width:96px">标准分类</th><th>判定条件</th></tr></thead>
   <tbody>{cat_doc_rows()}</tbody>
 </table>
 
@@ -811,14 +811,14 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
 {appeal_block}
 
 <p class="muted small" style="margin-top:36px;border-top:1px solid #eee;padding-top:12px">
-gen_html_report_v8.py · 评测口径：覆盖率/准确率只算【直接答案】知识点（直接回答用户所问的）；准确=直接（官方原站或官方来源，含算术级显然推导 2000×1.4=2800）+间接（其他非官方材料+官方验证）正确，幻觉=巧合+误导（覆盖数为分母，相加=100%）；直接答案区严格 4 标签；「补充参考」（相关但非所问）与「凭空编造」（官方原站及官方来源均查无）不计覆盖——凭空编造无论直接还是补充，全部在 ②-补③ 列出；全判定可溯源（依据原文 + 官方验证依据 + 原答案存证）</p>
+Fact-Check-X · 评测口径：覆盖率/准确率只算【直接答案】知识点（直接回答用户所问的）；准确=直接（官方原站或官方来源，含算术级显然推导 2000×1.4=2800）+间接（其他非官方材料+官方验证）正确，幻觉=巧合+误导（覆盖数为分母，相加=100%）；直接答案区严格 4 标签；「补充参考」（相关但非所问）与「凭空编造」（官方原站及官方来源均查无）不计覆盖——凭空编造无论直接还是补充，全部在 ②-补③ 列出；全判定可溯源（依据原文 + 官方验证依据 + 原答案存证）</p>
 </body></html>'''
 
 ts = datetime.now().strftime("%Y%m%d_%H%M")
-out = Path(a.out) if a.out else (Path(__file__).parent / "reports" / f"factcheck_{ts}_{a.topic}_v8.html")
+out = Path(a.out) if a.out else (Path(__file__).parent / "reports" / f"factcheck_{ts}_{a.topic}.html")
 out.parent.mkdir(exist_ok=True, parents=True)
 out.write_text(html, encoding="utf-8")
-print(f"✅ V8 报告: {out}")
+print(f"✅ 平台表现与完整证据报告: {out}")
 print(f"   大小: {len(html):,} 字符")
 for sk, sn, _ in SIDE:
     m = M.get(sk, {})

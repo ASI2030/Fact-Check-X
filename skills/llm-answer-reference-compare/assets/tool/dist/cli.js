@@ -65,8 +65,8 @@ async function loginCommand(platformTarget, timeoutMs, outDir, question) {
             await writeJsonFile(join(outDir, "capture-recovery.json"), recovery);
             console.error(`登录准备未完成，已写出 ${join(outDir, "capture-recovery.json")}。`);
         }
-        console.error("当前载体具备 Computer Use 时必须用它恢复同一平台；否则停止在 1.0。禁止改用 headless、另一套浏览器或命令行诊断。");
-        throw new Error(`登录准备未完成，已停止在 1.0 并请求 Computer Use 恢复：${recovery.failedPlatforms[0].error}`);
+        console.error("当前载体具备 Computer Use 时必须用它恢复同一平台；否则停止在原始答案采集阶段。禁止改用 headless、另一套浏览器或命令行诊断。");
+        throw new Error(`登录准备未完成，已停止在原始答案采集阶段并请求 Computer Use 恢复：${recovery.failedPlatforms[0].error}`);
     }
     finally {
         if (session) {
@@ -161,14 +161,14 @@ async function runCommand(options) {
                 error: platform.error
             })),
             instructions: [
-                "运行载体具备 Computer Use 时用它恢复同一平台；否则停止在 1.0。",
+                "运行载体具备 Computer Use 时用它恢复同一平台；否则停止在原始答案采集阶段。",
                 "需要用户本人处理账号、密码、验证码或人机验证。",
                 "仅使用 failedPlatforms[].loginUrl 打开平台；该字段是已清洗的纯 URL，不得拼接说明文字或展示层追踪参数。",
                 "直接读取本文件 question 字段并复用原始问题；不得要求用户回滚会话复制问题。",
                 "接管后保持当前页面；等待人工验证时不得关闭、重复打开浏览器或机械重采。",
                 "告诉用户完成后可回复“验证已完成”或“答案已生成”；继续检测当前回答并自动采集，无需暂停或取消任务。",
                 "完成登录、地区选择、问题提交并等待回答停止生成。",
-                "随后重新运行 1.0 采集；全部平台成功前禁止进入 1.1。"
+                "随后重新运行原始答案采集；全部平台成功前禁止进入知识点对比。"
             ]
         });
         const details = incomplete
@@ -232,7 +232,7 @@ export function createProgram() {
         .version("0.1.0");
     program
         .command("report")
-        .description("从已有 results.json 生成 1.0 对比报告。")
+        .description("从已有 results.json 生成原始答案与引用报告。")
         .requiredOption("--input <path>", "results.json 路径")
         .requiredOption("--out <dir>", "输出目录")
         .action(async (options) => {

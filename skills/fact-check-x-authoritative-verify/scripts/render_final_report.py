@@ -290,7 +290,7 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
         "ai_info": {platform["platform"]: {"size": "当前承载智能体完成语义分析"} for platform in platforms},
         "answer_knowledge_points": answer_points,
         "side_evaluation": side_evaluation,
-        "metrics_v8": metric_data,
+        "platform_metrics": metric_data,
         "head_to_head": {},
         "verdict": {"core_question": comparison.get("coreQuestion") or results.get("question"), "sides": verdict_sides} if verdict_sides else {},
         "reference_analysis": reference_analysis,
@@ -355,7 +355,7 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="把核验产物适配为 V8 定稿事实核查报告。")
+    parser = argparse.ArgumentParser(description="生成平台表现与完整证据报告。")
     parser.add_argument("--results", required=True)
     parser.add_argument("--comparison", required=True)
     parser.add_argument("--verification", required=True)
@@ -376,7 +376,7 @@ def main() -> int:
         result_path = intermediate / "legacy-result.json"
         dump_json(analysis_path, analysis)
         dump_json(result_path, legacy_result)
-        generator = Path(__file__).resolve().parent / "gen_html_report_v8.py"
+        generator = Path(__file__).resolve().parent / "render_platform_report.py"
         proc = subprocess.run(
             [sys.executable, str(generator), "--analysis", str(analysis_path), "--result", str(result_path), "--out", str(output), "--no-open"],
             text=True,
@@ -384,8 +384,8 @@ def main() -> int:
             check=False,
         )
         if proc.returncode:
-            raise SkillError(proc.stdout or proc.stderr or "V8 定稿报告生成失败")
-        metrics_json = json.dumps(analysis["metrics_v8"], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            raise SkillError(proc.stdout or proc.stderr or "平台表现与完整证据报告生成失败")
+        metrics_json = json.dumps(analysis["platform_metrics"], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         metrics_sha256 = hashlib.sha256(metrics_json.encode("utf-8")).hexdigest()
         html = output.read_text(encoding="utf-8")
         marker = f'<meta name="fact-check-x-metrics-sha256" content="{metrics_sha256}" />'

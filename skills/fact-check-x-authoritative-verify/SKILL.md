@@ -1,9 +1,9 @@
 ---
 name: fact-check-x-authoritative-verify
-description: 对单个知识点调用可信搜索取得官方证据，由当前承载技能的智能体裁决各平台主张，并生成 V8 定稿事实核查报告。支持多知识点独立并发、深知晓可信搜索锚点免重复检索，以及直接准确、间接准确、结果巧合、严重误导、凭空编造等分类。用于 Fact-Check-X 云端权威核验，也可脱离 1.1 单独使用。
+description: 对单个知识点调用可信搜索取得官方证据，由当前运行载体裁决各平台主张，并生成权威证据核验报告与平台表现报告。支持多知识点独立并发、深知晓可信搜索锚点免重复检索，以及直接准确、间接准确、结果巧合、严重误导、凭空编造等分类。可用于 Fact-Check-X 完整流程，也可作为独立的权威证据核验能力使用。
 ---
 
-# 云端权威核验
+# 权威证据核验
 
 本技能一次只核验一个知识点。多个知识点必须拆成多个独立请求并发执行，不能把完整回答或全部知识点塞进一个请求。
 
@@ -20,7 +20,7 @@ python3 scripts/authority_verify.py search \
   --service-area "<可选地区>"
 ```
 
-若请求内有经 1.1 严格验收的 `trustedAnchor.eligible=true`，程序直接复用深知晓所附官方证据，输出 `searchMode=dknow_exempt`、`requestCount=0`。否则只调用一次可信搜索，输出 `searchMode=trusted_search`、`requestCount=1`。
+若请求内有经知识点对比阶段严格验收的 `trustedAnchor.eligible=true`，程序直接复用深知晓所附官方证据，输出 `searchMode=dknow_exempt`、`requestCount=0`。否则只调用一次可信搜索，输出 `searchMode=trusted_search`、`requestCount=1`。
 
 通过 Fact-Check-X 统一入口调用时，可信搜索配置由跨载体配置组件自动注入：用户首次只需登录深知 MaaS，组件自动获取或创建专用 Key；以后 Codex、Claude Code、WorkBuddy 等直接复用本机共享配置。批量执行前仍会检查所有请求。存在非免查知识点且当前进程没有收到可用 Key 时，程序会在任何搜索开始前失败。不得让用户在对话中粘贴 Key，也不得仅因深知晓附带官方来源就绕过可信搜索；只有明确的 `trustedAnchor.eligible=true` 才可免查。
 
@@ -42,7 +42,7 @@ python3 scripts/batch_search.py \
 
 当 `searchMode=dknow_exempt` 时，`request.trustedAnchor.officialAnswer` 是当前知识点的权威结论，证据列表承担来源追溯作用，不要求标题或截断摘录逐字复述该结论。各平台主张与 `officialAnswer` 语义一致或可由其直接推出时，必须裁决为 `supported` 并引用当前锚点中的有效证据 ID；只有主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。
 
-1.1 已独立保存平台引用忠实性。本阶段只裁决事实正确性：平台自己的引用不充分但结论被权威锚点证实时，仍裁决为 `supported`，最终分类由程序结合原忠实性形成 `coincidental`。
+知识点对比阶段已独立保存平台引用忠实性。本阶段只裁决事实正确性：平台自己的引用不充分但结论被权威锚点证实时，仍裁决为 `supported`，最终分类由程序结合原忠实性形成 `coincidental`。
 
 ```json
 {
@@ -81,13 +81,13 @@ python3 scripts/authority_verify.py finalize \
 - 服务错误或证据仍不足：`unverified`。
 - 未覆盖：`omitted`。
 
-官方材料给出全部前提，平台只做一步显然算术推导时，可由当前智能体在 1.1 判为忠实，最终仍是 `direct_accurate`。
+官方材料给出全部前提，平台只做一步显然算术推导时，可由当前智能体在知识点对比阶段判为忠实，最终仍是 `direct_accurate`。
 
-“所附材料”既可以由当前主张片段内的逐段溯源建立，也可以在没有局部脚标时，由 1.1 对本次回答明确返回的参考资料做全文语义溯源。逐段溯源优先；已有局部脚标时不得用回答后段或回答级官方来源抬级。最终报告必须把 `local` 与 `answer_level_semantic` 分开显示，不能把“无逐句角标”写成“无来源”。
+“所附材料”既可以由当前主张片段内的逐段溯源建立，也可以在没有局部脚标时，由知识点对比阶段对本次回答明确返回的参考资料做全文语义溯源。逐段溯源优先；已有局部脚标时不得用回答后段或回答级官方来源抬级。最终报告必须把 `local` 与 `answer_level_semantic` 分开显示，不能把“无逐句角标”写成“无来源”。
 
-## V8 定稿报告
+## 报告交付
 
-`verification.json` 必须先生成独立云端权威核验报告：
+`verification.json` 必须先生成独立权威证据核验报告：
 
 ```bash
 python3 scripts/render_authority_report.py \
@@ -101,17 +101,17 @@ python3 scripts/render_authority_report.py \
 报告顶部必须先展示与全部知识点 ID 完整绑定的 `finalAnswer`，作为本阶段可直接
 使用的“权威核验后的最终答案”；存在待复核项时不得标成已核验完成。
 
-汇总后的 `verification.json` 可直接生成 V8 定稿报告：
+汇总后的 `verification.json` 可直接生成平台表现与完整证据报告：
 
 ```bash
-python3 scripts/render_v8_report.py \
+python3 scripts/render_final_report.py \
   --results <results.json> \
   --comparison <comparison.json> \
   --verification <verification.json> \
   --output <事实核查报告.html>
 ```
 
-视觉和章节结构以 [V8 定稿报告视觉基准](references/V8定稿报告视觉基准.html) 为准。
+报告必须保留平台表现、逐知识点裁决、权威证据、原始回答与引用存证，并按本次实际平台集合动态布局。
 
 ## 交付门禁
 

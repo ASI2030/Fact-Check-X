@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 
@@ -129,6 +130,64 @@ class PublicReleaseTest(unittest.TestCase):
                 self.assertEqual(
                     install_result["skill"], "fact-check-x-complete"
                 )
+
+    def test_skillhub_package_is_market_clean_and_reproducible(self):
+        with tempfile.TemporaryDirectory(prefix="fcx-skillhub-a-") as left_raw:
+            with tempfile.TemporaryDirectory(prefix="fcx-skillhub-b-") as right_raw:
+                left = Path(left_raw)
+                right = Path(right_raw)
+                for target in (left, right):
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            str(SCRIPTS / "build_release.py"),
+                            "--version",
+                            "1.1.0",
+                            "--out-dir",
+                            str(target),
+                        ],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+                    complete = target / "fact-check-x-complete-v1.1.0.zip"
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            str(SCRIPTS / "build_skillhub_package.py"),
+                            "--source",
+                            str(complete),
+                            "--output",
+                            str(target / "fact-check-x-skillhub-v1.1.0.zip"),
+                            "--version",
+                            "1.1.0",
+                        ],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+
+                left_package = left / "fact-check-x-skillhub-v1.1.0.zip"
+                right_package = right / "fact-check-x-skillhub-v1.1.0.zip"
+                self.assertEqual(sha256(left_package), sha256(right_package))
+                with zipfile.ZipFile(left_package) as archive:
+                    names = archive.namelist()
+                    skill = archive.read(
+                        "fact-check-x-complete/SKILL.md"
+                    ).decode("utf-8")
+                self.assertFalse(
+                    any(Path(name).name in {"LICENSE", "NOTICE"} for name in names)
+                )
+                self.assertNotIn("](references/", skill)
+                self.assertNotIn("V8", skill)
+                for platform in (
+                    "深知晓（深度研究）",
+                    "豆包",
+                    "腾讯元宝",
+                    "DeepSeek",
+                    "通义千问",
+                ):
+                    self.assertIn(platform, skill)
 
 
 if __name__ == "__main__":

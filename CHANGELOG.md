@@ -2,6 +2,16 @@
 
 All notable changes are documented in this file. The project follows Semantic Versioning.
 
+## [1.1.0] - 2026-07-30
+
+- Reframed the public product around four user-facing deliverables: original answers and citations, unverified knowledge comparison, authoritative evidence verification, and platform performance with complete evidence.
+- Added market-first SkillHub metadata, a clear first-run experience, optional Trusted Search onboarding, and an explicit six-platform support matrix.
+- Limited the formal support commitment to 深知晓, 深知晓（深度研究）, 豆包, 腾讯元宝, DeepSeek and 通义千问; removed unverified generic adapters from the built-in platform list.
+- Removed internal revision labels and carrier-specific acceptance links from public descriptions and generated reports.
+- Renamed final report scripts and visible report labels to stable product terms.
+- Added a deterministic SkillHub package builder that rejects relative documentation links, internal terminology and extensionless legal files.
+- Added regression coverage for SkillHub presentation, supported-platform truth and market-package reproducibility.
+
 ## [1.0.0] - 2026-07-30
 
 - Published the first public source release of 全知晓（Fact-Check-X）.

@@ -1,32 +1,80 @@
 # 全知晓（Fact-Check-X）
 
-[English](README.en.md) · [安全](SECURITY.md) · [隐私](PRIVACY.md) · [贡献](CONTRIBUTING.md) · [发布清单](release/manifest.json)
+[English](README.en.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [版本发布](https://github.com/ASI2030/Fact-Check-X/releases) · [安全](SECURITY.md) · [隐私](PRIVACY.md)
 
-当前正式版本：[`v1.0.0`](https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.0.0)。唯一正式完整包为 `fact-check-x-complete.zip`，SHA256：
+比较多个 AI 对同一问题的完整回答与引用，再用权威证据逐点核验。不是“再生成一个答案”，而是把各家说法、引用依据、共识冲突和最终结论放在同一条可追溯证据链上。
 
-```text
-007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6
+## 三分钟开始
+
+### 从 SkillHub 安装
+
+```bash
+skillhub install @user_186e37d0/fact-check-x
 ```
 
-全知晓（Fact-Check-X）是一套证据优先、可复现、可审计的 Agent Skills。它从用户明确选择的一个或多个 AI 网页端无损采集回答与引用，把回答拆成原子知识点，逐点取得权威证据并完成裁决，最后交付四份相互独立、可追溯的报告。
+也可以从 [GitHub Releases](https://github.com/ASI2030/Fact-Check-X/releases) 下载 `fact-check-x-complete.zip`，安装到 WorkBuddy、Codex、Claude Code 或其他兼容 Agent Skills 的载体。
 
-它解决的不是“再生成一个更像真的答案”，而是让以下关系可以被检查：
+安装后直接用自然语言：
 
-- 平台原回答究竟说了什么；
-- 每个结论引用了什么，引用是否真的支持该结论；
-- 不同平台在哪些原子事实点上一致或冲突；
-- 权威材料支持、反驳或暂时无法裁决哪些主张；
-- 最终结论如何回到原回答、原引用、权威证据和裁决过程。
+```text
+请使用“全知晓”核验：广州无合同租房提取住房公积金每月最高多少？
+采集平台：深知晓、豆包、DeepSeek。
+```
+
+用户只需提供问题和平台。首次访问某个平台时，浏览器会提示用户本人完成登录或验证码；后续自动复用本机登录会话。
+
+## 正式支持平台
+
+| 平台 | 平台 ID | 采集能力 |
+|---|---|---|
+| 深知晓 | `dknowc-chat` | 标准回答、引用和官方来源 |
+| 深知晓（深度研究） | `dknowc-deep-research` | 普通回答完成后启动深度研究，作为独立平台结果 |
+| 豆包 | `doubao` | 完整回答、引用和页面存证 |
+| 腾讯元宝 | `yuanbao` | 完整回答、引用和页面存证 |
+| DeepSeek | `deepseek` | 完整回答、引用和页面存证 |
+| 通义千问 | `qianwen` | 完整回答、引用和页面存证 |
+
+平台集合完全按用户输入动态选择：
+
+- `N=1`：完成单平台采集、知识点拆解、权威核验和报告；
+- `N≥2`：额外比较多平台共识、冲突、完整性和引用差异；
+- 任一已选平台失败时停在采集阶段，不使用部分结果继续。
+
+未列入上表的平台不作为当前正式支持能力承诺。自定义网页适配属于开发者扩展能力，需要单独验证后再用于真实业务。
+
+## 四份独立产物
+
+每一步完成后立即交付可打开报告，不把中间结果藏到最后：
+
+1. **原始答案与引用**：完整回答、参考文献、引用关系、截图和 HTML 存证。
+2. **知识点对比（未核验）**：原子事实、各家主张、共识、冲突与引用忠实性。
+3. **权威证据核验**：逐知识点展示权威结论、证据、平台裁决和待复核项。
+4. **平台表现与完整证据**：准确性、完整性、来源质量、关键发现和完整报告包。
+
+默认每一步都让用户选择继续、修正或结束。用户一开始明确要求完整跑完时可以连续执行，但四份产物仍会逐步交付。
+
+## API 与费用
+
+- 原始答案采集和知识点对比不需要 API Key。
+- 权威证据核验阶段可选使用深知可信搜索。
+- 首次需要时只打开 [深知智能 MaaS 登录页](https://platform.dknowc.cn/auth/#/login)，用户完成登录后，技能自动获取或创建专用 Key 并保存在本机。
+- 已有配置会自动复用，不要求在对话中粘贴密钥。
+- 不调用外部大模型 API；语义分析由当前运行载体完成。
+
+## 适用场景
+
+- 政策、公共服务、住房公积金、办事规则等需要核对官方依据的问题；
+- 行业规则、产品研究、竞品回答质量和引用质量比较；
+- 多个 AI 给出不同数字、条件或结论时的争议定位；
+- 需要保留原回答、来源、截图和裁决过程的审计型任务。
 
 > Fact-Check-X 是辅助核验工具，不是政府、司法、医疗、金融或其他专业机构。报告中的事实状态取决于检索时间、地域、来源可得性和用户所选平台。高影响决定必须由具备相应责任和资格的人复核。
 
 ## 目录
 
 - [核心能力](#核心能力)
-- [四步流程](#四步流程)
+- [工作流程](#工作流程)
 - [动态平台数量 N ≥ 1](#动态平台数量-n--1)
-- [支持平台](#支持平台)
-- [快速开始](#快速开始)
 - [安装到不同载体](#安装到不同载体)
 - [可信搜索 Key](#可信搜索-key)
 - [Playwright 持久会话与 Computer Use 恢复](#playwright-持久会话与-computer-use-恢复)
@@ -71,20 +119,20 @@
 - 最终压缩包使用相对路径，不包含执行机器的用户路径。
 - 完整报告保留来源、时间、知识点、裁决理由、不确定性和失败状态。
 
-## 四步流程
+## 工作流程
 
 ```mermaid
 flowchart LR
-    A["1.0 无损采集<br/>原回答、引用、截图、页面存证"]
-    B["1.1 知识点对比<br/>原子主张、差异、引用忠实性"]
-    C["2.0 权威核验<br/>逐点搜索、证据绑定、平台裁决"]
-    D["3.0 最终交付<br/>四份报告与完整报告包"]
+    A["原始答案与引用<br/>回答、来源、截图、页面存证"]
+    B["知识点对比<br/>原子主张、差异、引用忠实性"]
+    C["权威证据核验<br/>逐点搜索、证据绑定、平台裁决"]
+    D["平台表现与完整证据<br/>四份报告与完整报告包"]
     A -->|"capture-gate"| B
     B -->|"comparison-gate"| C
     C -->|"authority-gate"| D
 ```
 
-### 第一步：1.0 无损采集
+### 第一步：原始答案与引用
 
 输入是用户原始问题和明确选择的平台集合。输出至少包括：
 
@@ -95,9 +143,9 @@ flowchart LR
 - `capture-gate.json`
 - `01-capture-report.html`
 
-只有 `results.json` 中全部指定平台状态为 `success`、回答非空且恢复状态不再为 `required`，才允许进入 1.1。
+只有 `results.json` 中全部指定平台状态为 `success`、回答非空且恢复状态不再为 `required`，才允许进入知识点对比。
 
-### 第二步：1.1 知识点结构化对比
+### 第二步：知识点结构化对比
 
 统一入口先生成 `comparison-task.json`。当前宿主智能体阅读任务包，完成语义拆解并写出 `comparison-analysis.json`；脚本负责验证、标准化和渲染。
 
@@ -110,9 +158,9 @@ flowchart LR
 - `comparison-gate.json`
 - `02-comparison-report.html`
 
-1.1 结论仍是“未经过外部权威核验的结构化对比”，不得被描述成最终事实结论。
+本阶段结论仍是“未经过外部权威核验的结构化对比”，不得被描述成最终事实结论。
 
-### 第三步：2.0 云端权威核验
+### 第三步：权威证据核验
 
 每个知识点独立生成：
 
@@ -128,9 +176,9 @@ flowchart LR
 - `verification.json`
 - `03-authority-report.html`
 
-### 第四步：3.0 最终裁决与交付
+### 第四步：平台表现与完整证据
 
-只有权威核验状态为 `completed` 才生成最终定稿：
+只有权威核验状态为 `completed` 才生成最终报告：
 
 - `04-final-report.html`
 - `pipeline.json`
@@ -145,7 +193,7 @@ flowchart LR
 - `N = 1`：完成单平台无损采集、知识点结构化、权威核验和最终报告；不制造不存在的跨平台差异。
 - `N ≥ 2`：在上述流程上增加跨平台一致性、冲突和来源差异对比。
 - 报告、门禁、平台卡片、知识点裁决和汇总分母都必须使用本次实际成功的平台集合。
-- 任一已选择平台失败时，整个 1.0 阶段失败关闭，不能用部分成功结果进入后续流程。
+- 任一已选择平台失败时，原始答案采集阶段失败关闭，不能用部分成功结果进入后续流程。
 
 示例：
 
@@ -162,30 +210,6 @@ flowchart LR
 --platform doubao
 ```
 
-## 支持平台
-
-平台适配器位于：
-
-`skills/llm-answer-reference-compare/assets/tool/dist/capture/platform-registry.js`
-
-当前注册表包含：
-
-| 平台 ID | 显示名称 | 说明 |
-|---|---|---|
-| `dknowc-chat` | 深知晓 | 标准问答；合格官方锚点可以进入可信搜索免查判断 |
-| `dknowc-deep-research` | 深知晓（深度研究） | 先等待普通回答完整生成，再点击“深度研究”，接管新打开的可信溯源报告页 |
-| `doubao` | 豆包 | 网页端回答与来源采集 |
-| `deepseek` | DeepSeek | 网页端回答与来源采集 |
-| `qianwen` | 通义千问 | 网页端回答与来源采集 |
-| `yuanbao` | 腾讯元宝 | 网页端回答与来源采集 |
-| `kimi` | Kimi | 网页端回答与来源采集 |
-| `chatgpt` | ChatGPT | 网页端回答与来源采集 |
-| `claude` | Claude | 网页端回答与来源采集 |
-| `gemini` | Gemini | 网页端回答与来源采集 |
-| `zhipu` | 智谱 | 网页端回答与来源采集 |
-
-网页结构会变化。注册表存在不等于目标平台永远可用；Release 的支持矩阵和当次 `platforms` 命令输出优先。
-
 ### 深知晓（深度研究）的独立语义
 
 `dknowc-deep-research` 不是 `dknowc-chat` 的显示别名，也不是普通页面多等一会：
@@ -199,26 +223,14 @@ flowchart LR
 
 按钮缺失、报告页未打开或结果未完成均为采集失败。它在 `results.json` 和报告中是一个独立平台结果。只有标准 `dknowc-chat` 满足完整锚点条件时才具有后续免重复搜索资格；深度研究结果不能自动继承该资格。
 
-## 快速开始
-
-### 环境要求
+## 环境要求
 
 - Python 3.10 或更高版本
 - Node.js 20 或更高版本
 - macOS、Windows 或 Linux
 - Google Chrome、Microsoft Edge、Brave 或 Chromium 之一
 - 需要在线采集时，拥有所选平台的合法账号和访问权限
-- 需要非免查权威核验时，拥有深知 MaaS 的合法访问权限
-
-### 获取 Release
-
-从 [`v1.0.0` Release](https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.0.0) 下载：
-
-- `fact-check-x-complete.zip`：唯一正式完整包，WorkBuddy 和一站式安装首选
-- `fact-check-x-suite-v1.0.0.zip`：四个公开独立模块
-- 单模块 ZIP：按需安装
-
-完整包 SHA256 必须是 `007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6`。下载后先按 [版本与 SHA256 验证](#版本与-sha256-验证) 校验，再安装。
+- 需要权威证据核验时，拥有深知 MaaS 的合法访问权限
 
 ### 安装运行依赖
 
@@ -455,7 +467,7 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js login \
 - 修改启动参数碰运气；
 - 用已有材料或搜索结果补成“成功”。
 
-宿主没有 Computer Use 时必须明确停在 1.0，不能跳到 1.1。
+宿主没有 Computer Use 时必须明确停在原始答案采集阶段，不能跳到知识点对比。
 
 ## CLI 完整示例
 
@@ -503,7 +515,7 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
   --retries 2
 ```
 
-### 5. 生成 1.1 任务
+### 5. 生成知识点对比任务
 
 ```bash
 python3 scripts/fact_check_x.py prepare-comparison \
@@ -588,9 +600,9 @@ Fact-Check-X/
 | 目录 | 职责 |
 |---|---|
 | `fact-check-x-complete` | WorkBuddy 等载体的一站式入口和产品门禁 |
-| `llm-answer-reference-compare` | 1.0 多端回答、引用与现场存证采集 |
-| `fact-check-x-knowledge-compare` | 1.1 原子知识点与引用忠实性对比 |
-| `fact-check-x-authoritative-verify` | 逐知识点权威取证、裁决与 V8 报告 |
+| `llm-answer-reference-compare` | 多平台回答、引用与现场存证采集 |
+| `fact-check-x-knowledge-compare` | 原子知识点与引用忠实性对比 |
+| `fact-check-x-authoritative-verify` | 逐知识点权威取证、裁决与平台表现报告 |
 | `fact-check-x-unified` | 跨模块定位、编排、门禁与交付 |
 
 ### 单次运行目录
@@ -626,8 +638,8 @@ fact-check-x-run/
 
 ### 不变量
 
-- 1.0 不改写原回答，不替换平台原引用。
-- 1.1 不联网找最终真相。
+- 原始答案采集不改写回答，不替换平台原引用。
+- 知识点对比不联网找最终真相。
 - 权威层一次只处理一个知识点。
 - 所有平台主张必须绑定当前知识点的真实证据 ID。
 - `supported` 和 `contradicted` 必须引用当前证据包中存在的证据。
@@ -682,7 +694,7 @@ Fact-Check-X 的默认边界：
 | 页面有输入框但仍未登录 | 页面登录入口是否仍存在 | 等用户完成登录，禁止提前提交问题 |
 | 验证码/CAPTCHA | 当前前台命令和页面 | 保持页面，交给用户本人处理 |
 | 回答采集不完整 | 页面是否仍在生成、来源计数是否达到页面声明 | 等待稳定；失败后自动重采 |
-| 生成 `capture-recovery.json` | `action`、平台、问题、profile | 有 Computer Use 时接管同一页面；没有时停在 1.0 |
+| 生成 `capture-recovery.json` | `action`、平台、问题、profile | 有 Computer Use 时接管同一页面；没有时停在原始答案采集 |
 | 一个平台失败 | `capture-gate.json` | 重采或恢复该平台；不能用部分成功继续 |
 | `configuration_required` | `configuration.command` 与 `userPrompt` | 前台运行自动配置；不要让用户粘贴 Key |
 | 可信搜索 401/403 | Key 状态 | 重新自动配置 |
@@ -714,7 +726,7 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 - Release 两次构建字节一致；
 - 每个资产与 manifest 的 SHA、大小、ZIP 根和法务文件一致；
 - 安装器 dry run 不写安装态；
-- 源 manifest 绑定 `v1.0.0`、正式完整包 SHA 与正式回执 SHA。
+- 源 manifest 绑定当前版本、正式完整包 SHA 与正式回执 SHA。
 
 ### 技能 Smoke Tests
 
@@ -743,33 +755,32 @@ node skills/llm-answer-reference-compare/tests/trusted_search_onboarding_test.mj
 
 ```bash
 FCX_RELEASE_OUT="./release-assets"
+FCX_VERSION="<发布版本>"
+FCX_CANDIDATE_SHA="<候选完整包SHA256>"
+FCX_OFFICIAL_SHA="<正式完整包SHA256>"
 
 python3 scripts/build_release.py \
   --out-dir "$FCX_RELEASE_OUT" \
-  --version 1.0.0 \
-  --upstream-candidate-sha 007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6 \
-  --official-complete-sha 007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6
+  --version "$FCX_VERSION" \
+  --upstream-candidate-sha "$FCX_CANDIDATE_SHA" \
+  --official-complete-sha "$FCX_OFFICIAL_SHA"
 
 python3 scripts/verify_release.py manifest \
   --manifest "$FCX_RELEASE_OUT/release-manifest.json" \
   --asset-dir "$FCX_RELEASE_OUT"
 ```
 
-`v1.0.0` 的正式回执 SHA 为 `317a6dc7b65a4020da252a08054b5a62a74001e088226722071232619ec857ea`。后续版本若缺少正式 SHA，构建状态只能是 `awaiting_promote`；候选 SHA 与正式 SHA 不一致时，构建器直接失败。
+缺少正式 SHA 时，构建状态只能是 `awaiting_promote`；候选 SHA 与正式 SHA 不一致时，构建器直接失败。已发布版本的精确哈希以对应 Release 内的 `release-manifest.json` 和 `SHA256SUMS` 为准。
 
 ## 版本与 SHA256 验证
 
-### 验证主任务正式包
-
-验证 `v1.0.0` 唯一正式完整包：
+### 验证完整包
 
 ```bash
 python3 scripts/verify_release.py sha \
   --file fact-check-x-complete.zip \
-  --sha256 007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6
+  --sha256 <Release 公布的 SHA256>
 ```
-
-该 SHA 已由正式回执 `317a6dc7b65a4020da252a08054b5a62a74001e088226722071232619ec857ea` 绑定为正式发布基线。
 
 ### 验证公开 Release
 
@@ -804,8 +815,8 @@ Get-FileHash .\fact-check-x-complete.zip -Algorithm SHA256
 启用 GitHub 不可变 Release 后：
 
 ```bash
-gh release verify v1.0.0 --repo ASI2030/Fact-Check-X
-gh release verify-asset v1.0.0 fact-check-x-complete.zip \
+gh release verify <版本标签> --repo ASI2030/Fact-Check-X
+gh release verify-asset <版本标签> fact-check-x-complete.zip \
   --repo ASI2030/Fact-Check-X
 gh attestation verify fact-check-x-complete.zip \
   --repo ASI2030/Fact-Check-X

@@ -1,4 +1,4 @@
 interface:
-  display_name: "1.1 知识点结构化对比"
+  display_name: "知识点对比"
   short_description: "本地拆解并对齐知识点、主张、所附依据与来源忠实性"
   default_prompt: "使用 $fact-check-x-knowledge-compare 在本地完成多平台知识点结构化对比；由当前智能体分析，不调用外部模型或可信搜索。"

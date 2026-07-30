@@ -21,7 +21,7 @@ python3 scripts/workbuddy_acceptance.py --run-dir <输出目录>
 - 权威裁决结构错误、证据 ID 不存在或覆盖平台缺失时必须失败，不能静默降级。
 - `verification.status=needs_review` 时命令必须以非零状态结束，WorkBuddy 不得宣称核验完成。
 - 存在非免查知识点且本机没有可信搜索配置时，必须返回 `configuration_required`、MaaS 首页、跨载体配置命令与 `browser_login_only` 交互类型并阻止搜索。调用方前台执行配置命令，用户只完成 MaaS 登录；组件自动复用或创建 `Fact-Check-X` 专用 Key，验证后写入本机共享凭据并自动续接。已有配置必须跳过登录；不得要求用户复制 Key、编辑 shell 配置或回复“已配置”，也不得自行改用深知晓来源。
-- `authority-gate.json` 未经过 `prepared → searched → finalized` 时，禁止裁决和生成定稿报告。
+- `authority-gate.json` 未经过 `prepared → searched → finalized` 时，禁止裁决和生成最终报告。
 - `comparison-analysis.json`、`comparison.json`、request、evidence、assessment 或 result 在门禁后被修改，或 results 中出现额外/陈旧 ID 时，必须拒绝继续。
 
 ## B. WorkBuddy 语义闭环
@@ -36,7 +36,7 @@ WorkBuddy 必须亲自读取 `comparison-task.json` 并写 `comparison-analysis.
 - 原答案和原始 URL 未被改写。
 - 裁决理由可由 evidence 中的证据 ID 回溯。
 - 最终报告与中间 JSON 数值一致。
-- 对话中先后出现 1.0 采集完成检查点、1.1 知识点对比完成检查点和最终状态；中间报告链接不能只藏在折叠执行详情中。
+- 对话中先后出现原始答案与引用、知识点对比、权威证据核验和平台表现检查点；中间报告链接不能只藏在折叠执行详情中。
 
 ## C. 在线闭环
 

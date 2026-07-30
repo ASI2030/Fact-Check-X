@@ -1,30 +1,63 @@
 ---
 name: fact-check-x-complete
-description: Fact-Check-X 完整事实核验中文技能，在 WorkBuddy 等智能体载体中一次调用多端回答与引用无损聚合、知识点结构化对比、可信搜索权威核验和 V8 定稿报告。用于完整事实核验、多家 AI 回答比较、来源忠实性检查、官方证据裁决及可审计报告交付；不调用任何外部模型 API，语义工作由当前运行载体直接完成。
+description: 面向真实业务决策的多平台事实核验 Skill。正式支持深知晓、深知晓（深度研究）、豆包、腾讯元宝、DeepSeek 和通义千问，按用户输入动态选择 N≥1 个平台。完整采集原回答、引用、截图与页面存证，拆解并对比关键事实，再按需使用可信搜索取得权威证据，交付四份独立报告和可追溯结论。基础采集与对比无需 API Key；可信搜索是权威核验阶段的可选增强。语义工作由 Codex、Claude Code、WorkBuddy 等当前运行载体完成，不调用外部大模型 API。
+license: Apache-2.0
+metadata:
+  slug: fact-check-x
+  displayName: 全知晓（Fact-Check-X）
+  version: "1.1.0"
+  summary: 正式支持 6 个 AI 平台，完整采集回答与引用、比较关键事实，并按需用权威证据逐点核验。
+  tags: [事实核验, 多平台对比, 可信搜索, 深度研究]
+  homepage: https://github.com/ASI2030/Fact-Check-X
 ---
 
-# Fact-Check-X 完整事实核验
+# 全知晓（Fact-Check-X）
+
+把同一个问题交给多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并形成可追溯结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
+
+## 支持平台
+
+当前内置以下网页端平台，按用户本次输入动态选择任意 `N≥1` 个：
+
+| 平台 | 能力 |
+|---|---|
+| 深知晓 | 标准问答、引用与官方来源采集 |
+| 深知晓（深度研究） | 等待普通回答完成后启动深度研究，并作为独立结果采集 |
+| 豆包 | 回答、引用与页面存证 |
+| DeepSeek | 回答、引用与页面存证 |
+| 通义千问 | 回答、引用与页面存证 |
+| 腾讯元宝 | 回答、引用与页面存证 |
+平台由用户选择，不存在固定“五平台模式”。`N=1` 可完成单平台事实核验；`N≥2` 会额外比较各平台的共识、冲突和来源差异。网页结构变化时，技能会明确报告失败并停在当前阶段，不会用部分结果冒充完整报告。
+
+## 使用体验
+
+- 用户只需提供核验问题和想比较的平台；没有指定平台时，先用自然语言询问，不要求记平台 ID。
+- 第一次使用某个平台时打开浏览器，由用户本人完成登录或验证码；会话保存后自动复用。
+- 每一步都交付可打开的独立报告：原始答案与引用、知识点对比（未核验）、权威证据核验、平台表现与完整证据。
+- 多平台采集与知识点对比不需要 API Key。只有用户继续进行权威证据核验，且现有材料不足以直接裁决时，才检查可信搜索配置。
+- 可信搜索未配置时，只引导用户登录深知智能平台；技能自动获取或创建专用 Key 并安全保存在本机，不要求用户复制粘贴密钥。
+- 语义分析由 Codex、Claude Code、WorkBuddy 等当前运行载体完成，不调用外部大模型 API。
 
 ## 强制执行门禁（任何动作前先读）
 
-1. **语言硬门禁**：读取本技能后的第一句话、过程更新、命令说明、阶段检查点、错误说明和最终答复全部只使用简体中文；不得输出英文句子。命令、路径、平台 ID 和数据字段名可以保留原文。第一条回复直接使用“我将使用‘完整事实核验’技能核验这个问题。先完成所选平台的登录与无损采集，再依次输出 1.0、1.1、云端权威核验和最终裁决报告。”，不得先用英文介绍技能或流程。
+1. **语言硬门禁**：读取本技能后的第一句话、过程更新、命令说明、阶段检查点、错误说明和最终答复全部只使用简体中文；不得输出英文句子。命令、路径、平台 ID 和数据字段名可以保留原文。第一条回复直接使用“我会核验这个问题：先采集您选择的平台原回答和引用，再比较共识与分歧；如需权威结论，最后用可信搜索逐点核验。每一步都会给您一份可打开的报告。”，不得先用英文介绍技能或内部流程编号。
 2. 执行任何命令前先检查当前会话可调用的工具。完整在线采集优先由包内 Playwright 直接启动并控制系统 Chrome、Microsoft Edge、Brave 或 Chromium；Computer Use 不是正常采集的前置条件，只是自动化失败后的恢复手段。只有命令工具时可以前台执行一次 `login` 验证可见浏览器，但没有真实成功输出前不得声称浏览器已启动。
 3. 所有流水线命令必须前台直接执行并等待真实退出状态，包括 `login`、`run`、`prepare-comparison`、`complete-comparison`、`prepare-authority`、`search-authority`、`finalize-authority` 和 `deliver`。执行工具因等待用户操作而返回可轮询的运行会话 ID 时，应保留并轮询该会话；禁止使用 shell 后台任务，禁止给任何流水线命令添加 `| tail`、`| tee`、`|| true` 或其他会掩盖退出码的包装。
 4. `login` 是可见浏览器命令，必须严格按本技能给出的参数执行，不得添加 `--headed` 或其他未列出的参数。精确命令尚未失败时，不得先检查 CLI 帮助、源码或浏览器环境；精确命令失败后只按错误与 `capture-recovery.json` 恢复。
 5. 未看到 `login` 成功、可提问页面已建立或 `results.json` 全平台成功证据前，禁止告诉用户“浏览器已启动”“采集已在后台运行”或“将自动进入后续流程”。
 6. `login` 或 `run` 运行期间出现登录、短信验证码、人机验证或 CAPTCHA 时，保持命令和当前 Playwright 页面运行，立即提示用户本人处理；检测到处理完成后自动继续，不得关闭页面、重输问题或提前结束任务。
-7. `login` 或 `run` 非零退出、浏览器意外关闭、人工处理超时或采集失败时，立即读取 `capture-recovery.json`。运行载体有 Computer Use 时调用它恢复；没有时明确说明“当前载体无法调用 Computer Use，采集流程已停止”，停在 1.0。
+7. `login` 或 `run` 非零退出、浏览器意外关闭、人工处理超时或采集失败时，立即读取 `capture-recovery.json`。运行载体有 Computer Use 时调用它恢复；没有时明确说明“当前载体无法调用 Computer Use，原始答案采集已停止”，停在原始答案采集阶段。
 8. 进入 Computer Use 恢复后，禁止改用 headless/无头浏览器、清理锁文件、修改启动参数或用命令行诊断规避接管。允许使用原持久化配置重新打开同一平台，并直接复用 `capture-recovery.json.question`。
-9. `capture-gate.json` 未证明所有指定平台均成功前，禁止进入 1.1 和后续流程。不得用已有材料、搜索结果、空回答或部分成功结果替代失败平台。
-10. **分阶段交付门禁**：默认在 1.0、1.1 和云端权威核验各自完成后，先向用户发送本阶段真实可打开的独立产物，再询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”。收到“继续下一步”前禁止执行下一阶段命令。用户在最初请求中明确要求“完整跑完、无需逐步确认”时，可以连续执行，但仍必须逐阶段发送可打开产物和状态，不得只在最后一次性汇报。最终裁决完成后交付第四阶段产物，并允许用户确认完成或指定返回修正的阶段。程序硬门禁、登录、验证码和待复核状态不受自动连续执行授权影响。
+9. `capture-gate.json` 未证明所有指定平台均成功前，禁止进入知识点对比和后续流程。不得用已有材料、搜索结果、空回答或部分成功结果替代失败平台。
+10. **分阶段交付门禁**：默认在原始答案采集、知识点对比和权威证据核验各自完成后，先向用户发送本阶段真实可打开的独立产物，再询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”。收到“继续下一步”前禁止执行下一阶段命令。用户在最初请求中明确要求“完整跑完、无需逐步确认”时，可以连续执行，但仍必须逐阶段发送可打开产物和状态，不得只在最后一次性汇报。平台表现评估完成后交付第四阶段产物，并允许用户确认完成或指定返回修正的阶段。程序硬门禁、登录、验证码和待复核状态不受自动连续执行授权影响。
 
 本技能是对外唯一入口，包内自带三个独立业务模块：
 
 1. `llm-answer-reference-compare`：多端回答、原始引用与现场存证无损采集。
 2. `fact-check-x-knowledge-compare`：原子知识点拆解、主张对齐、来源忠实性判断。
-3. `fact-check-x-authoritative-verify`：逐知识点可信搜索、证据裁决、独立云端权威核验报告与 V8 定稿报告。
+3. `fact-check-x-authoritative-verify`：逐知识点可信搜索、证据裁决、独立权威核验报告与最终平台表现报告。
 
-脚本只负责采集、校验、编排和渲染。知识点拆解、证据理解与裁决由当前 WorkBuddy 运行载体完成，禁止调用任何外部模型 API。
+脚本只负责采集、校验、编排和渲染。知识点拆解、证据理解与裁决由当前运行载体完成，禁止调用任何外部模型 API。
 
 所有面向用户的提示、阶段检查点、错误说明和最终答复必须使用中文。不得因为运行载体的默认语言改用英文。
 
@@ -36,7 +69,7 @@ description: Fact-Check-X 完整事实核验中文技能，在 WorkBuddy 等智�
 python3 scripts/fact_check_x.py locate
 ```
 
-仅当需要从真实 AI 网页采集时安装 1.0 运行依赖：
+仅当需要从真实 AI 网页采集时安装采集运行依赖：
 
 ```bash
 cd modules/llm-answer-reference-compare/assets/tool
@@ -55,7 +88,7 @@ Microsoft Edge、Brave、Chromium。Playwright 自带的 Chrome for Testing
 
 ## 完整流程
 
-### 1.0 首次登录与无损采集
+### 第一步：原始答案与引用
 
 首次采集某个平台时，必须先在对话中告诉用户“将打开浏览器，请完成登录；检测到可提问界面后自动保存会话”。不得把提示只藏在命令输出里。然后逐个平台打开可见浏览器并等待登录准备命令成功：
 
@@ -91,17 +124,17 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
 标准深知晓使用 `dknowc-chat`。深知晓（深度研究）使用
 `dknowc-deep-research`：采集器会在同一会话先等待普通回答完整生成，再点击
 “深度研究”，接管新打开的可信溯源报告页，等待结果完整生成后独立保存为一个
-平台；按钮缺失、报告页未打开或结果未完成均按采集失败处理。豆包可由用户改选
-内置 `deepseek`。平台组合完全按用户输入决定，内置选项包括
+平台；按钮缺失、报告页未打开或结果未完成均按采集失败处理。平台组合完全按用户输入决定，
+正式支持的内置选项包括
 `dknowc-chat`、`dknowc-deep-research`、`doubao`、`yuanbao`、`deepseek`、
-`qianwen`，也允许
-已注册的其他平台；不存在固定“五平台模式”或固定上限。所有选定平台必须
-采集成功后才允许进入 1.1，1.0、1.1、云端权威核验与最终报告均按本次
+`qianwen`；`generic` 仅供开发者适配和验证新网页，不属于正式支持平台。
+不存在固定“五平台模式”或固定上限。所有选定平台必须
+采集成功后才允许进入知识点对比。原始答案、知识点对比、权威证据核验与平台表现报告均按本次
 实际平台集合动态展示。
 
 保留完整原答案、原始 URL、引用标记、引用正文、截图和失败状态。不得摘要、改写或用搜索结果替换原始来源。
 
-当深知平台所附来源只有标题或截断摘要时，1.0 用可信搜索 `return_full_content=true` 补全与该标题或原始 URL 匹配的同一材料全文；返回全文或段落直接用于判断，不访问源网址二次抓取正文。可信搜索返回的 `源网址` 作为官方来源主链接，深知收录页作为辅助链接；未返回源网址时保留深知收录页兜底。不得另找材料替换平台引用。其他平台已绑定 PDF 经可信搜索与直接提取仍无正文时必须失败关闭并进入 OCR 或 Computer Use，不能把采集缺口计为平台幻觉。
+当深知平台所附来源只有标题或截断摘要时，采集阶段用可信搜索 `return_full_content=true` 补全与该标题或原始 URL 匹配的同一材料全文；返回全文或段落直接用于判断，不访问源网址二次抓取正文。可信搜索返回的 `源网址` 作为官方来源主链接，深知收录页作为辅助链接；未返回源网址时保留深知收录页兜底。不得另找材料替换平台引用。其他平台已绑定 PDF 经可信搜索与直接提取仍无正文时必须失败关闭并进入 OCR 或 Computer Use，不能把采集缺口计为平台幻觉。
 
 ### 采集完成硬门禁与 Computer Use 恢复
 
@@ -111,15 +144,15 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
 - 自动重采后仍失败，采集器会写出 `capture-recovery.json` 并以非零状态退出。此时必须暂停流水线。
 - Playwright 检测到登录、验证码或人机验证时，优先保持当前命令与页面运行，提示用户本人完成；完成后自动续采。
 - 登录准备命令非零退出、浏览器意外关闭或人工处理超时时，同样会写出 `capture-recovery.json`；这已经是 Computer Use 接管信号，不是继续诊断浏览器环境的授权。
-- `capture-recovery.json` 的 `action` 为 `computer_use` 时，有 Computer Use 的运行载体立即恢复同一平台，处理登录后的页面操作、地区选择、问题提交和回答完成等待；没有该能力时停在 1.0，不得直接跳到 1.1。
+- `capture-recovery.json` 的 `action` 为 `computer_use` 时，有 Computer Use 的运行载体立即恢复同一平台，处理登录后的页面操作、地区选择、问题提交和回答完成等待；没有该能力时停在原始答案采集阶段，不得直接跳到知识点对比。
 - 禁止以 headless 测试、另一套浏览器、锁文件清理、显示会话检查或启动参数调整代替恢复。
 - 接管时必须直接读取并复用 `capture-recovery.json.question`，不得要求用户滚动到旧会话开头寻找或复制原问题。
 - 登录、验证或人工发送需要用户参与时，保持当前 Playwright 页面和采集上下文，不得关闭页面、重复打开浏览器或机械重采。明确告诉用户直接在页面处理即可，也可回复“验证已完成”或“答案已生成”；不得要求用户暂停或取消任务。
 - Computer Use 遇到账号、密码、短信验证码、人机验证或 CAPTCHA 时，交给用户本人处理；检测用户处理完成或收到“验证已完成”“答案已生成”后，重新检查当前页面，等待回答完全停止生成并自动续采。
-- Computer Use 恢复页面后重新运行 1.0 采集。只有 `results.json` 中所有指定平台均为 `success`、回答非空且 `capture-recovery.json.status` 不再是 `required`，才允许运行 `prepare-comparison`。
+- Computer Use 恢复页面后重新运行原始答案采集。只有 `results.json` 中所有指定平台均为 `success`、回答非空且 `capture-recovery.json.status` 不再是 `required`，才允许运行 `prepare-comparison`。
 - 统一入口生成的 `capture-gate.json` 是程序级硬门禁；失败平台、空回答和初始化提示都无法进入知识点对比、权威核验或最终报告。
 
-### 1.1 知识点结构化对比
+### 第二步：知识点对比（未核验）
 
 ```bash
 python3 scripts/fact_check_x.py prepare-comparison \
@@ -127,18 +160,18 @@ python3 scripts/fact_check_x.py prepare-comparison \
   --run-dir <run目录>
 ```
 
-命令成功后，必须立刻向用户发送一条独立的 **1.0 采集完成检查点**，展示每个平台的采集状态、可回溯参考文献数量、无 URL 来源标签数量和耗时，并提供以下可点击产物：
+命令成功后，必须立刻向用户发送一条独立的 **原始答案采集完成检查点**，展示每个平台的采集状态、可回溯参考文献数量、无 URL 来源标签数量和耗时，并提供以下可点击产物：
 
 - `capture/report.html`：原始答案、参考文献和引用关系；
 - `capture/results.json`：无损结构化采集结果；
 - `capture/report.md`：可迁移文本报告；
 - `capture-gate.json`：全部平台采集成功证明。
 
-必须使用命令返回的 `deliverables[0].path` 发送真正的 Markdown 文件链接，例如 `[打开 1.0 原始采集报告](<返回路径>)`；禁止仅用反引号显示路径。该检查点必须在开始 1.1 前对用户可见。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。不得只把路径藏在“运行命令”、折叠执行详情或最终总结中。
+必须使用命令返回的 `deliverables[0].path` 发送真正的 Markdown 文件链接，例如 `[打开原始答案与引用报告](<返回路径>)`；禁止仅用反引号显示路径。该检查点必须在开始知识点对比前对用户可见。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。不得只把路径藏在“运行命令”、折叠执行详情或最终总结中。
 
 豆包等页面可能只显示来源名称而不暴露原文 URL。采集器会先尝试展开来源标签获取真实链接；仍无链接时写入 `sourceMentions`。此时必须表述为“0 条可回溯参考文献，N 个无 URL 来源标签”，不得说“页面没有来源”，也不得把标签伪造成参考文献。
 
-读取 `comparison-task.json`，由当前承载智能体直接写 `comparison-analysis.json`。每个知识点只表达一个可核验事实变量；同一事实的不同数值必须对齐在同一点；只能使用 1.0 已捕获来源判断来源忠实性，禁止联网补证。顶层必须填写 `synthesisDraft`，其 `status` 固定为 `unverified`，正文综合所有相关知识点并保留冲突、条件和缺口，`basisKnowledgePointIds` 只能引用当前知识点；它是“综合草案（未核验）”，不得写成权威最终答案。
+读取 `comparison-task.json`，由当前承载智能体直接写 `comparison-analysis.json`。每个知识点只表达一个可核验事实变量；同一事实的不同数值必须对齐在同一点；只能使用原始答案采集阶段已经保存的来源判断来源忠实性，禁止联网补证。顶层必须填写 `synthesisDraft`，其 `status` 固定为 `unverified`，正文综合所有相关知识点并保留冲突、条件和缺口，`basisKnowledgePointIds` 只能引用当前知识点；它是“综合草案（未核验）”，不得写成权威最终答案。
 
 原子性必须落实到每个平台的 `claim`，不能只把知识点标题写得宽泛。原回答一句话同时包含多个可独立判真的义务、条件、对象、数值或后果时，必须拆成多个知识点；各点的 `claim` 只保留当前事实，`answerExcerpt` 可以复用同一段原文。仅个别平台增加的实质事实也要单独成点，其他平台标为未覆盖，禁止把新增事实并入宽泛知识点后借用深知晓锚点免查。`trustedAnchor` 只能覆盖与深知晓权威结论相同的单一事实变量；超出该变量的主张必须成为无锚点知识点，交给后续一次可信搜索。
 
@@ -155,14 +188,14 @@ python3 scripts/fact_check_x.py complete-comparison \
   --run-dir <run目录>
 ```
 
-若命令返回 `fact-check-x/product-truth@1` 契约错误，必须停留在 1.1：
+若命令返回 `fact-check-x/product-truth@1` 契约错误，必须停留在知识点对比阶段：
 按错误路径补齐或重写 `comparison-analysis.json`，随后重新执行
-`complete-comparison`，最多自动修复 2 次。两次后仍失败则明确报告 1.1
+`complete-comparison`，最多自动修复 2 次。两次后仍失败则明确报告知识点对比
 阻断及缺失字段，禁止进入 `prepare-authority`，也禁止静默结束任务。
 
-命令成功后，必须立刻向用户发送一条独立的 **1.1 知识点对比完成检查点**，展示知识点数量、待复核数量和“综合草案（未核验）”。必须使用 `deliverables[0].path` 发送 `[打开 1.1 知识点对比报告](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。
+命令成功后，必须立刻向用户发送一条独立的 **知识点对比完成检查点**，展示知识点数量、待复核数量和“综合草案（未核验）”。必须使用 `deliverables[0].path` 发送 `[打开知识点对比报告（未核验）](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。
 
-### 云端权威核验
+### 第三步：权威证据核验（可选增强）
 
 可信搜索使用跨载体共享的本机配置。每次进入权威核验前先自动检查；已有有效 Key 时直接继续，不打开登录页，也不要求用户重复配置。首次缺少 Key 时，向用户说明“将打开深知 MaaS 页面，您只需完成登录，后续由技能自动配置”，随后立即执行命令返回的 `configuration.command`。配置组件会使用包内 Playwright 打开系统浏览器并等待用户本人完成短信、密码、验证码或人机验证；登录成功后自动读取已有完整 Key，没有可复用 Key 时创建名称为 `Fact-Check-X` 的专用 Key，验证后写入 `~/.fact-check-x/credentials/trusted-search-key`。该配置供 Codex、Claude Code、WorkBuddy 等载体共同复用。
 
@@ -181,13 +214,13 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run目录> --max-wor
 
 配置组件返回 `status=configured` 或 `status=already_configured` 后，自动重新执行 `prepare-authority`；只有返回 `status=prepared` 才能继续搜索。登录期间保持浏览器与命令运行，用户完成登录后自动续接。不得自行决定“直接基于深知晓官方来源裁决”，不得以普通联网搜索代替可信搜索，也不得让用户在对话中发送密钥。
 
-`comparison-gate.json` 会锁定采集结果、`comparison-analysis.json` 与 `comparison.json` 的摘要；`authority-gate.json` 会继续锁定 request、evidence、assessment 和 result 的精确文件集合及摘要。后续发现文件被修改、ID 不一致、额外/陈旧 result、缺失 assessment（已取得证据的知识点）或手工结果时必须拒绝继续。只有 `search-authority` 正常完成并把门禁更新为 `searched` 后，才能写 assessment、运行 `finalize-authority` 或生成定稿报告。禁止手工伪造 evidence、result，禁止通过修改中间 JSON 消除待复核，禁止在缺钥时宣称“核心事实核验已完成”。
+`comparison-gate.json` 会锁定采集结果、`comparison-analysis.json` 与 `comparison.json` 的摘要；`authority-gate.json` 会继续锁定 request、evidence、assessment 和 result 的精确文件集合及摘要。后续发现文件被修改、ID 不一致、额外/陈旧 result、缺失 assessment（已取得证据的知识点）或手工结果时必须拒绝继续。只有 `search-authority` 正常完成并把门禁更新为 `searched` 后，才能写 assessment、运行 `finalize-authority` 或生成最终报告。禁止手工伪造 evidence、result，禁止通过修改中间 JSON 消除待复核，禁止在缺钥时宣称“核心事实核验已完成”。
 
-逐个读取 `authority/requests` 和 `authority/evidence`，由当前 WorkBuddy 直接把裁决写入 `authority/assessments/<知识点ID>.json`。已有合格深知晓官方锚点时必须免查；否则每个知识点只调用一次可信搜索。多个知识点独立并发，不上传无关回答全文。
+逐个读取 `authority/requests` 和 `authority/evidence`，由当前运行载体直接把裁决写入 `authority/assessments/<知识点ID>.json`。已有合格深知晓官方锚点时必须免查；否则每个知识点只调用一次可信搜索。多个知识点独立并发，不上传无关回答全文。
 
 免查模式下，`trustedAnchor.officialAnswer` 是当前知识点的权威结论，锚点证据列表用于来源追溯，不要求每条标题或截断摘录逐字复述该结论。平台主张与 `officialAnswer` 语义一致，或可由其直接推出时，必须裁决为 `supported` 并引用当前锚点中的有效证据 ID。只有平台主张增加了 `officialAnswer` 和锚点均不能支持的实质事实，或者事实确实无法判定时，才使用 `insufficient`。不得仅因锚点摘录较短，就把与 `officialAnswer` 同义的主张判为证据不足。
 
-1.1 的引用忠实性和本阶段的事实正确性必须分别保留：平台自己的引用不支持其主张时，1.1 继续记录 `faithfulness=insufficient`；若该主张经权威结论证实，本阶段仍裁决为 `supported`，最终分类由程序据此形成 `coincidental`，不能用引用缺口代替事实裁决。
+知识点对比阶段的引用忠实性和本阶段的事实正确性必须分别保留：平台自己的引用不支持其主张时，继续记录 `faithfulness=insufficient`；若该主张经权威结论证实，本阶段仍裁决为 `supported`，最终分类由程序据此形成 `coincidental`，不能用引用缺口代替事实裁决。
 
 每个裁决文件必须严格使用以下结构；平台键必须与 request 中已覆盖的平台 ID 一致，`evidenceIds` 只能引用当前 evidence 文件中的证据 ID：
 
@@ -216,13 +249,15 @@ python3 scripts/fact_check_x.py finalize-authority --run-dir <run目录>
 ```
 
 `finalize-authority` 完成裁决后会独立生成 `verification.json` 和
-`03-authority-report.html`；即使返回 `status=needs_review`，也必须生成并返回明确标记待复核的阶段报告，同时继续禁止最终报告。必须立即发送 **云端权威核验检查点**，使用
-`deliverables[0].path` 提供 `[打开云端权威核验报告](<返回路径>)`；报告顶部
+`03-authority-report.html`；即使返回 `status=needs_review`，也必须生成并返回明确标记待复核的阶段报告，同时继续禁止最终报告。必须立即发送 **权威证据核验检查点**，使用
+`deliverables[0].path` 提供 `[打开权威证据核验报告](<返回路径>)`；报告顶部
 在完成状态展示“权威核验后的最终答案”，在待复核状态展示“当前核验结论（待复核）”，下方保留逐知识点证据和平台裁决。默认询问用户
 选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有
 最初请求已明确授权完整自动跑完且当前状态为 `completed` 时才可不等待。
 
-用户确认后再生成最终平台评价与完整报告包：
+### 第四步：平台表现与完整证据
+
+用户确认后再生成平台表现评估与完整报告包：
 
 ```bash
 python3 scripts/fact_check_x.py deliver \
@@ -237,76 +272,28 @@ python3 scripts/fact_check_x.py deliver \
 最终必须交付：
 
 - `05-complete-report-package.zip`：可直接发送给他人的完整报告包，内含四份 HTML、原始 JSON、截图、页面存证和逐知识点核验数据；
-- `01-capture-report.html`：1.0 原始答案、参考文献与引用存证报告；
-- `02-comparison-report.html`：1.1 知识点结构化对比报告；
-- `03-authority-report.html`：逐知识点权威结论、官方证据和各平台裁决的云端权威核验报告；
+- `01-capture-report.html`：原始答案、参考文献与引用存证报告；
+- `02-comparison-report.html`：知识点结构化对比报告（未核验）；
+- `03-authority-report.html`：逐知识点权威结论、官方证据和各平台裁决的权威证据核验报告；
 - `04-final-report.html`：按本次动态平台集合生成的平台表现评价、综合指标、关键发现与原始存证汇总；
 - `capture/results.json`：原始回答、参考文献、原始 URL、引用标记和现场存证索引；
 - `capture/capture-recovery.json`：在线采集时记录 Computer Use 恢复状态；
-- `capture/report.html`：1.0 原始答案、参考文献与引用关系可视化报告；
-- `capture/report.md`：1.0 可迁移文本报告；
+- `capture/report.html`：原始答案、参考文献与引用关系可视化报告；
+- `capture/report.md`：原始答案与引用的可迁移文本报告；
 - `capture-gate.json`：全部指定平台采集成功的程序级门禁证明；
-- `comparison-gate.json`：1.1 输入、分析与归一化结果未被后改的 provenance 证明；
-- `comparison.html`：1.1 知识点结构化对比报告；
-- `verification.json`、`report.html`、`pipeline.json`：权威核验数据、V8 定稿报告和全链路清单；
+- `comparison-gate.json`：知识点对比输入、分析与归一化结果未被后改的 provenance 证明；
+- `comparison.html`：知识点结构化对比报告（未核验）；
+- `verification.json`、`report.html`、`pipeline.json`：权威核验数据、最终平台表现报告和全链路清单；
 - 每个知识点的 request、evidence、assessment 和 result。
 
-最终对话必须使用 `deliverables` 返回路径，按“完整可分发报告包、1.0 原始采集报告、1.1 知识点对比报告、云端权威核验报告、最终平台评价报告、全链路清单”给出实际状态。即使最终报告已经生成，也不得省略三个阶段报告；并允许用户确认完成或指定返回修正的阶段。
+最终对话必须使用 `deliverables` 返回路径，按“完整可分发报告包、原始答案与引用报告、知识点对比报告（未核验）、权威证据核验报告、平台表现与完整证据报告、全链路清单”给出实际状态。即使最终报告已经生成，也不得省略三个阶段报告；并允许用户确认完成或指定返回修正的阶段。
 
-本机文件链接只用于当前 WorkBuddy 会话内查看，禁止把 macOS 用户目录、Windows 本地盘符路径或本机文件协议地址描述成群成员、客户或共享链接访问者可以打开的对外交付地址。需要对外发送或转交时：
+本机文件链接只用于当前运行会话内查看，禁止把 macOS 用户目录、Windows 本地盘符路径或本机文件协议地址描述成群成员、客户或共享链接访问者可以打开的对外交付地址。需要对外发送或转交时：
 
 1. 优先把 `05-complete-report-package.zip` 作为真实文件附件上传到目标会话、群聊、邮件或云盘；
 2. 目标平台支持多附件时，同时上传 `01-capture-report.html`、`02-comparison-report.html`、`03-authority-report.html` 和 `04-final-report.html`；
 3. 目标平台不支持文件上传时，必须明确提示“当前链接仅在执行机器可用”，并请用户选择可上传的交付渠道；不得只发送本机 Markdown 链接后宣称交付完成；
 4. `05-complete-report-package.zip` 内部必须使用相对路径，解压后可直接打开四份报告，不得包含可执行机器的绝对路径。
-
-## 完整离线验收
-
-安装后先运行内置全链路验收；它不联网、不需要密钥，但会生成可人工检查的最终报告：
-
-```bash
-python3 scripts/workbuddy_acceptance.py --run-dir <输出目录>
-```
-
-每次真实运行完成 1.1 后执行反馈验收代理；完成最终交付后增加
-`--require-final`。代理会自动检查来源文案与矩阵、证据定位、深知晓直接准确
-锚点、待复核泛滥、二次搜索数量和阶段数据守恒：
-
-```bash
-python3 scripts/feedback_acceptance_agent.py \
-  --run-dir <运行目录> \
-  --require-final
-```
-
-通过条件见 [WorkBuddy 验收标准](references/workbuddy-acceptance.md)。
-
-离线层通过后，发布候选必须从真实 WorkBuddy 安装目录和全新运行目录执行在线验收：
-
-```bash
-python3 scripts/installed_live_acceptance.py \
-  --installed-skill <真实安装目录> \
-  --run-dir <全新验收目录> \
-  --candidate-package <候选包路径> \
-  --candidate-sha256 <候选包SHA> \
-  --question "<真实验收问题>" \
-  --platform dknowc-chat \
-  --platform doubao \
-  --platform deepseek \
-  --n2-run <WorkBuddy双平台完整运行目录> \
-  --n3-run <WorkBuddy三平台完整运行目录> \
-  --n2-product-audit <双平台product-truth审计JSON> \
-  --n3-product-audit <三平台product-truth审计JSON> \
-  --independent-audit-task-id <独立Codex审计任务ID> \
-  --workbuddy-session-evidence <WorkBuddy任务会话证据JSON> \
-  --execute-online
-```
-
-该入口只验证同一 WorkBuddy 干净会话已经生成的 N=2 与 N=3 完整在线
-流水线，不会另起第二轮采集。会话回读必须绑定两条流水线的 capture
-SHA、product-truth 审计、真实登录状态、浏览器事件和 transcript；独立审计
-结论必须由脚本通过 Codex App Server 回读指定任务，不能用本地 JSON 代替。
-没有 `--execute-online`、平台不足 3 个、任何平台失败或安装态受管文件
-与候选包不一致时一律失败，不能用离线 fixture 或历史 completed-run 冒充。
 
 ## 在线配置
 
@@ -322,8 +309,8 @@ python3 scripts/trusted_search_config.py configure
 
 ## 执行边界
 
-- 1.0 只采集，不核验。
-- 1.1 只比较原回答与其自带来源，不联网找真相。
+- 原始答案阶段只采集，不核验。
+- 知识点对比阶段只比较原回答与其自带来源，不联网找真相。
 - 权威层一次只处理一个知识点，可信搜索只返回证据，不负责最终裁决。
 - 运行载体是 WorkBuddy、Codex、Claude Code 等智能体，不把运行载体称为“模型”。
 - 任何登录失败、验证码、搜索错误、证据不足和抽取异常都必须显式报告，不得伪装成功。

@@ -322,7 +322,7 @@ def main() -> int:
         results_path.write_text(json.dumps(results, ensure_ascii=False), encoding="utf-8")
         comparison_path.write_text(json.dumps(comparison, ensure_ascii=False), encoding="utf-8")
         verification_path.write_text(json.dumps(verification, ensure_ascii=False), encoding="utf-8")
-        authority_report = out / "云端权威核验报告.html"
+        authority_report = out / "权威证据核验报告.html"
         run([
             sys.executable,
             str(ROOT / "scripts" / "render_authority_report.py"),
@@ -332,15 +332,15 @@ def main() -> int:
             str(authority_report),
         ])
         authority_html = authority_report.read_text(encoding="utf-8")
-        assert "云端权威核验报告" in authority_html
+        assert "权威证据核验报告" in authority_html
         assert "深知晓" in authority_html and "豆包" in authority_html
         assert "data-fcx-authority-binding-sha256" in authority_html
         assert k1["authoritativeFinding"] in authority_html
         assert k1["verdicts"]["doubao"]["reason"] in authority_html
         report = out / "事实核查报告.html"
-        run([sys.executable, str(ROOT / "scripts" / "render_v8_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(verification_path), "--output", str(report)])
+        run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(verification_path), "--output", str(report)])
         report_html = report.read_text(encoding="utf-8")
-        baseline_html = (ROOT / "references" / "V8定稿报告视觉基准.html").read_text(encoding="utf-8")
+        baseline_html = (ROOT / "references" / "final-report-baseline.html").read_text(encoding="utf-8")
         for heading in ("① 参考性", "② 直接答案逐条判定", "②-补 补充参考分析", "③ 关键发现", "④ 原始答案与参考文献（存证）", "⑤ 指标口径速查", "⑥ 评测元信息"):
             assert heading in baseline_html and heading in report_html
         assert "https://gjj.gz.gov.cn/example" in report_html
@@ -400,7 +400,7 @@ def main() -> int:
         long_anchor_report = out / "long-anchor-report.html"
         run([
             sys.executable,
-            str(ROOT / "scripts" / "render_v8_report.py"),
+            str(ROOT / "scripts" / "render_final_report.py"),
             "--results",
             str(results_path),
             "--comparison",
@@ -427,7 +427,7 @@ def main() -> int:
         reference_anchor_report = out / "reference-anchor-report.html"
         run([
             sys.executable,
-            str(ROOT / "scripts" / "render_v8_report.py"),
+            str(ROOT / "scripts" / "render_final_report.py"),
             "--results",
             str(results_path),
             "--comparison",
@@ -452,7 +452,7 @@ def main() -> int:
         fabricated_path = out / "fabricated-verification.json"
         fabricated_path.write_text(json.dumps(fabricated_verification, ensure_ascii=False), encoding="utf-8")
         fabricated_report = out / "fabricated-report.html"
-        run([sys.executable, str(ROOT / "scripts" / "render_v8_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(fabricated_path), "--output", str(fabricated_report)])
+        run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(fabricated_path), "--output", str(fabricated_report)])
         fabricated_html = fabricated_report.read_text(encoding="utf-8")
         assert 'class="fabricated-alert"' in fabricated_html
         assert "高风险告警：检出编造" in fabricated_html
@@ -468,7 +468,7 @@ def main() -> int:
         evidence_mapping_path = out / "evidence-mapping-verification.json"
         evidence_mapping_path.write_text(json.dumps(evidence_mapping_verification, ensure_ascii=False), encoding="utf-8")
         evidence_mapping_report = out / "evidence-mapping-report.html"
-        run([sys.executable, str(ROOT / "scripts" / "render_v8_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(evidence_mapping_path), "--output", str(evidence_mapping_report)])
+        run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(evidence_mapping_path), "--output", str(evidence_mapping_report)])
         evidence_mapping_html = evidence_mapping_report.read_text(encoding="utf-8")
         assert "https://example.gov.cn/matched" in evidence_mapping_html
         assert "支持当前知识点的正文" in evidence_mapping_html
@@ -613,7 +613,7 @@ def main() -> int:
         batch = json.loads((batch_dir / "batch.json").read_text(encoding="utf-8"))
         assert batch["executionMode"] == "parallel" and batch["taskCount"] == 11
         assert batch["trustedSearchRequestCount"] == 11 and batch["elapsedMs"] < 700
-    print("PASS 云端权威核验")
+    print("PASS 权威证据核验")
     return 0
 
 

@@ -1,131 +1,45 @@
 # Fact-Check-X
 
-[中文](README.md) · [Security](SECURITY.md) · [Privacy](PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Release source manifest](release/manifest.json)
+[中文](README.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [Releases](https://github.com/ASI2030/Fact-Check-X/releases) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
 
-Current stable release: [`v1.0.0`](https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.0.0). The only official complete package is `fact-check-x-complete.zip`, SHA256:
+Compare complete answers and citations from several AI services, then verify atomic facts against authoritative evidence. Fact-Check-X makes each platform's answer, source support, disagreements and final finding traceable.
+
+## Quick start
+
+```bash
+skillhub install @user_186e37d0/fact-check-x
+```
+
+Or download `fact-check-x-complete.zip` from [GitHub Releases](https://github.com/ASI2030/Fact-Check-X/releases) and install it in WorkBuddy, Codex, Claude Code or another Agent Skills-compatible host.
+
+Then ask naturally:
 
 ```text
-007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6
+Use Fact-Check-X to verify this question: ...
+Platforms: DeepSeek, Qwen and Doubao.
 ```
 
-Fact-Check-X, branded as “全知晓” in Chinese, is an evidence-first, reproducible and auditable Agent Skills suite. It captures complete answers and citations from one or more user-selected AI websites, decomposes them into atomic knowledge points, verifies each point against authoritative evidence, and delivers four independently inspectable reports.
+## Officially supported platforms
 
-It is designed to make these relationships reviewable:
-
-- what each platform actually answered;
-- which sources it cited and whether they support the claim;
-- where platforms agree or conflict at the atomic-fact level;
-- which claims authoritative evidence supports, contradicts or cannot yet resolve;
-- how the final finding traces back to the original answer, citation and evidence.
-
-> Fact-Check-X is decision support, not a government, legal, medical, financial or other professional authority. Results depend on time, jurisdiction, source availability and the platforms selected for a run. A qualified person must review high-impact decisions.
-
-## Capabilities
-
-- Lossless web capture of complete answers, citation markers, global source lists, source text, screenshots and page evidence.
-- Atomic claim decomposition and source-faithfulness comparison.
-- One independent authority request per knowledge point, with parallel retrieval.
-- Fail-closed gates between capture, comparison, authority review and delivery.
-- Dynamic support for any selected platform count `N ≥ 1`.
-- Separate semantics for standard 深知晓 and 深知晓 Deep Research.
-- Four stage reports plus a portable final report package.
-- No external model API: semantic work is performed by the current host agent.
-
-## Four-stage workflow
-
-```mermaid
-flowchart LR
-    A["1.0 Lossless capture<br/>answers, citations and page evidence"]
-    B["1.1 Knowledge comparison<br/>atomic claims and source faithfulness"]
-    C["2.0 Authority verification<br/>evidence binding and verdicts"]
-    D["3.0 Delivery<br/>four reports and portable package"]
-    A -->|"capture-gate"| B
-    B -->|"comparison-gate"| C
-    C -->|"authority-gate"| D
-```
-
-### 1.0 Lossless capture
-
-The user supplies the original question and platform set. Fact-Check-X preserves the full answer, original URLs, citation markers, displayed source text, screenshots and failure states. All selected platforms must succeed before the next stage.
-
-Primary outputs:
-
-- `capture/results.json`
-- `capture/report.html`
-- `capture/report.md`
-- `capture-gate.json`
-- `01-capture-report.html`
-- `capture/capture-recovery.json` when recovery is required
-
-### 1.1 Atomic knowledge comparison
-
-The orchestrator creates `comparison-task.json`. The current host agent reads it, performs semantic decomposition and writes `comparison-analysis.json`; deterministic scripts validate, normalize and render it.
-
-This stage compares what platforms said and whether each attached source faithfully supports its claim. It does not search for final truth.
-
-Primary outputs:
-
-- `comparison-task.json`
-- `comparison-analysis.json`
-- `comparison.json`
-- `comparison.html`
-- `comparison-gate.json`
-- `02-comparison-report.html`
-
-### 2.0 Authoritative verification
-
-Each atomic knowledge point becomes an independent request. Trusted Search retrieves evidence; the current host agent decides whether the evidence supports, contradicts or cannot resolve each platform claim.
-
-The authority gate must move through `prepared → searched → finalized`. Empty evidence, a service failure, an invalid assessment or an unbound evidence ID produces `needs_review`, not a false completion.
-
-Primary outputs:
-
-- `authority/requests/`
-- `authority/evidence/`
-- `authority/assessments/`
-- `authority/results/`
-- `authority-gate.json`
-- `verification.json`
-- `03-authority-report.html`
-
-### 3.0 Final decision and delivery
-
-Only a completed authority stage may produce:
-
-- `04-final-report.html`
-- `pipeline.json`
-- `05-complete-report-package.zip`
-
-Interactive mode delivers each stage before asking the user to continue, revise or stop. A user may request uninterrupted execution at the start, but login, CAPTCHA, program gates and review states still cannot be bypassed.
-
-## Dynamic `N ≥ 1`
-
-- `N = 1`: single-platform capture, atomic structuring, authority verification and final reporting; no invented cross-platform comparison.
-- `N ≥ 2`: the same workflow plus cross-platform agreement, conflict and citation differences.
-- Every report, denominator and gate uses the actual platform set for that run.
-- One failed selected platform closes the entire capture gate.
-
-There is no fixed five-platform mode and no fixed platform maximum.
-
-## Platforms
-
-The current registry includes:
-
-| Platform ID | Name | Semantics |
+| Platform ID | Name | Capture |
 |---|---|---|
-| `dknowc-chat` | 深知晓 | Standard chat; a qualified official anchor may exempt a point from repeated search |
-| `dknowc-deep-research` | 深知晓 (Deep Research) | Wait for the normal answer, invoke Deep Research, take over the new provenance report page, and save it as a separate result |
-| `doubao` | Doubao | Web answer and citation capture |
-| `deepseek` | DeepSeek | Web answer and citation capture |
-| `qianwen` | Qwen | Web answer and citation capture |
-| `yuanbao` | Tencent Yuanbao | Web answer and citation capture |
-| `kimi` | Kimi | Web answer and citation capture |
-| `chatgpt` | ChatGPT | Web answer and citation capture |
-| `claude` | Claude | Web answer and citation capture |
-| `gemini` | Gemini | Web answer and citation capture |
-| `zhipu` | Zhipu | Web answer and citation capture |
+| `dknowc-chat` | DKnow Chat / 深知晓 | Standard answer, citations and official sources |
+| `dknowc-deep-research` | DKnow Deep Research | Runs after the normal answer and is saved as a separate platform result |
+| `doubao` | Doubao | Complete answer, citations and page evidence |
+| `yuanbao` | Tencent Yuanbao | Complete answer, citations and page evidence |
+| `deepseek` | DeepSeek | Complete answer, citations and page evidence |
+| `qianwen` | Qwen | Complete answer, citations and page evidence |
 
-Website structures change. A registered adapter is not a guarantee of permanent availability; use the support matrix and `platforms` output from the exact Release.
+The selected set is dynamic. `N=1` runs a complete single-platform verification. `N≥2` adds agreement, conflict and citation comparison. Platforms not listed here are not part of the current support commitment.
+
+## Four independent deliverables
+
+1. **Original answers and citations**: complete answers, references, screenshots and HTML evidence.
+2. **Knowledge comparison (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness.
+3. **Authoritative evidence verification**: evidence, findings, platform verdicts and review items.
+4. **Platform performance and complete evidence**: accuracy, completeness, source quality and a portable report package.
+
+Capture and comparison require no API key. Trusted Search is an optional enhancement used only at the authoritative verification stage. On first use, the user signs in to the DKnow MaaS page; the skill obtains or creates a dedicated local key without asking the user to paste secrets into chat. Semantic analysis runs in the current host and does not call an external model API.
 
 ### Deep Research is a separate platform result
 
@@ -169,7 +83,7 @@ cd ../../../..
 
 ## Installation
 
-Download `fact-check-x-complete.zip` from the [`v1.0.0` Release](https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.0.0). Its SHA256 must be `007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6`.
+Download `fact-check-x-complete.zip` from [GitHub Releases](https://github.com/ASI2030/Fact-Check-X/releases). Verify it against the `SHA256SUMS` file published with the same release.
 
 ### WorkBuddy
 
@@ -287,7 +201,7 @@ Profiles reduce repeated login but never bypass login-state, ready-page, answer-
 
 When automation cannot complete, `capture-recovery.json` records the selected platform, original question and recovery action. A host with Computer Use takes over the same visible page and profile, reuses the recorded question, lets the user handle password, SMS and CAPTCHA, waits for generation to stop, then reruns capture.
 
-Do not replace this recovery with a headless browser, a new temporary profile, lock-file deletion or a partial-result shortcut. A host without Computer Use must stop at 1.0.
+Do not replace this recovery with a headless browser, a new temporary profile, lock-file deletion or a partial-result shortcut. A host without Computer Use must stop at the original-answer capture stage.
 
 ## CLI example
 
@@ -400,7 +314,7 @@ See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 | Input box appears while still logged out | Wait until the login entry disappears |
 | CAPTCHA or SMS challenge | Keep the page open and let the user complete it |
 | One platform fails | Repair or recapture it; the capture gate must stay closed |
-| `capture-recovery.json` appears | Use Computer Use on the same page or stop at 1.0 |
+| `capture-recovery.json` appears | Use Computer Use on the same page or stop at original-answer capture |
 | `configuration_required` | Run the returned configuration command in the foreground |
 | Trusted Search times out | Preserve the Key and move to review |
 | `needs_review` | Fix evidence or assessment structure; do not report completion |
@@ -419,23 +333,26 @@ python3 skills/fact-check-x-unified/tests/smoke_test.py
 python3 skills/fact-check-x-complete/tests/smoke_test.py
 ```
 
-Build the reproducible `v1.0.0` public assets:
+Build reproducible public assets:
 
 ```bash
 FCX_RELEASE_OUT="./release-assets"
+FCX_VERSION="<release version>"
+FCX_CANDIDATE_SHA="<candidate complete-package SHA256>"
+FCX_OFFICIAL_SHA="<official complete-package SHA256>"
 
 python3 scripts/build_release.py \
   --out-dir "$FCX_RELEASE_OUT" \
-  --version 1.0.0 \
-  --upstream-candidate-sha 007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6 \
-  --official-complete-sha 007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6
+  --version "$FCX_VERSION" \
+  --upstream-candidate-sha "$FCX_CANDIDATE_SHA" \
+  --official-complete-sha "$FCX_OFFICIAL_SHA"
 
 python3 scripts/verify_release.py manifest \
   --manifest "$FCX_RELEASE_OUT/release-manifest.json" \
   --asset-dir "$FCX_RELEASE_OUT"
 ```
 
-The official `v1.0.0` receipt SHA is `317a6dc7b65a4020da252a08054b5a62a74001e088226722071232619ec857ea`. Future builds remain `awaiting_promote` without an official SHA and fail closed when candidate and official SHA differ.
+Builds remain `awaiting_promote` without an official SHA and fail closed when candidate and official SHA differ. Exact hashes for a published version are recorded in its `release-manifest.json` and `SHA256SUMS`.
 
 ## Version and SHA verification
 
@@ -444,7 +361,7 @@ Verify the formally promoted input:
 ```bash
 python3 scripts/verify_release.py sha \
   --file fact-check-x-complete.zip \
-  --sha256 007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6
+  --sha256 <SHA256 published with the release>
 ```
 
 Verify downloaded public assets:
@@ -458,8 +375,8 @@ python3 scripts/verify_release.py manifest \
 For an immutable GitHub Release:
 
 ```bash
-gh release verify v1.0.0 --repo ASI2030/Fact-Check-X
-gh release verify-asset v1.0.0 fact-check-x-complete.zip \
+gh release verify <tag> --repo ASI2030/Fact-Check-X
+gh release verify-asset <tag> fact-check-x-complete.zip \
   --repo ASI2030/Fact-Check-X
 gh attestation verify fact-check-x-complete.zip \
   --repo ASI2030/Fact-Check-X

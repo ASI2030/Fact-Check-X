@@ -50,7 +50,7 @@ def validate(data: object) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="校验 1.0 无损聚合结果。")
+    parser = argparse.ArgumentParser(description="校验多平台原始答案采集结果。")
     parser.add_argument("--input", required=True)
     args = parser.parse_args()
     try:

@@ -139,7 +139,7 @@ def main() -> int:
             "schemaVersion": "fact-check-x/test-assertions@1",
             "actualAssertionIds": ["ui.official_source_label", "ui.source_matrix_layout"],
         }), encoding="utf-8")
-    print("PASS 1.0 多端无损聚合")
+    print("PASS 多平台回答与引用无损采集")
     return 0
 
 

@@ -46,7 +46,7 @@
 
 ## 汇总结果
 
-V8 定稿报告接受统一入口生成的 `fact-check-x/verification@2`，其中每个知识点带一个 `authority` 单点结果，并包含：
+最终平台表现报告接受统一入口生成的 `fact-check-x/verification@2`，其中每个知识点带一个 `authority` 单点结果，并包含：
 
 ```json
 {

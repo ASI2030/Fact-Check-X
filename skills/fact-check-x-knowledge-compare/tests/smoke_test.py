@@ -686,7 +686,7 @@ def main() -> int:
                 "citation.decimal_not_marker",
             ],
         }), encoding="utf-8")
-    print("PASS 1.1 知识点结构化对比")
+    print("PASS 知识点结构化对比")
     return 0
 
 

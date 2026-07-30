@@ -47,8 +47,8 @@ PORTABLE_REPORT_README = """Fact-Check-X 完整事实核验报告包
 建议按以下顺序打开：
 1. 01-capture-report.html：原始答案、参考文献与引用存证
 2. 02-comparison-report.html：知识点结构化对比
-3. 03-authority-report.html：云端权威核验
-4. 04-final-report.html：最终裁决定稿
+3. 03-authority-report.html：权威证据核验
+4. 04-final-report.html：平台表现与完整证据
 
 请先解压整个压缩包，再用浏览器打开 HTML 文件，以保留截图、页面存证和报告导航。
 """
@@ -492,7 +492,7 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
         },
         "deliverables": [
             {
-                "label": "1.0 原始采集报告",
+                "label": "原始答案与引用报告",
                 "path": str(capture_deliverable.resolve()),
             }
         ],
@@ -543,7 +543,7 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
         },
         "deliverables": [
             {
-                "label": "1.1 知识点对比报告",
+                "label": "知识点对比报告（未核验）",
                 "path": str(comparison_deliverable.resolve()),
             }
         ],
@@ -826,9 +826,9 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
         "deliverables": [
             {
                 "label": (
-                    "云端权威核验报告"
+                    "权威证据核验报告"
                     if final_status == "completed"
-                    else "云端权威核验待复核报告"
+                    else "权威证据核验报告（待复核）"
                 ),
                 "path": str(authority_report.resolve()),
             }
@@ -914,14 +914,14 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     results = validate_capture_results(results_path)
     authority_gate_path = run_dir / "authority-gate.json"
     if not authority_gate_path.exists():
-        raise PipelineError("缺少权威核验门禁，禁止生成定稿报告")
+        raise PipelineError("缺少权威核验门禁，禁止生成最终报告")
     authority_gate = load_json(authority_gate_path)
     if (
         authority_gate.get("schemaVersion") != "fact-check-x/authority-gate@1"
         or authority_gate.get("status") != "finalized"
         or authority_gate.get("finalizeStatus") != "completed"
     ):
-        raise PipelineError("权威核验尚未通过取证与裁决门禁，禁止生成定稿报告")
+        raise PipelineError("权威核验尚未通过取证与裁决门禁，禁止生成最终报告")
     comparison_gate = require_comparison_provenance(run_dir)
     comparison_path = Path(args.comparison).resolve() if args.comparison else run_dir / "comparison.json"
     if comparison_path != Path(comparison_gate["files"]["comparison"]["path"]).resolve():
@@ -981,7 +981,7 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     ])
     run([
         sys.executable,
-        str(skills["authority"] / "scripts" / "render_v8_report.py"),
+        str(skills["authority"] / "scripts" / "render_final_report.py"),
         "--results",
         str(results_path),
         "--comparison",
@@ -1048,10 +1048,10 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
         "comparisonReport": manifest["artifacts"]["comparisonReport"],
         "report": str(report_path.resolve()),
         "deliverables": [
-            {"label": "1.0 原始采集报告", "path": str(capture_deliverable.resolve())},
-            {"label": "1.1 知识点对比报告", "path": str(comparison_deliverable.resolve())},
-            {"label": "云端权威核验报告", "path": str(authority_deliverable.resolve())},
-            {"label": "最终裁决定稿报告", "path": str(final_deliverable.resolve())},
+            {"label": "原始答案与引用报告", "path": str(capture_deliverable.resolve())},
+            {"label": "知识点对比报告（未核验）", "path": str(comparison_deliverable.resolve())},
+            {"label": "权威证据核验报告", "path": str(authority_deliverable.resolve())},
+            {"label": "平台表现与完整证据报告", "path": str(final_deliverable.resolve())},
             {
                 "label": "完整可分发报告包",
                 "path": package["path"],

@@ -245,7 +245,7 @@ def main() -> int:
             single_run / "02-comparison-report.html"
         ).read_text(encoding="utf-8")
         assert single_comparison_html.count('class="answer-panel"') == 1
-        assert "1.1 知识点结构化</h1>" in single_comparison_html
+        assert "知识点结构化</h1>" in single_comparison_html
         assert "逐知识点结构化结果" in single_comparison_html
         assert "<th>差异</th>" not in single_comparison_html
         assert "跨平台" not in single_comparison_html

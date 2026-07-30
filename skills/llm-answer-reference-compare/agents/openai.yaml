@@ -1,4 +1,4 @@
 interface:
-  display_name: "1.0 多端无损聚合"
+  display_name: "多平台原始答案采集"
   short_description: "无损采集多个 AI 网页端的完整回答、原始引用与现场存证"
   default_prompt: "使用 $llm-answer-reference-compare 从指定 AI 网页端无损采集回答和原始引用，保留引用标记、原 URL、失败状态与现场存证。"

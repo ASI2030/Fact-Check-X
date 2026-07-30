@@ -16,8 +16,8 @@ def main() -> int:
     assert "**语言硬门禁**" in instructions
     assert "第一句话、过程更新、命令说明、阶段检查点、错误说明和最终答复全部只使用简体中文" in instructions
     assert "不得输出英文句子" in instructions
-    assert "第一条回复直接使用“我将使用‘完整事实核验’技能核验这个问题" in instructions
-    assert "云端权威核验和最终裁决报告" in instructions
+    assert "第一条回复直接使用“我会核验这个问题" in instructions
+    assert "原始答案与引用、知识点对比（未核验）、权威证据核验、平台表现与完整证据" in instructions
     assert "不存在固定“五平台模式”或固定上限" in instructions
     assert "平台组合完全按用户输入决定" in instructions
     assert "**分阶段交付门禁**" in instructions
@@ -49,7 +49,7 @@ def main() -> int:
     assert "运行期间出现登录、短信验证码、人机验证或 CAPTCHA" in instructions
     assert "保持命令和当前 Playwright 页面运行" in instructions
     assert "禁止改用 headless/无头浏览器" in instructions
-    assert "当前载体无法调用 Computer Use，采集流程已停止" in instructions
+    assert "当前载体无法调用 Computer Use，原始答案采集已停止" in instructions
     for browser_name in ("Google Chrome", "Microsoft Edge", "Brave", "Chromium"):
         assert browser_name in instructions
     assert "不得反复启动 Chrome for Testing" in instructions
@@ -99,6 +99,27 @@ def main() -> int:
     assert 'name: "dknowc-deep-research"' in registry_text
     assert 'label: "深知晓（深度研究）"' in registry_text
     assert "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/" in registry_text
+    for platform in (
+        "dknowc-chat",
+        "dknowc-deep-research",
+        "doubao",
+        "yuanbao",
+        "deepseek",
+        "qianwen",
+    ):
+        assert f'name: "{platform}"' in registry_text
+    for unsupported in ("kimi", "chatgpt", "claude", "gemini", "zhipu"):
+        assert f'name: "{unsupported}"' not in registry_text
+    for public_only_term in (
+        "V8",
+        "1.0 原始",
+        "1.1 知识",
+        "云端权威核验",
+        "定稿报告",
+        "[WorkBuddy 验收标准]",
+    ):
+        assert public_only_term not in instructions
+    assert "](references/" not in instructions
     assert "Playwright 直接管理系统 Chromium 持久化会话" in live_acceptance
     assert "保留两平台登录状态" in live_acceptance
     assert "保留两平台主页面" not in live_acceptance

@@ -229,7 +229,7 @@ def main() -> int:
             for phrase in (
                 "`trustedAnchor.officialAnswer` 是当前知识点的权威结论",
                 "必须裁决为 `supported`",
-                "1.1 的引用忠实性和本阶段的事实正确性必须分别保留",
+                "知识点对比阶段的引用忠实性和本阶段的事实正确性必须分别保留",
             )
         ),
         "atomicMaterialAdditionPolicy": all(

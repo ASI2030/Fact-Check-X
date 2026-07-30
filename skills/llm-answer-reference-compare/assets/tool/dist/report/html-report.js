@@ -791,7 +791,7 @@ export function renderHtmlReport(run) {
         </div>
       </div>
     </section>
-    <p class="fine-print">本报告只展示 1.0 原始采集结果；后续知识点对比与权威核验由独立技能处理。</p>
+    <p class="fine-print">本报告展示原始答案、引用与现场存证；后续知识点对比与权威证据核验由独立阶段处理。</p>
   </main>
 </body>
 </html>`;

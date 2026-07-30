@@ -145,7 +145,7 @@ def main() -> int:
         assert verification["finalAnswer"]["status"] == "verified"
         assert verification["finalAnswer"]["knowledgePointIds"] == ["K1"]
         assert verification["knowledgePoints"][0]["authority"]["verdicts"]["doubao"]["category"] == "misleading"
-        assert "云端权威核验报告" in authority_report
+        assert "权威证据核验报告" in authority_report
         assert "权威核验后的最终答案" in authority_report
         assert "深知晓" in authority_report and "豆包" in authority_report
         assert "data-fcx-authority-binding-sha256" in authority_report
@@ -303,7 +303,7 @@ def main() -> int:
             str(configuration_run),
         ), keyless_environment)
         assert bypass_delivery["status"] == "failed"
-        assert "禁止生成定稿报告" in bypass_delivery["error"]
+        assert "禁止生成最终报告" in bypass_delivery["error"]
 
         tamper_run = Path(temp) / "tamper-run"
         run(command("prepare-comparison", "--results", str(results), "--run-dir", str(tamper_run)))
@@ -385,7 +385,7 @@ def main() -> int:
         assert json.loads((review_run / "authority-gate.json").read_text(encoding="utf-8"))["status"] == "review_pending"
         review_delivery = run_failed(command("deliver", "--results", str(results), "--run-dir", str(review_run)))
         assert review_delivery["status"] == "failed"
-        assert "禁止生成定稿报告" in review_delivery["error"]
+        assert "禁止生成最终报告" in review_delivery["error"]
         shutil.copyfile(AUTHORITY_FIXTURES / "K1-assessment.json", review_assessments / "K1.json")
         retried = run(command("finalize-authority", "--run-dir", str(review_run)))
         assert retried["status"] == "completed"

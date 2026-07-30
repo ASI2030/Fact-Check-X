@@ -1,15 +1,15 @@
 ---
 name: fact-check-x-unified
-description: Fact-Check-X 对外统一中文入口，轻量编排 1.0 多端无损聚合、可选的 1.1 知识点结构化对比和云端权威核验，生成可审计中间产物与 V8 定稿报告。用于完整事实核验、两家或多家 AI 回答对比、仅凭已知知识点直接权威核验，以及可下载可迁移的技能套件演示。
+description: Fact-Check-X 流程编排能力，依次组织多平台原始答案与引用采集、知识点结构化对比、权威证据核验和平台表现评估，生成可打开、可审计、可迁移的阶段产物与完整报告包。
 ---
 
 # Fact-Check-X 统一入口
 
 本技能只做编排，不内嵌三个业务层。它按以下顺序调用兄弟技能：
 
-1. `llm-answer-reference-compare`：1.0 多端回答与引用无损聚合。
-2. `fact-check-x-knowledge-compare`：1.1 本地知识点结构化对比，可选。
-3. `fact-check-x-authoritative-verify`：逐知识点并发权威核验与 V8 定稿报告。
+1. `llm-answer-reference-compare`：多平台回答、引用与现场存证采集。
+2. `fact-check-x-knowledge-compare`：本地知识点结构化对比，可选。
+3. `fact-check-x-authoritative-verify`：逐知识点并发权威核验与平台表现报告。
 
 所有语义拆解和证据裁决由当前承载技能的智能体完成。脚本不调用任何模型 API。
 
@@ -29,7 +29,7 @@ python3 scripts/fact_check_x.py locate
 
 ## 完整流程
 
-先用 1.0 采集 `results.json`，然后准备 1.1：
+先采集 `results.json`，然后准备知识点对比：
 
 ```bash
 python3 scripts/fact_check_x.py prepare-comparison \
@@ -37,7 +37,7 @@ python3 scripts/fact_check_x.py prepare-comparison \
   --run-dir <run>
 ```
 
-命令会同步生成 1.0 原始采集报告，在运行目录顶层生成 `01-capture-report.html`，并通过 `deliverables` 返回用户可见路径。调用方必须先用该路径发送真正的 Markdown 文件链接，再继续 1.1；禁止只显示反引号路径。
+命令会同步生成原始答案与引用报告，在运行目录顶层生成 `01-capture-report.html`，并通过 `deliverables` 返回用户可见路径。调用方必须先用该路径发送真正的 Markdown 文件链接，再继续知识点对比；禁止只显示反引号路径。
 
 默认交互模式下，调用方发送本阶段产物后必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，收到继续指令后才能进入下一阶段。只有用户在最初请求中明确要求完整自动跑完时才可连续执行，但各阶段产物仍须逐步展示。
 
@@ -68,7 +68,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 
 当前智能体逐个读取 `authority/requests` 与 `authority/evidence`，把裁决写入 `authority/assessments/<知识点ID>.json`，然后：
 
-免查模式下，`trustedAnchor.officialAnswer` 是当前知识点的权威结论；锚点证据列表用于来源追溯，不要求标题或截断摘录逐字复述该结论。平台主张与 `officialAnswer` 语义一致或可由其直接推出时，裁决为 `supported` 并引用有效锚点证据 ID。仅当平台主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。1.1 的引用忠实性与本阶段的事实正确性分别保留，不能因平台自身引用不足而拒绝判断已经被权威结论证实的主张。
+免查模式下，`trustedAnchor.officialAnswer` 是当前知识点的权威结论；锚点证据列表用于来源追溯，不要求标题或截断摘录逐字复述该结论。平台主张与 `officialAnswer` 语义一致或可由其直接推出时，裁决为 `supported` 并引用有效锚点证据 ID。仅当平台主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。知识点对比阶段的引用忠实性与本阶段的事实正确性分别保留，不能因平台自身引用不足而拒绝判断已经被权威结论证实的主张。
 
 ```json
 {
@@ -106,7 +106,7 @@ python3 scripts/fact_check_x.py deliver --results <results.json> --run-dir <run>
 - `01-capture-report.html`：原始答案、参考文献与引用存证；
 - `02-comparison-report.html`：知识点结构化对比；
 - `03-authority-report.html`：逐知识点权威结论、官方证据和各平台裁决；
-- `04-final-report.html`：综合指标、关键发现与最终裁决定稿。
+- `04-final-report.html`：平台表现、综合指标、关键发现与完整证据。
 
 缺少任一报告都不得生成或交付 `05-complete-report-package.zip`。
 
@@ -118,17 +118,17 @@ python3 scripts/fact_check_x.py deliver --results <results.json> --run-dir <run>
 - `authority/batch.json`、`verification.json`、`report.html`、`pipeline.json`；
 - 四份阶段报告和 `05-complete-report-package.zip`。
 
-## 跳过 1.1
+## 跳过知识点对比
 
-1.1 是可选能力。已有结构化知识点时，可按云端技能的数据契约直接建立单知识点请求，独立调用 `fact-check-x-authoritative-verify`。统一入口不会强迫用户先采集多个 AI 回答。
+知识点对比是可选能力。已有结构化知识点时，可按权威证据核验模块的数据契约直接建立单知识点请求，独立调用 `fact-check-x-authoritative-verify`。统一入口不会强迫用户先采集多个 AI 回答。
 
 ## 执行边界
 
-- 1.0 只采集，不核验；可用可信搜索全文参数补全平台已给出的同一来源正文，但不得新增或替换引用。
-- 1.1 只比较原答案与所附来源，不联网找真相。
+- 原始答案阶段只采集，不核验；可用可信搜索全文参数补全平台已给出的同一来源正文，但不得新增或替换引用。
+- 知识点对比只比较原答案与所附来源，不联网找真相。
 - 云端层只接收当前知识点；各家主张相同则不上传主张，不同才上传差异。
 - 深知晓已有合格官方锚点时不重复搜索。
-- 最终报告必须使用云端技能内的 V8 定稿渲染器。
+- 最终报告必须使用权威证据核验模块内的稳定报告渲染器。
 
 ## 交付门禁
 

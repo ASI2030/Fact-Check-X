@@ -233,7 +233,7 @@ def render(verification: dict) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="fact-check-x-authority-report" content="1">
   <meta name="fact-check-x-verification-sha256" content="{verification_sha}">
-  <title>云端权威核验报告</title>
+  <title>Fact-Check-X 权威证据核验报告</title>
   <style>
     * {{ box-sizing: border-box; }}
     html {{ background: #eef1f5; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
@@ -305,12 +305,12 @@ def render(verification: dict) -> str:
 <body>
   <header class="top">
     <p class="eyebrow">Fact-Check-X · 第三阶段</p>
-    <h1>云端权威核验报告</h1>
+    <h1>权威证据核验报告</h1>
     <p class="question">{escaped(verification.get("question"))}</p>
   </header>
   <nav class="nav">
-    <a href="01-capture-report.html">1.0 原始采集</a>
-    <a href="02-comparison-report.html">1.1 知识点对比</a>
+    <a href="01-capture-report.html">原始答案与引用</a>
+    <a href="02-comparison-report.html">知识点对比</a>
     {final_report_nav}
   </nav>
   <main>
@@ -337,7 +337,7 @@ def render(verification: dict) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="生成独立云端权威核验报告。")
+    parser = argparse.ArgumentParser(description="生成独立权威证据核验报告。")
     parser.add_argument("--verification", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()

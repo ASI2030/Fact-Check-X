@@ -152,8 +152,8 @@ def expected_portable_files(run_dir: Path) -> dict[str, bytes]:
             "建议按以下顺序打开：\n"
             "1. 01-capture-report.html：原始答案、参考文献与引用存证\n"
             "2. 02-comparison-report.html：知识点结构化对比\n"
-            "3. 03-authority-report.html：云端权威核验\n"
-            "4. 04-final-report.html：最终裁决定稿\n\n"
+            "3. 03-authority-report.html：权威证据核验\n"
+            "4. 04-final-report.html：平台表现与完整证据\n\n"
             "请先解压整个压缩包，再用浏览器打开 HTML 文件，以保留截图、页面存证和报告导航。\n"
         ).encode("utf-8")
     }
@@ -171,7 +171,7 @@ def expected_portable_files(run_dir: Path) -> dict[str, bytes]:
             if b'href="03-authority-report.html"' not in content:
                 content = content.replace(
                     b'<a href="04-final-report.html">',
-                    b'<a href="03-authority-report.html">\xe4\xba\x91\xe7\xab\xaf\xe6\x9d\x83\xe5\xa8\x81\xe6\xa0\xb8\xe9\xaa\x8c</a>'
+                    b'<a href="03-authority-report.html">\xe6\x9d\x83\xe5\xa8\x81\xe8\xaf\x81\xe6\x8d\xae\xe6\xa0\xb8\xe9\xaa\x8c</a>'
                     b'<a href="04-final-report.html">',
                 )
         expected[f"{root}/{name}"] = content
@@ -257,10 +257,10 @@ def load_contract(script: Path) -> dict:
 
 
 def load_metrics_function(script: Path):
-    packaged = script.parents[1] / "modules/fact-check-x-authoritative-verify/scripts/render_v8_report.py"
-    source = script.parents[2] / "fact-check-x-authoritative-verify/scripts/render_v8_report.py"
+    packaged = script.parents[1] / "modules/fact-check-x-authoritative-verify/scripts/render_final_report.py"
+    source = script.parents[2] / "fact-check-x-authoritative-verify/scripts/render_final_report.py"
     target = packaged if packaged.exists() else source
-    spec = importlib.util.spec_from_file_location("fact_check_x_render_v8", target)
+    spec = importlib.util.spec_from_file_location("fact_check_x_render_final", target)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
     sys.path.insert(0, str(target.parent))
@@ -815,13 +815,13 @@ def main() -> int:
         else:
             legacy = load(legacy_path)
             recomputed_metrics = load_metrics_function(Path(__file__).resolve())(verified, verification.get("platforms") or [])
-            if legacy.get("metrics_v8") != recomputed_metrics:
+            if legacy.get("platform_metrics") != recomputed_metrics:
                 failures.append("embedded_report_metrics_mismatch")
             metrics_json = json.dumps(recomputed_metrics, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
             metrics_sha = hashlib.sha256(metrics_json.encode("utf-8")).hexdigest()
             if f'name="fact-check-x-metrics-sha256" content="{metrics_sha}"' not in final_html:
                 failures.append("final_report_metrics_hash_missing")
-            if not legacy.get("metrics_v8"):
+            if not legacy.get("platform_metrics"):
                 failures.append("missing_embedded_report_metrics")
         html = (run_dir / "01-capture-report.html").read_text(encoding="utf-8")
         for report_name in (

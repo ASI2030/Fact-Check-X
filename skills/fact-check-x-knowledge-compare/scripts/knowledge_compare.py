@@ -381,7 +381,7 @@ def task_platform(platform: dict) -> dict:
 def build_task(question: str, platforms: list[dict]) -> dict:
     return {
         "schemaVersion": "fact-check-x/comparison-task@1",
-        "task": "由当前承载技能的智能体完成 1.1 知识点结构化对比",
+        "task": "由当前运行载体完成知识点结构化对比",
         "question": question,
         "rules": [
             "只使用任务包中的原始回答和已捕获来源，不使用可信搜索、网络搜索或外部模型 API",
@@ -904,7 +904,7 @@ def canonical_analysis(comparison: dict) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="生成或验收 1.1 知识点结构化对比。")
+    parser = argparse.ArgumentParser(description="生成或验收知识点结构化对比。")
     parser.add_argument("--input", required=True)
     parser.add_argument("--task-output")
     parser.add_argument("--analysis")

@@ -183,9 +183,9 @@ def build_html(results: dict, comparison: dict) -> str:
         for point in comparison.get("knowledgePoints") or []
     )
     report_title = (
-        "1.1 知识点结构化"
+        "知识点结构化"
         if single_platform
-        else "1.1 知识点结构化对比"
+        else "知识点结构化对比"
     )
     detail_title = (
         "逐知识点结构化结果"

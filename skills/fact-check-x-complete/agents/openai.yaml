@@ -1,4 +1,4 @@
 interface:
-  display_name: "Fact-Check-X 完整事实核验"
-  short_description: "一站式采集、对比、权威核验并生成可审计报告"
-  default_prompt: "请使用 Fact-Check-X 完整事实核验技能完成多端回答采集、知识点对比、权威核验和报告交付。"
+  display_name: "全知晓（Fact-Check-X）"
+  short_description: "比较多个 AI 的完整回答与引用，再用权威证据逐点核验"
+  default_prompt: "请使用全知晓核验这个问题：采集我选择的平台原回答和引用，比较关键事实，再按需进行权威证据核验；每一步都交付可打开的报告。"
