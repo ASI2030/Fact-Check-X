@@ -1,6 +1,6 @@
 # Fact-Check-X
 
-[中文](README.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete) · [Releases](https://github.com/ASI2030/Fact-Check-X/releases) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
+[中文](README.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete) · [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) · [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete) · [Releases](https://github.com/ASI2030/Fact-Check-X/releases) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
 
 Compare complete answers and citations from several AI services, then verify atomic facts against authoritative evidence. Fact-Check-X makes each platform's answer, source support, disagreements and final finding traceable.
 
@@ -17,6 +17,8 @@ npx skills add ASI2030/Fact-Check-X --skill fact-check-x-complete
 ```
 
 The public listing is available on [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete).
+
+The complete skill is also indexed by [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) and [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete). Both directories install from this repository's `fact-check-x-complete` source tree; a clean 94-file installation was verified against the release source before publication.
 
 Claude Code users can install the repository as a versioned plugin marketplace:
 
