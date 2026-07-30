@@ -13,7 +13,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-OFFICIAL_SHA = "007fe204cddff50a19ecfd1d82e3c0c52c21ef3ff4ee73a45b4e99f5303165b6"
+VERSION = "1.1.0"
+OFFICIAL_SHA = "7eb4b713be58d3948ca6c44db8dbe9e352a718531eb58dcdf017bff6e104ea59"
 
 
 def load_module(name: str, path: Path):
@@ -39,14 +40,13 @@ class PublicReleaseTest(unittest.TestCase):
             (ROOT / "release" / "manifest.json").read_text(encoding="utf-8")
         )
         self.assertEqual(manifest["status"], "published")
+        self.assertEqual(manifest["version"], VERSION)
         self.assertEqual(
-            manifest["upstreamCandidate"]["complete"]["sha256"],
+            manifest["formalArtifact"]["sha256"],
             OFFICIAL_SHA,
         )
-        self.assertEqual(
-            manifest["officialPromotion"]["completeSha256"],
-            OFFICIAL_SHA,
-        )
+        self.assertEqual(manifest["distribution"]["skillhub"]["status"], "approved")
+        self.assertEqual(manifest["distribution"]["workbuddy"]["version"], VERSION)
         self.assertFalse(manifest["publishGate"]["githubUploadAllowed"])
 
     def test_build_is_reproducible_and_manifest_verifies(self):
@@ -58,11 +58,7 @@ class PublicReleaseTest(unittest.TestCase):
                     sys.executable,
                     str(SCRIPTS / "build_release.py"),
                     "--version",
-                    "1.0.0",
-                    "--upstream-candidate-sha",
-                    OFFICIAL_SHA,
-                    "--official-complete-sha",
-                    OFFICIAL_SHA,
+                    VERSION,
                 ]
                 subprocess.run(
                     command + ["--out-dir", str(left)],
@@ -103,7 +99,7 @@ class PublicReleaseTest(unittest.TestCase):
                 )
                 result = json.loads(verification.stdout)
                 self.assertEqual(result["status"], "verified")
-                self.assertEqual(result["releaseStatus"], "promote_verified")
+                self.assertEqual(result["releaseStatus"], "awaiting_promote")
                 self.assertEqual(len(result["artifacts"]), 6)
 
                 complete = next(
@@ -142,7 +138,7 @@ class PublicReleaseTest(unittest.TestCase):
                             sys.executable,
                             str(SCRIPTS / "build_release.py"),
                             "--version",
-                            "1.1.0",
+                            VERSION,
                             "--out-dir",
                             str(target),
                         ],
@@ -150,7 +146,7 @@ class PublicReleaseTest(unittest.TestCase):
                         capture_output=True,
                         text=True,
                     )
-                    complete = target / "fact-check-x-complete-v1.1.0.zip"
+                    complete = target / f"fact-check-x-complete-v{VERSION}.zip"
                     subprocess.run(
                         [
                             sys.executable,
@@ -158,17 +154,17 @@ class PublicReleaseTest(unittest.TestCase):
                             "--source",
                             str(complete),
                             "--output",
-                            str(target / "fact-check-x-skillhub-v1.1.0.zip"),
+                            str(target / f"fact-check-x-skillhub-v{VERSION}.zip"),
                             "--version",
-                            "1.1.0",
+                            VERSION,
                         ],
                         check=True,
                         capture_output=True,
                         text=True,
                     )
 
-                left_package = left / "fact-check-x-skillhub-v1.1.0.zip"
-                right_package = right / "fact-check-x-skillhub-v1.1.0.zip"
+                left_package = left / f"fact-check-x-skillhub-v{VERSION}.zip"
+                right_package = right / f"fact-check-x-skillhub-v{VERSION}.zip"
                 self.assertEqual(sha256(left_package), sha256(right_package))
                 with zipfile.ZipFile(left_package) as archive:
                     names = archive.namelist()
