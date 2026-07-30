@@ -1,6 +1,7 @@
 ---
 name: llm-answer-reference-compare
 description: 用 Playwright 从深知晓、深知晓（深度研究）、豆包、腾讯元宝、DeepSeek 和通义千问网页端无损采集完整回答、原始引用、引用标记和现场存证。用于 Fact-Check-X 的原始答案采集阶段，或任何需要比较多个 AI 网页回答与参考来源的任务。
+license: Apache-2.0
 ---
 
 # 多平台回答与引用无损采集

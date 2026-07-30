@@ -1,6 +1,7 @@
 ---
 name: fact-check-x-unified
 description: Fact-Check-X 流程编排能力，依次组织多平台原始答案与引用采集、知识点结构化对比、权威证据核验和平台表现评估，生成可打开、可审计、可迁移的阶段产物与完整报告包。
+license: Apache-2.0
 ---
 
 # Fact-Check-X 统一入口
