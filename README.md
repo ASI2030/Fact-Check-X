@@ -1,6 +1,6 @@
 # 全知晓（Fact-Check-X）
 
-[English](README.en.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [版本发布](https://github.com/ASI2030/Fact-Check-X/releases) · [安全](SECURITY.md) · [隐私](PRIVACY.md)
+[English](README.en.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete) · [版本发布](https://github.com/ASI2030/Fact-Check-X/releases) · [安全](SECURITY.md) · [隐私](PRIVACY.md)
 
 比较多个 AI 对同一问题的完整回答与引用，再用权威证据逐点核验。不是“再生成一个答案”，而是把各家说法、引用依据、共识冲突和最终结论放在同一条可追溯证据链上。
 
@@ -12,7 +12,22 @@
 skillhub install @user_186e37d0/fact-check-x
 ```
 
-也可以从 [GitHub Releases](https://github.com/ASI2030/Fact-Check-X/releases) 下载 `fact-check-x-complete.zip`，安装到 WorkBuddy、Codex、Claude Code 或其他兼容 Agent Skills 的载体。
+### 使用 Agent Skills CLI 安装
+
+```bash
+npx skills add ASI2030/Fact-Check-X --skill fact-check-x-complete
+```
+
+这条命令适用于 Codex、Claude Code、Cursor、Cline 等兼容 Agent Skills 的载体。公开详情页见 [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete)。
+
+### 作为 Claude Code 插件安装
+
+```bash
+claude plugin marketplace add ASI2030/Fact-Check-X
+claude plugin install fact-check-x@fact-check-x-marketplace
+```
+
+也可以从 [GitHub Releases](https://github.com/ASI2030/Fact-Check-X/releases) 下载 `fact-check-x-complete.zip`，安装到 WorkBuddy、Codex、Claude Code 或其他兼容 Agent Skills 的载体。下载后请按同一版本的 `SHA256SUMS` 校验文件。
 
 安装后直接用自然语言：
 

@@ -1,6 +1,6 @@
 # Fact-Check-X
 
-[中文](README.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [Releases](https://github.com/ASI2030/Fact-Check-X/releases) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
+[中文](README.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete) · [Releases](https://github.com/ASI2030/Fact-Check-X/releases) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
 
 Compare complete answers and citations from several AI services, then verify atomic facts against authoritative evidence. Fact-Check-X makes each platform's answer, source support, disagreements and final finding traceable.
 
@@ -10,7 +10,22 @@ Compare complete answers and citations from several AI services, then verify ato
 skillhub install @user_186e37d0/fact-check-x
 ```
 
-Or download `fact-check-x-complete.zip` from [GitHub Releases](https://github.com/ASI2030/Fact-Check-X/releases) and install it in WorkBuddy, Codex, Claude Code or another Agent Skills-compatible host.
+Install through the Agent Skills CLI:
+
+```bash
+npx skills add ASI2030/Fact-Check-X --skill fact-check-x-complete
+```
+
+The public listing is available on [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete).
+
+Claude Code users can install the repository as a versioned plugin marketplace:
+
+```bash
+claude plugin marketplace add ASI2030/Fact-Check-X
+claude plugin install fact-check-x@fact-check-x-marketplace
+```
+
+Or download `fact-check-x-complete.zip` from [GitHub Releases](https://github.com/ASI2030/Fact-Check-X/releases) and install it in WorkBuddy, Codex, Claude Code or another Agent Skills-compatible host. Verify the download against the `SHA256SUMS` file from the same release.
 
 Then ask naturally:
 
