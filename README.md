@@ -1,6 +1,6 @@
 # 全知晓（Fact-Check-X）
 
-[English](README.en.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete) · [版本发布](https://github.com/ASI2030/Fact-Check-X/releases) · [安全](SECURITY.md) · [隐私](PRIVACY.md)
+[English](README.en.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete) · [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) · [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete) · [版本发布](https://github.com/ASI2030/Fact-Check-X/releases) · [安全](SECURITY.md) · [隐私](PRIVACY.md)
 
 比较多个 AI 对同一问题的完整回答与引用，再用权威证据逐点核验。不是“再生成一个答案”，而是把各家说法、引用依据、共识冲突和最终结论放在同一条可追溯证据链上。
 
@@ -19,6 +19,8 @@ npx skills add ASI2030/Fact-Check-X --skill fact-check-x-complete
 ```
 
 这条命令适用于 Codex、Claude Code、Cursor、Cline 等兼容 Agent Skills 的载体。公开详情页见 [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete)。
+
+完整技能也已收录于 [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) 和 [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete)。两个目录都指向本仓库的 `fact-check-x-complete` 源码目录；发布前已验证从公开地址安装得到的 94 个文件与正式技能树一致。
 
 ### 作为 Claude Code 插件安装
 
