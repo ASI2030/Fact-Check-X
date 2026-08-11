@@ -19,7 +19,8 @@ python3 scripts/workbuddy_acceptance.py --run-dir <输出目录>
 - `prepare-comparison` 明确返回 1.0 产物索引，`complete-comparison` 明确返回 1.1 产物索引，`deliver` 返回全部阶段产物。
 - 在运行目录顶层生成 `01-capture-report.html`、`02-comparison-report.html`、`03-authority-report.html`、`04-final-report.html`，并要求 WorkBuddy 使用真正的 Markdown 文件链接分别交付。
 - 权威裁决结构错误、证据 ID 不存在或覆盖平台缺失时必须失败，不能静默降级。
-- `verification.status=needs_review` 时命令必须以非零状态结束，WorkBuddy 不得宣称核验完成。
+- `verification.evidenceGaps` 非空时仍须完成第三、四步；确定答案排除对应知识点，准确率排除对应平台主张，并在报告中明确展示证据充分率。
+- 可信搜索技术故障必须自动重试；重试后仍失败时命令以非零状态结束并停留在搜索阶段，WorkBuddy 不得把技术错误转成人工事实复核。
 - 存在非免查知识点且本机没有可信搜索配置时，必须返回 `configuration_required`、MaaS 首页、跨载体配置命令与 `browser_login_only` 交互类型并阻止搜索。调用方前台执行配置命令，用户只完成 MaaS 登录；组件自动复用或创建 `Fact-Check-X` 专用 Key，验证后写入本机共享凭据并自动续接。已有配置必须跳过登录；不得要求用户复制 Key、编辑 shell 配置或回复“已配置”，也不得自行改用深知晓来源。
 - `authority-gate.json` 未经过 `prepared → searched → finalized` 时，禁止裁决和生成最终报告。
 - `comparison-analysis.json`、`comparison.json`、request、evidence、assessment 或 result 在门禁后被修改，或 results 中出现额外/陈旧 ID 时，必须拒绝继续。

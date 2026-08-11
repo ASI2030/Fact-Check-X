@@ -101,6 +101,8 @@ def main() -> int:
             actual.append("comparison.material_additions_split")
         if checks.get("trustedSearchConfigurationPrompt") and checks.get("trustedSearchHardGate"):
             actual.extend(["secret.missing_key_blocked", "secret.no_chat_secret"])
+        if checks.get("noEvidenceCompletesWithBoundary"):
+            actual.append("authority.no_evidence_completed_with_boundary")
         expected_by_case = {
             "GR-002": {
                 "anchor.exempt_zero_search",
@@ -111,7 +113,7 @@ def main() -> int:
             "GR-007": {
                 "secret.missing_key_blocked",
                 "secret.no_chat_secret",
-                "authority.no_evidence_needs_review",
+                "authority.no_evidence_completed_with_boundary",
             },
         }
         actual = [item for item in actual if item in expected_by_case[args.case_id]]

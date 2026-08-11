@@ -112,7 +112,7 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
 
 
 <div class="hero">
-  <p style="margin:0 0 6px"><b>结论：</b>共核验 1 个知识点；直接准确 1 项，间接准确 0 项，结果巧合 0 项，严重误导 1 项，凭空编造 0 项，待复核 0 项。</p>
+  <p style="margin:0 0 6px"><b>结论：</b>共核验 1 个知识点；直接准确 1 项，间接准确 0 项，结果巧合 0 项，严重误导 1 项，凭空编造 0 项，证据不足 0 项。</p>
   <div class="mwrap">
 
     <div class="mcard">
@@ -201,7 +201,7 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
 <p class="muted small" style="margin-top:10px">知识点判定类别（②中的彩色标签）：外显使用描述性中性文案，标准分类可在鼠标悬停标签时查看。</p>
 <table class="doc">
   <thead><tr><th style="width:150px">外显标签</th><th style="width:96px">标准分类</th><th>判定条件</th></tr></thead>
-  <tbody><tr><td><span class="catpill" style="background:#059669">✅ 直接正确</span></td><td class="muted small">直接准确</td><td>与所附官方依据（官方原站或官方来源）一致（含算术级显然推导），可自验</td></tr><tr><td><span class="catpill" style="background:#10b981">☑ 间接正确</span></td><td class="muted small">间接准确</td><td>忠实于所附非官方材料，且经官方源独立验证通过（仅当 AI 用了非官方材料）</td></tr><tr><td><span class="catpill" style="background:#f59e0b">🎲 幻觉·结果巧合正确</span></td><td class="muted small">巧合式幻觉</td><td>无据/不符所附材料，但结果碰巧与官方一致（运气，不计准确）</td></tr><tr><td><span class="catpill" style="background:#dc2626">⚠ 幻觉：严重误导</span></td><td class="muted small">误导式幻觉</td><td>经官方源验证，结果是错误的（用户照做会被误导）</td></tr><tr><td><span class="catpill" style="background:#b91c1c">✖ 凭空编造·官方查无</span></td><td class="muted small">编造式幻觉</td><td>任何官方材料（官方原站或官方来源）都查不到、无法核验 = 凭空编造</td></tr><tr><td><span class="catpill" style="background:#64748b">? 证据不足·待复核</span></td><td class="muted small">待复核</td><td>可信搜索服务异常或当前证据不足，不能据此判定主张真假</td></tr><tr><td><span class="catpill" style="background:#9ca3af">· 未覆盖</span></td><td class="muted small">答案遗漏</td><td>该家没有答到这个知识点（状态指示，非判定）</td></tr></tbody>
+  <tbody><tr><td><span class="catpill" style="background:#059669">✅ 直接正确</span></td><td class="muted small">直接准确</td><td>与所附官方依据（官方原站或官方来源）一致（含算术级显然推导），可自验</td></tr><tr><td><span class="catpill" style="background:#10b981">☑ 间接正确</span></td><td class="muted small">间接准确</td><td>忠实于所附非官方材料，且经官方源独立验证通过（仅当 AI 用了非官方材料）</td></tr><tr><td><span class="catpill" style="background:#f59e0b">🎲 幻觉·结果巧合正确</span></td><td class="muted small">巧合式幻觉</td><td>无据/不符所附材料，但结果碰巧与官方一致（运气，不计准确）</td></tr><tr><td><span class="catpill" style="background:#dc2626">⚠ 幻觉：严重误导</span></td><td class="muted small">误导式幻觉</td><td>经官方源验证，结果是错误的（用户照做会被误导）</td></tr><tr><td><span class="catpill" style="background:#b91c1c">✖ 凭空编造·官方查无</span></td><td class="muted small">编造式幻觉</td><td>任何官方材料（官方原站或官方来源）都查不到、无法核验 = 凭空编造</td></tr><tr><td><span class="catpill" style="background:#64748b">? 证据不足</span></td><td class="muted small">证据不足</td><td>当前权威证据不足，不能据此判定主张真假；该项不进入准确率分母</td></tr><tr><td><span class="catpill" style="background:#9ca3af">· 未覆盖</span></td><td class="muted small">答案遗漏</td><td>该家没有答到这个知识点（状态指示，非判定）</td></tr></tbody>
 </table>
 
 
@@ -212,7 +212,7 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
   <tr><td>原始答案抓取数据</td><td>legacy-result.json（文件时间 2026-07-22 23:43）· 答案与参考文献已在 ④ 全文存证</td></tr>
   <tr><td>分析载体</td><td>当前承载技能的智能体（知识点拆解 / 忠实性 / 官方验证判定）</td></tr>
   <tr><td>裁判 LLM 健康度</td><td>1 次调用 / 0 次失败</td></tr>
-  <tr><td>人工复核判定</td><td>0 项（标 category_locked，rescore 不覆盖；矩阵中带「人工复核✓」标记）</td></tr>
+  <tr><td>证据不足判定</td><td>0 项（证据不足项不进入确定答案或准确率分母）</td></tr>
   <tr><td>语义分析执行方式</td><td>由当前承载技能的智能体直接完成知识点拆解与证据裁决；脚本不调用任何外部模型接口</td></tr>
   <tr><td>真相源构成</td><td>经严格验收的深知晓可信搜索官方锚点，或逐知识点独立可信搜索所得官方材料；同一知识点的所有参与方共用同一份验证证据</td></tr>
   <tr><td>可直接自验的官方来源</td><td>官方原站 ＋ 官方来源；范围符合要求：地域链匹配＋文件现行有效（废止/修订/过期降级为非正确源）</td></tr>

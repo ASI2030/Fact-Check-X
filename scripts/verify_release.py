@@ -56,6 +56,8 @@ def inspect_zip(
             raise RuntimeError(f"corrupt ZIP member: {bad_member}")
 
         names = archive.namelist()
+        if len(names) != len(set(names)):
+            raise RuntimeError("duplicate ZIP members are not allowed")
         roots = set()
         for info in archive.infolist():
             member = PurePosixPath(info.filename)

@@ -5,7 +5,7 @@ Fact-Check-X 平台表现与完整证据报告渲染器。
 稳定指标口径：
   分母 N = 合法直接答案知识点（剔除补充参考 + 剔除编造）
   覆盖率 + 遗漏率 = 100%（分母 N）
-  覆盖类下：准确率 + 幻觉率 = 100%（分母 = 直接答案覆盖数）
+  可裁决的覆盖类下：准确率 + 幻觉率 = 100%（分母 = 已有足够证据裁决的直接答案覆盖数）
     准确率 = 直接准确（官方依据，含算术级显然推导 2000×1.4=2800）+ 间接准确（非官方+官方验证通过）
     幻觉率 = 巧合式（无据碰对）+ 误导式（结果错）
   编造（官方查无）独立轴，不计覆盖/准确/幻觉；无论直接/补充，全进补充参考③
@@ -88,14 +88,15 @@ def tier_of(k):
 METRIC_DOC = {
     "覆盖率":   ("合法直接答案知识点 N", "答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少", "只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖"),
     "遗漏率":   ("合法直接答案知识点 N", "该家没答到的合法直接答案知识点占比", "与覆盖率互补，相加=100%"),
-    "准确率":   ("该家直接答案覆盖数", "覆盖的直接答案里「有据且正确」的比例 = 直接准确 + 间接准确", "衡量说出口的话靠不靠谱；无据碰对不计入"),
-    "直接准确率": ("该家直接答案覆盖数", "声明与其所附官方原站材料或官方来源一致；含算术级显然推导（如正文'2000上增加40%'→答案'2800'）", "最高可信级：主张由官方来源直接支持"),
-    "间接准确率": ("该家直接答案覆盖数", "声明忠实于其他非官方材料，且事后经官方源独立验证正确", "内容正确，但答案自身所附出处不是官方来源"),
+    "准确率":   ("已有足够证据裁决的直接答案覆盖数", "可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确", "证据不足项单独展示，不按错误计分"),
+    "直接准确率": ("已有足够证据裁决的直接答案覆盖数", "声明与其所附官方原站材料或官方来源一致；含算术级显然推导（如正文'2000上增加40%'→答案'2800'）", "最高可信级：主张由官方来源直接支持"),
+    "间接准确率": ("已有足够证据裁决的直接答案覆盖数", "声明忠实于其他非官方材料，且事后经官方源独立验证正确", "内容正确，但答案自身所附出处不是官方来源"),
+    "证据充分率": ("该家直接答案覆盖数", "已有足够权威证据完成裁决的覆盖项比例", "低于100%表示仍有证据边界，不代表对应回答错误"),
     "官方证据支持率": ("该家直接答案覆盖数", "该主张有经原文核对、确实支持它的所附官方材料", "可由局部角标或无角标时的回答级参考资料语义匹配建立"),
     "局部角标覆盖率": ("该家直接答案覆盖数", "该主张原答案片段内存在与它相连的可验证脚标", "只衡量逐句引用完整性；低于事实准确率不代表答案内容错误"),
-    "幻觉率":   ("该家直接答案覆盖数", "覆盖的直接答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）", "与准确率互补"),
-    "巧合式幻觉率": ("该家直接答案覆盖数", "声明无依据或与所附材料不符，但经官方源验证结果碰巧正确", "结果对但行为不可靠（运气），故不计入准确率"),
-    "误导式幻觉率": ("该家直接答案覆盖数", "经官方源验证，声明的结果是错误的", "最危险的一类：用户照做会被误导"),
+    "幻觉率":   ("已有足够证据裁决的直接答案覆盖数", "可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）", "与准确率互补"),
+    "巧合式幻觉率": ("已有足够证据裁决的直接答案覆盖数", "声明无依据或与所附材料不符，但经官方源验证结果碰巧正确", "结果对但行为不可靠（运气），故不计入准确率"),
+    "误导式幻觉率": ("已有足够证据裁决的直接答案覆盖数", "经官方源验证，声明的结果是错误的", "最危险的一类：用户照做会被误导"),
 }
 def tip(name):
     d = METRIC_DOC.get(name)
@@ -111,7 +112,7 @@ CAT_STYLE = {
     # 编造（官方查无）→ 仅出现在补充参考分析的③凭空编造（不进直接答案区）
     "编造式幻觉": ("#b91c1c", "✖", "在官方原站和官方来源中均查不到、无法核验 = 凭空编造", "凭空编造·官方查无"),
     # 答案遗漏：非判定标签，灰色文本，与 4 个判定标签视觉隔离
-    "待复核": ("#64748b", "?", "可信搜索服务异常或当前证据不足，不能据此判定主张真假", "证据不足·待复核"),
+    "证据不足": ("#64748b", "?", "当前权威证据不足，不能据此判定主张真假；该项不进入准确率分母", "证据不足"),
     "答案遗漏": ("#9ca3af", "·", "该家没有答到这个知识点（状态指示，非判定）", "未覆盖"),
 }
 def cat_norm(c):
@@ -119,7 +120,8 @@ def cat_norm(c):
         if c.startswith(k): return k
     # 历史标签兜底（旧数据兼容，统归到现行 5 类）
     if "诚实无规定" in c or "无据造规则" in c or "待核验" in c: return "编造式幻觉"
-    if "未核验" in c or "缺依据" in c: return "编造式幻觉"
+    if "证据不足" in c: return "证据不足"
+    if "未核验" in c or "缺依据" in c: return "证据不足"
     if "猜测" in c: return "巧合式幻觉"
     if "捏造" in c or "疑似" in c: return "编造式幻觉"
     if "误导" in c: return "误导式幻觉"
@@ -238,12 +240,13 @@ def metric_card(sk, sname, color):
     # 覆盖质量两段（准确/幻觉）最大余数法，相加恒=100%
     acc_i, hall_i = _lr100([m.get("准确率",0), m.get("幻觉率",0)])
     no_direct = ("_N" in m) and m.get("_N", 0) == 0   # 本题无直接答案知识点
+    no_resolved = m.get("_resolved", 0) == 0
     fab_n = m.get("编造数", 0)
     ref_val = m.get("参考_有价值正确", 0); ref_hal = m.get("参考_幻觉式提醒", 0)
     cov_txt = '—' if no_direct else f'{g("覆盖率")}%'
     om_txt = '—' if no_direct else f'{g("遗漏率")}%'
-    acc_txt = '—' if no_direct else f'{acc_i}%'
-    hall_txt = '—' if no_direct else f'{hall_i}%'
+    acc_txt = '—' if no_direct or no_resolved else f'{acc_i}%'
+    hall_txt = '—' if no_direct or no_resolved else f'{hall_i}%'
     fab_block = (
         f'<div class="{"fabricated-alert" if fab_n else "fabricated-clear"}">'
         + (f'⚠ 高风险告警：检出编造 <b>{fab_n}</b> 项（官方查无、凭空捏造），详见编造清单'
@@ -261,7 +264,7 @@ def metric_card(sk, sname, color):
         <div class="kpi kpi-hallucination"><span class="tt"{tip("幻觉率")}>幻觉率</span><b>{hall_txt}</b><small>巧合 + 误导</small></div>
       </div>
       {f'<div class="muted small" style="color:#b45309;margin:2px 0 0">本题无可核验的直接答案知识点</div>' if no_direct else ''}
-      <div class="m2">证据呈现：<span class="tt"{tip("官方证据支持率")}>官方支持</span> <b>{g("官方证据支持率")}%</b> ｜ <span class="tt"{tip("局部角标覆盖率")}>局部角标</span> <b>{g("局部角标覆盖率")}%</b></div>
+      <div class="m2">证据状态：<span class="tt"{tip("证据充分率")}>充分</span> <b>{g("证据充分率")}%</b> ｜ <span class="tt"{tip("官方证据支持率")}>官方支持</span> <b>{g("官方证据支持率")}%</b> ｜ <span class="tt"{tip("局部角标覆盖率")}>局部角标</span> <b>{g("局部角标覆盖率")}%</b></div>
       <table class="mtab">
         <tr><td class="tt"{tip("直接准确率")}>· 直接准确（官方依据）</td><td>{g("直接准确率")}%</td></tr>
         <tr><td class="tt"{tip("间接准确率")}>· 间接准确（非官方+官方验证）</td><td>{g("间接准确率")}%</td></tr>
@@ -455,7 +458,7 @@ def kp_rows(roles=("direct",), exclude_fab=True):
                         ' title="该家在本知识点上凭空编造，详见下方「补充参考分析 · ③凭空编造」">· 见下方编造区</span></td>')
             col, ic, cdoc, neutral = CAT_STYLE[cn]
             claim = escape((e.get("claim") or "")[:90])
-            locked = ' <span class="locktag" title="此判定经人工复核定论（category_locked）">人工复核✓</span>' if e.get("category_locked") else ''
+            locked = ''
             ap = e.get("appeal_applied")
             if ap:
                 locked += (f' <span class="appealtag" title="经申诉复核更正：{escape(ap.get("prev_category",""))}→{escape(ap.get("new_category",""))}'
@@ -468,7 +471,7 @@ def kp_rows(roles=("direct",), exclude_fab=True):
             return (f'<td class="kc"{attrs}>{pill}{locked}'
                     f'<div class="claim"><span class="claimtag">答案点</span>{claim}</div>'
                     f'<div class="srcline">所附源：{escape((e.get("source_type") or "—")[:28])} ｜ 溯源方式：{escape({"local":"逐段溯源","declared_global":"无对应的清单","answer_level_semantic":"全文语义溯源","none":"未建立溯源"}.get(e.get("reference_binding"), e.get("reference_binding") or "未建立溯源"))} ｜ 忠实：{escape(e.get("faithful","?"))}</div>'
-                    f'<div class="verdictreason"><b>裁决：</b>{reason or "待复核"}</div>'
+                    f'<div class="verdictreason"><b>裁决：</b>{reason or "证据不足"}</div>'
                     f'<div class="evgroup">{prov_html(e, (k.get("official_basis") or {}).get("excerpt", ""))}</div></td>')
         ob_html = official_basis_html(k)
         finding = escape(str(k.get("authoritative_finding") or ""))
@@ -531,7 +534,7 @@ def reference_analysis_html():
                 f'<div class="refitem"{attrs}><b style="color:{scolor}">{escape(sname)}</b>'
                 f' <span class="catpill" style="background:{col}">{ic} {neutral}</span> '
                 f'<span class="muted small">[{escape(k.get("desc","")[:24])}]</span> {claim}{govlink}'
-                f'<div class="verdictreason"><b>裁决：</b>{reason or "待复核"}</div>'
+                f'<div class="verdictreason"><b>裁决：</b>{reason or "证据不足"}</div>'
                 f'{basis_html}</div>')
         return "".join(rows)
     return f'''
@@ -586,7 +589,7 @@ def metric_doc_rows():
         f'<tr><td><b>{escape(name)}</b></td><td>{escape(d[0])}</td><td>{escape(d[1])}</td><td class="muted">{escape(d[2])}</td></tr>'
         for name, d in METRIC_DOC.items())
 
-_ACTIVE_CATS = ("直接准确", "间接准确", "巧合式幻觉", "误导式幻觉", "编造式幻觉", "待复核", "答案遗漏")
+_ACTIVE_CATS = ("直接准确", "间接准确", "巧合式幻觉", "误导式幻觉", "编造式幻觉", "证据不足", "答案遗漏")
 def cat_doc_rows():
     return "".join(
         f'<tr><td><span class="catpill" style="background:{CAT_STYLE[name][0]}">{CAT_STYLE[name][1]} {escape(CAT_STYLE[name][3])}</span></td>'
@@ -602,12 +605,11 @@ meta_rows = f'''
   <tr><td>评测报告生成时间</td><td>{datetime.now().strftime("%Y-%m-%d %H:%M")}</td></tr>
   <tr><td>原始答案抓取数据</td><td>{escape(Path(a.result).name)}（文件时间 {result_mtime}）· 答案与参考文献已在 ④ 全文存证</td></tr>
   <tr><td>分析载体</td><td>当前承载技能的智能体（知识点拆解 / 忠实性 / 官方验证判定）</td></tr>
-  <tr><td>裁判 LLM 健康度</td><td>{HEALTH.get("total","—")} 次调用 / {HEALTH.get("failed","—")} 次失败{"（失败项已按 Agent 接管协议人工补位）" if HEALTH.get("failed") else ""}</td></tr>
-  <tr><td>人工复核判定</td><td>{len(locked_list)} 项{("：" + "、".join(locked_list)) if locked_list else ""}（标 category_locked，rescore 不覆盖；矩阵中带「人工复核✓」标记）</td></tr>
+  <tr><td>自动裁决状态</td><td>{HEALTH.get("total","—")} 个知识点 / 证据不足 {HEALTH.get("evidenceGapCount",0)} 项；证据不足项单列且不按错误计分</td></tr>
   <tr><td>语义分析执行方式</td><td>由当前承载技能的智能体直接完成知识点拆解与证据裁决；脚本不调用任何外部模型接口</td></tr>
   <tr><td>真相源构成</td><td>经严格验收的深知晓可信搜索官方锚点，或逐知识点独立可信搜索所得官方材料；同一知识点的所有参与方共用同一份验证证据</td></tr>
   <tr><td>可直接判定的官方来源</td><td>官方原站，或由深知可信搜索返回的 dknowc / DT_DATA 官方来源；后者统一标为“官方来源”，可注明“由深知可信搜索收录”</td></tr>
-  <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；「编造式幻觉」表示本次可信搜索未找到官方依据，不排除官方无明文或检索未覆盖，被评方可提交官方依据申诉复核</td></tr>'''
+  <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；可信搜索未取得足够材料时统一标记“证据不足”，并从确定答案和准确率分母中排除</td></tr>'''
 
 # 申诉声明（中立公信力护栏）：有凭空编造或可申诉项时显示——被评方可提交官方依据复核
 _appeal_needed = any(
@@ -753,7 +755,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   <div class="mwrap">
     {"".join(metric_card(sk, sn, col) for sk, sn, col in SIDE)}
   </div>
-  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率/准确率只算【直接答案】知识点</b>（直接回答用户所问的；相关但非所问的「补充参考」与「凭空编造」都不计）。①覆盖率+遗漏率=100%（分母=合法直接答案知识点）；②准确率+幻觉率=100%（分母=直接答案覆盖数；准确=直接+间接正确，幻觉=巧合+误导）；③官方证据支持率与局部角标覆盖率分开呈现，无逐句角标不自动等于无依据；④编造（官方查无）独立成轴；⑤补充参考另列分析（见②-补）。
+  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率衡量答没答，准确率衡量已有足够证据裁决的回答是否正确</b>。①覆盖率+遗漏率=100%；②准确率+幻觉率=100%，证据不足项不进入二者分母；③证据充分率单独展示当前可裁决覆盖程度；④官方证据支持率与局部角标覆盖率分开呈现；⑤补充参考另列分析（见②-补）。
   各指标含义鼠标悬停可见，完整口径见 <a href="#metricdoc">⑤ 指标口径速查</a>。</p>
 </div>
 
@@ -763,7 +765,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
 </div>
 
 <h2>② 直接答案逐条判定 <span class="muted small">（直接答案区 · 直接回答用户所问的知识点）</span></h2>
-<p class="muted small">凡<b>直接回答用户所问</b>的知识点列在此区。每条<b>严格四类判定</b>：✅ 直接正确 / ☑ 间接正确 / 🎲 幻觉·结果巧合正确 / ⚠ 幻觉：严重误导；若某家没答到此点，标灰色「未覆盖」（状态指示，非判定）。<b>官方查无、无法核验的凭空编造不在此区</b>——无论直接还是补充，全部移到 <a href="#refzone">②-补 补充参考分析 ③凭空编造</a>，不计覆盖率/准确率。<b>「答案知识点」列</b>放该知识点的<b>共享官方依据</b>（官方验证原文 + 权威核验页，全家共用一份真值）；<b>各家列</b>放该家说法 + 自己引的所附依据原文。</p>
+<p class="muted small">凡<b>直接回答用户所问</b>的知识点列在此区。已有足够证据时使用四类裁决：直接正确、间接正确、结果巧合正确、严重误导；证据不足时单独标记，不按正确或错误计分；未回答则标记“未覆盖”。<b>「答案知识点」列</b>展示共享权威依据，<b>各家列</b>展示该家说法及其所附依据。</p>
 <div class="kp-scroll" aria-label="直接答案逐条判定横向查看">
 <table class="kp">
   <thead><tr><th>#</th><th>答案知识点 + 官方依据</th>{"".join(f"<th>{escape(sn)}</th>" for _, sn, _ in SIDE)}</tr></thead>
@@ -811,7 +813,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
 {appeal_block}
 
 <p class="muted small" style="margin-top:36px;border-top:1px solid #eee;padding-top:12px">
-Fact-Check-X · 评测口径：覆盖率/准确率只算【直接答案】知识点（直接回答用户所问的）；准确=直接（官方原站或官方来源，含算术级显然推导 2000×1.4=2800）+间接（其他非官方材料+官方验证）正确，幻觉=巧合+误导（覆盖数为分母，相加=100%）；直接答案区严格 4 标签；「补充参考」（相关但非所问）与「凭空编造」（官方原站及官方来源均查无）不计覆盖——凭空编造无论直接还是补充，全部在 ②-补③ 列出；全判定可溯源（依据原文 + 官方验证依据 + 原答案存证）</p>
+Fact-Check-X · 评测口径：覆盖率衡量平台是否回答直接知识点；准确率与幻觉率仅以已有足够证据裁决的覆盖项为分母；证据不足项单独展示，不按正确或错误计分；全判定可回溯至平台原答案、所附依据和权威证据。</p>
 </body></html>'''
 
 ts = datetime.now().strftime("%Y%m%d_%H%M")

@@ -58,9 +58,9 @@ python3 scripts/batch_search.py \
 }
 ```
 
-`authoritativeFinding` 必须非空；每个已覆盖平台都必须有裁决，`verdict` 只能是 `supported`、`contradicted` 或 `insufficient`；`reason` 必须非空；`supported` 和 `contradicted` 必须至少引用一个当前证据包中真实存在的 `evidenceId`。程序不接受顶层 `verdict`、`officialAnswer` 或 `platformAssessment`，也不会把错误结构静默降级为待复核。
+`authoritativeFinding` 必须非空；每个已覆盖平台都必须有裁决，`verdict` 只能是 `supported`、`contradicted` 或 `insufficient`；`reason` 必须非空；`supported` 和 `contradicted` 必须至少引用一个当前证据包中真实存在的 `evidenceId`。程序不接受顶层 `verdict`、`officialAnswer` 或 `platformAssessment`，也不会把错误结构静默降级为证据不足。
 
-若可信搜索正常返回但没有取得权威材料，输出 `no_evidence` 并进入 `needs_review`。没有检索到材料不构成对主张的反证，禁止自动归类为“编造”或标记完成。
+若可信搜索正常返回但没有取得权威材料，输出 `no_evidence`；单点裁决写入 `resolution=insufficient_evidence` 和 `evidenceGaps`，并以 `status=completed` 完成。没有检索到材料不构成对主张的反证，禁止自动归类为“编造”，对应主张不进入确定答案或准确率分母。服务异常由程序自动重试，重试后仍失败则返回技术错误，不生成事实裁决。
 
 然后验收：
 
@@ -100,7 +100,7 @@ python3 scripts/render_authority_report.py \
 的主张、裁决理由和证据绑定。平台集合必须与 `verification.json` 完全一致，
 缺少任一已选平台裁决时拒绝生成；平台数量由输入决定，只要求 `N≥1`。`N=1` 为单平台权威核验，`N≥2` 同时保留跨平台差异。
 报告顶部必须先展示与全部知识点 ID 完整绑定的 `finalAnswer`，作为本阶段可直接
-使用的“权威核验后的最终答案”；存在待复核项时不得标成已核验完成。
+使用的“权威核验后的最终答案”；证据不足知识点必须从确定答案中排除并在证据边界中单列。
 
 汇总后的 `verification.json` 可直接生成平台表现与完整证据报告：
 

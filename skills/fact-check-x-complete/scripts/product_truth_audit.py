@@ -420,11 +420,17 @@ def main() -> int:
         ):
             failures.append("synthesis_draft_not_conserved")
         final_answer = verification.get("finalAnswer")
+        included_ids = list((final_answer or {}).get("knowledgePointIds") or [])
+        excluded_ids = list((final_answer or {}).get("excludedKnowledgePointIds") or [])
         if (
             not isinstance(final_answer, dict)
-            or final_answer.get("status") != "verified"
+            or final_answer.get("status")
+            not in {"verified", "partially_verified", "insufficient_evidence"}
             or not str(final_answer.get("answer") or "").strip()
-            or final_answer.get("knowledgePointIds") != comparison_ids
+            or len(included_ids) != len(set(included_ids))
+            or len(excluded_ids) != len(set(excluded_ids))
+            or set(included_ids) & set(excluded_ids)
+            or set(included_ids + excluded_ids) != set(comparison_ids)
             or re.sub(r"\s+", "", str(final_answer.get("answer") or ""))
             not in authority_text
         ):

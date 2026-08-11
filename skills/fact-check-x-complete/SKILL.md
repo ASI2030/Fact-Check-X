@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.0"
+  version: "1.1.1"
   summary: 正式支持 6 个 AI 平台，完整采集回答与引用、比较关键事实，并按需用权威证据逐点核验。
   tags: [事实核验, 多平台对比, 可信搜索, 深度研究]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -34,6 +34,7 @@ metadata:
 - 用户只需提供核验问题和想比较的平台；没有指定平台时，先用自然语言询问，不要求记平台 ID。
 - 第一次使用某个平台时打开浏览器，由用户本人完成登录或验证码；会话保存后自动复用。
 - 每一步都交付可打开的独立报告：原始答案与引用、知识点对比（未核验）、权威证据核验、平台表现与完整证据。
+- 第三步展示权威核验后的最终答案；证据不足的知识点单独列明边界，不写入确定答案，也不阻断第四步报告。
 - 多平台采集与知识点对比不需要 API Key。只有用户继续进行权威证据核验，且现有材料不足以直接裁决时，才检查可信搜索配置。
 - 可信搜索未配置时，只引导用户登录深知智能平台；技能自动获取或创建专用 Key 并安全保存在本机，不要求用户复制粘贴密钥。
 - 语义分析由 Codex、Claude Code、WorkBuddy 等当前运行载体完成，不调用外部大模型 API。
@@ -49,7 +50,7 @@ metadata:
 7. `login` 或 `run` 非零退出、浏览器意外关闭、人工处理超时或采集失败时，立即读取 `capture-recovery.json`。运行载体有 Computer Use 时调用它恢复；没有时明确说明“当前载体无法调用 Computer Use，原始答案采集已停止”，停在原始答案采集阶段。
 8. 进入 Computer Use 恢复后，禁止改用 headless/无头浏览器、清理锁文件、修改启动参数或用命令行诊断规避接管。允许使用原持久化配置重新打开同一平台，并直接复用 `capture-recovery.json.question`。
 9. `capture-gate.json` 未证明所有指定平台均成功前，禁止进入知识点对比和后续流程。不得用已有材料、搜索结果、空回答或部分成功结果替代失败平台。
-10. **分阶段交付门禁**：默认在原始答案采集、知识点对比和权威证据核验各自完成后，先向用户发送本阶段真实可打开的独立产物，再询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”。收到“继续下一步”前禁止执行下一阶段命令。用户在最初请求中明确要求“完整跑完、无需逐步确认”时，可以连续执行，但仍必须逐阶段发送可打开产物和状态，不得只在最后一次性汇报。平台表现评估完成后交付第四阶段产物，并允许用户确认完成或指定返回修正的阶段。程序硬门禁、登录、验证码和待复核状态不受自动连续执行授权影响。
+10. **分阶段交付门禁**：默认在原始答案采集、知识点对比和权威证据核验各自完成后，先向用户发送本阶段真实可打开的独立产物，再询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”。收到“继续下一步”前禁止执行下一阶段命令。用户在最初请求中明确要求“完整跑完、无需逐步确认”时，可以连续执行，但仍必须逐阶段发送可打开产物和状态，不得只在最后一次性汇报。平台表现评估完成后交付第四阶段产物，并允许用户确认完成或指定返回修正的阶段。程序硬门禁、登录、验证码和技术故障不受自动连续执行授权影响；证据不足属于可交付结论，不阻断后续报告。
 
 本技能是对外唯一入口，包内自带三个独立业务模块：
 
@@ -178,7 +179,7 @@ python3 scripts/fact_check_x.py prepare-comparison \
 每个 `covered=true` 的 claim 必须填写 `answerExcerpt`：它必须是原始 `answerMarkdown` 的连续子串，并覆盖当前原子主张。载体负责知识点、主张和原回答片段的语义判断；程序负责从已捕获来源中校验脚标、重建可定位证据摘录、归一化引用方式，并自动生成合格的深知晓可信锚点。
 
 - 局部角标优先：脚标实际出现在 `answerExcerpt` 内时列入 `citedReferenceIndexes`；当前主张已有局部脚标后，答案后段或回答级官方来源不得反向抬高它。
-- 没有局部角标时，可把平台为该主张返回的来源索引写入 `citedReferenceIndexes` 或 `answerLevelReferenceIndexes`。程序会在对应 `capturedText` 中定位支持当前主张的原文，并归一化为回答级语义溯源；定位失败才进入待复核。
+- 没有局部角标时，可把平台为该主张返回的来源索引写入 `citedReferenceIndexes` 或 `answerLevelReferenceIndexes`。程序会在对应 `capturedText` 中定位支持当前主张的原文，并归一化为回答级语义溯源；定位失败时标记为分析信息不足，继续交给权威证据阶段裁决。
 - 回答级语义匹配不等于整篇自动继承来源。证据必须实际支持当前主张；只支持补充点的官方来源不得抬高核心点。
 - 溯源方式会标准化为 `local`、`declared_global`、`answer_level_semantic` 或 `none`，最终报告分别外显为“逐段溯源 / 无对应的清单 / 全文语义溯源 / 未建立溯源”。缺少可定位证据时保守降级，不得默认为官方依据。
 
@@ -193,7 +194,7 @@ python3 scripts/fact_check_x.py complete-comparison \
 `complete-comparison`，最多自动修复 2 次。两次后仍失败则明确报告知识点对比
 阻断及缺失字段，禁止进入 `prepare-authority`，也禁止静默结束任务。
 
-命令成功后，必须立刻向用户发送一条独立的 **知识点对比完成检查点**，展示知识点数量、待复核数量和“综合草案（未核验）”。必须使用 `deliverables[0].path` 发送 `[打开知识点对比报告（未核验）](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。
+命令成功后，必须立刻向用户发送一条独立的 **知识点对比完成检查点**，展示知识点数量、分析信息不足数量和“综合草案（未核验）”。必须使用 `deliverables[0].path` 发送 `[打开知识点对比报告（未核验）](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。
 
 ### 第三步：权威证据核验（可选增强）
 
@@ -201,7 +202,7 @@ python3 scripts/fact_check_x.py complete-comparison \
 
 用户不需要查找、复制、粘贴或回复 Key，也不需要编辑 shell 文件、执行环境变量命令或回复“已配置”。配置命令成功后自动重新执行 `prepare-authority` 并继续。若用户在对话中粘贴疑似密钥，仍必须视为已经泄露：不得复制到命令、脚本、日志、配置或报告中，不得用该值继续执行；立即提示用户在 MaaS 控制台吊销，然后重新运行自动配置。
 
-只有可信搜索返回 401/403 时才把现有 Key 视为失效并进入自动配置。超时、断网或服务异常必须保留现有配置，直接按服务异常进入待复核，不得要求用户重新登录。
+只有可信搜索返回 401/403 时才把现有 Key 视为失效并进入自动配置。超时、断网或服务异常必须保留现有配置，由搜索组件自动重试；重试后仍失败则停留在当前技术阶段并返回明确错误，不得要求用户重新登录，也不得转成事实复核任务。
 
 ```bash
 python3 scripts/fact_check_x.py prepare-authority --run-dir <run目录>
@@ -214,7 +215,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run目录> --max-wor
 
 配置组件返回 `status=configured` 或 `status=already_configured` 后，自动重新执行 `prepare-authority`；只有返回 `status=prepared` 才能继续搜索。登录期间保持浏览器与命令运行，用户完成登录后自动续接。不得自行决定“直接基于深知晓官方来源裁决”，不得以普通联网搜索代替可信搜索，也不得让用户在对话中发送密钥。
 
-`comparison-gate.json` 会锁定采集结果、`comparison-analysis.json` 与 `comparison.json` 的摘要；`authority-gate.json` 会继续锁定 request、evidence、assessment 和 result 的精确文件集合及摘要。后续发现文件被修改、ID 不一致、额外/陈旧 result、缺失 assessment（已取得证据的知识点）或手工结果时必须拒绝继续。只有 `search-authority` 正常完成并把门禁更新为 `searched` 后，才能写 assessment、运行 `finalize-authority` 或生成最终报告。禁止手工伪造 evidence、result，禁止通过修改中间 JSON 消除待复核，禁止在缺钥时宣称“核心事实核验已完成”。
+`comparison-gate.json` 会锁定采集结果、`comparison-analysis.json` 与 `comparison.json` 的摘要；`authority-gate.json` 会继续锁定 request、evidence、assessment 和 result 的精确文件集合及摘要。后续发现文件被修改、ID 不一致、额外/陈旧 result、缺失 assessment（已取得证据的知识点）或手工结果时必须拒绝继续。只有 `search-authority` 正常完成并把门禁更新为 `searched` 后，才能写 assessment、运行 `finalize-authority` 或生成最终报告。禁止手工伪造 evidence、result，禁止通过修改中间 JSON 消除证据不足记录，禁止在缺钥时宣称“核心事实核验已完成”。
 
 逐个读取 `authority/requests` 和 `authority/evidence`，由当前运行载体直接把裁决写入 `authority/assessments/<知识点ID>.json`。已有合格深知晓官方锚点时必须免查；否则每个知识点只调用一次可信搜索。多个知识点独立并发，不上传无关回答全文。
 
@@ -249,11 +250,10 @@ python3 scripts/fact_check_x.py finalize-authority --run-dir <run目录>
 ```
 
 `finalize-authority` 完成裁决后会独立生成 `verification.json` 和
-`03-authority-report.html`；即使返回 `status=needs_review`，也必须生成并返回明确标记待复核的阶段报告，同时继续禁止最终报告。必须立即发送 **权威证据核验检查点**，使用
-`deliverables[0].path` 提供 `[打开权威证据核验报告](<返回路径>)`；报告顶部
-在完成状态展示“权威核验后的最终答案”，在待复核状态展示“当前核验结论（待复核）”，下方保留逐知识点证据和平台裁决。默认询问用户
+`03-authority-report.html`。证据充分的知识点进入 `finalAnswer`；证据不足的知识点进入 `evidenceGaps`，从确定答案和准确率分母中排除，但命令仍返回 `status=completed` 并允许继续生成第四步。必须立即发送 **权威证据核验检查点**，使用
+`deliverables[0].path` 提供 `[打开权威证据核验报告](<返回路径>)`；报告顶部展示确定答案或“证据不足，未形成确定答案”，下方保留逐知识点证据、证据边界和平台裁决。默认询问用户
 选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有
-最初请求已明确授权完整自动跑完且当前状态为 `completed` 时才可不等待。
+最初请求已明确授权完整自动跑完时才可不等待。
 
 ### 第四步：平台表现与完整证据
 
@@ -265,9 +265,9 @@ python3 scripts/fact_check_x.py deliver \
   --run-dir <run目录>
 ```
 
-`finalize-authority` 或 `deliver` 返回非零状态，或返回 `status=needs_review` 时，必须停在“待复核”，读取错误或 `needsReview` 修正后重跑。此时禁止宣称“事实核验完成”，禁止把待复核结论包装成确定答案。
+`finalize-authority` 或 `deliver` 返回非零状态时，必须按技术错误修正或重试当前阶段，不得绕过门禁。技术流程成功但存在 `evidenceGaps` 时继续交付第四步，并明确这些项目不进入确定答案和准确率分母。
 
-可信搜索返回成功但当前知识点 `no_evidence` 时，也必须归类为“证据不足、待复核”并停止交付。单次检索未返回材料不等于官方明确否定，更不等于平台主张“编造”；不得据此生成 `fabricated` 或 `completed`。
+可信搜索返回成功但当前知识点 `no_evidence` 时，归类为 `insufficient_evidence`。单次检索未返回材料不等于官方明确否定，更不等于平台主张“编造”；程序必须完成本知识点的证据边界记录，并继续后续报告。
 
 最终必须交付：
 

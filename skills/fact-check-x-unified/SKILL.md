@@ -63,7 +63,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 
 若存在非免查知识点但本机尚无可信搜索配置，`prepare-authority` 和 `search-authority` 会返回 `status=configuration_required`、`userPrompt` 与 `configuration.command` 并以非零状态退出。调用方先展示登录提示，再前台执行该命令。用户只需在自动打开的深知 MaaS 页面完成登录；组件会自动复用已有完整 Key，没有时创建 `Fact-Check-X` 专用 Key，验证后保存到 `~/.fact-check-x/credentials/trusted-search-key`。Codex、Claude Code、WorkBuddy 等载体共享该配置，检测到已有 Key 时直接跳过登录。配置成功后调用方自动重跑 `prepare-authority`，不得要求用户复制 Key、编辑 shell 配置、回复“已配置”，也不得改用深知晓来源或普通搜索绕过。
 
-只有可信搜索返回 401/403 时才把现有 Key 视为失效并进入自动配置。超时、断网或服务异常保留现有配置，并按服务异常进入待复核，不要求用户重新登录。
+只有可信搜索返回 401/403 时才把现有 Key 视为失效并进入自动配置。超时、断网或服务异常保留现有配置并自动重试；重试后仍失败则停留在搜索阶段返回技术错误，不要求用户重新登录，也不转成人工事实复核。
 
 `prepare-authority` 会写入 `authority-gate.json`。只有可信搜索批次正常完成、门禁状态变为 `searched` 后，`finalize-authority` 才允许运行；手工写 evidence 或 result 不能绕过。
 
@@ -90,7 +90,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 python3 scripts/fact_check_x.py finalize-authority --run-dir <run>
 ```
 
-任一命令返回 `status=needs_review` 时会以非零状态结束。调用方必须标记“待复核”并修正问题，不能宣称事实核验完成。`finalize-authority` 即使待复核，也会生成 `03-authority-report.html` 并通过 `deliverables` 返回；报告明确标记待复核且不提供尚不存在的最终报告链接。
+`finalize-authority` 生成权威核验后的最终答案，将证据充分的知识点纳入确定答案，将证据不足的知识点写入 `evidenceGaps` 并排除在确定答案和准确率分母之外；只要技术链路成功，命令返回 `status=completed`，调用方继续生成第四步。只有技术命令返回非零状态时才停止并重试当前阶段。
 
 `finalize-authority` 完成裁决后会独立生成 `03-authority-report.html`，并通过
 `deliverables` 返回路径。调用方必须先展示这份权威报告；默认交互模式下，
@@ -100,7 +100,7 @@ python3 scripts/fact_check_x.py finalize-authority --run-dir <run>
 python3 scripts/fact_check_x.py deliver --results <results.json> --run-dir <run>
 ```
 
-可信搜索返回 `no_evidence` 时必须同样进入 `needs_review`：空结果只表示本次没有取得可裁决材料，不能直接判成“编造”或完成核验。
+可信搜索返回 `no_evidence` 时记录为 `insufficient_evidence`：空结果只表示本次没有取得可裁决材料，不能直接判成“编造”；证据边界记录完成后继续生成后续报告。
 
 `deliver` 必须在运行目录顶层生成并返回四份独立可读报告：
 

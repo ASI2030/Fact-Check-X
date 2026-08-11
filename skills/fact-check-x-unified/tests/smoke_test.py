@@ -51,7 +51,7 @@ def main() -> int:
             "verdicts": {
                 "doubao": {"verdict": "contradicted"},
             },
-            "needsReview": [],
+            "evidenceGaps": [],
         }), encoding="utf-8")
         merged = merge_verification({
             "question": "测试",
@@ -60,7 +60,7 @@ def main() -> int:
                 "id": "K1",
                 "trustedAnchor": {"eligible": False},
             }],
-            "needsReview": [{
+            "analysisGaps": [{
                 "stage": "comparison",
                 "knowledgePointId": "K1",
                 "platform": "doubao",
@@ -68,7 +68,7 @@ def main() -> int:
             }],
         }, merge_results)
         assert merged["status"] == "completed"
-        assert merged["needsReview"] == []
+        assert merged["evidenceGaps"] == []
 
         run_dir = Path(temp) / "run"
         results = COMPARE_FIXTURES / "results.json"
@@ -369,27 +369,29 @@ def main() -> int:
             "evidenceIds": [],
         }
         (review_assessments / "K1.json").write_text(json.dumps(review_assessment, ensure_ascii=False), encoding="utf-8")
-        review_final = run_failed(command("finalize-authority", "--run-dir", str(review_run)))
-        assert review_final["status"] == "needs_review"
-        assert review_final["stage"] == "authority_needs_review"
-        assert review_final["needsReviewCount"] == 1
+        review_final = run(command("finalize-authority", "--run-dir", str(review_run)))
+        assert review_final["status"] == "completed"
+        assert review_final["stage"] == "authority_completed"
+        assert review_final["evidenceGapCount"] == 1
         assert review_final["deliverables"][0]["path"] == str(
             (review_run / "03-authority-report.html").resolve()
         )
         review_authority_report = (
             review_run / "03-authority-report.html"
         ).read_text(encoding="utf-8")
-        assert "当前核验结论（待复核）" in review_authority_report
-        assert "最终裁决报告待复核完成后生成" in review_authority_report
-        assert 'href="04-final-report.html"' not in review_authority_report
-        assert json.loads((review_run / "authority-gate.json").read_text(encoding="utf-8"))["status"] == "review_pending"
-        review_delivery = run_failed(command("deliver", "--results", str(results), "--run-dir", str(review_run)))
-        assert review_delivery["status"] == "failed"
-        assert "禁止生成最终报告" in review_delivery["error"]
-        shutil.copyfile(AUTHORITY_FIXTURES / "K1-assessment.json", review_assessments / "K1.json")
-        retried = run(command("finalize-authority", "--run-dir", str(review_run)))
-        assert retried["status"] == "completed"
+        assert "证据不足项" in review_authority_report
+        assert 'href="04-final-report.html"' in review_authority_report
         assert json.loads((review_run / "authority-gate.json").read_text(encoding="utf-8"))["status"] == "finalized"
+        review_delivery = run(command("deliver", "--results", str(results), "--run-dir", str(review_run)))
+        assert review_delivery["status"] == "completed"
+        assert review_delivery["evidenceGapCount"] == 1
+        assert (review_run / "04-final-report.html").is_file()
+        review_verification = json.loads(
+            (review_run / "verification.json").read_text(encoding="utf-8")
+        )
+        assert review_verification["status"] == "completed"
+        assert review_verification["evidenceGapCount"] == 1
+        assert review_verification["evidenceGaps"][0]["platform"] == "doubao"
 
         failed_results = json.loads(results.read_text(encoding="utf-8"))
         failed_results["platforms"][0]["answerMarkdown"] = "为您智能匹配到当前所在区域为“北京市”，如想咨询其他区域可点击修改"

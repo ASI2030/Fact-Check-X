@@ -533,7 +533,7 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
     result.update({
         "stage": "comparison_completed",
         "knowledgePointCount": len(comparison_data.get("knowledgePoints") or []),
-        "needsReviewCount": len(comparison_data.get("needsReview") or []),
+        "analysisGapCount": len(comparison_data.get("analysisGaps") or []),
         "artifacts": {
             "comparisonAnalysis": str(analysis.resolve()),
             "comparison": str(comparison.resolve()),
@@ -727,8 +727,10 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     if not authority_gate_path.exists():
         raise PipelineError("缺少权威核验门禁，禁止裁决")
     authority_gate = load_json(authority_gate_path)
-    gate_status = authority_gate.get("status")
-    if authority_gate.get("schemaVersion") != "fact-check-x/authority-gate@1" or gate_status not in {"searched", "review_pending"}:
+    if (
+        authority_gate.get("schemaVersion") != "fact-check-x/authority-gate@1"
+        or authority_gate.get("status") != "searched"
+    ):
         raise PipelineError("可信搜索尚未通过程序门禁，禁止写入裁决或进入最终报告")
     if not (run_dir / "authority" / "evidence" / "batch.json").exists():
         raise PipelineError("缺少可信搜索批次证明，禁止裁决")
@@ -751,13 +753,7 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     results_dir = run_dir / "authority" / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
     existing_results = list(results_dir.glob("*.json"))
-    if gate_status == "review_pending":
-        expected_result_names = {f"{request_id}.json" for request_id in request_ids}
-        if json_file_manifest(results_dir, expected_result_names) != authority_gate.get("resultHashes"):
-            raise PipelineError("待复核结果已被修改或混入额外/陈旧 ID，禁止重新裁决")
-        for result_path in existing_results:
-            result_path.unlink()
-    elif existing_results:
+    if existing_results:
         raise PipelineError("results 目录必须为空；检测到旧文件或手工结果，禁止覆盖式裁决")
     expected_assessments = set()
     for request_id in request_ids:
@@ -766,29 +762,36 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
             expected_assessments.add(f"{request_id}.json")
     assessment_hashes = json_file_manifest(assessments_dir, expected_assessments)
     statuses = []
-    for entry in manifest.get("requests") or []:
-        request_id = entry["requestId"]
-        command = [
-            sys.executable,
-            str(skills["authority"] / "scripts" / "authority_verify.py"),
-            "finalize",
-            "--request",
-            str(requests_dir / f"{request_id}.json"),
-            "--evidence",
-            str(evidence_dir / f"{request_id}.json"),
-            "--output",
-            str(results_dir / f"{request_id}.json"),
-        ]
-        assessment = assessments_dir / f"{request_id}.json"
-        if assessment.exists():
-            command.extend(["--assessment", str(assessment)])
-        statuses.append(run(command).get("status"))
-    needs_review_count = sum(status == "needs_review" for status in statuses)
-    final_status = "needs_review" if needs_review_count else "completed"
+    evidence_gap_count = 0
+    try:
+        for entry in manifest.get("requests") or []:
+            request_id = entry["requestId"]
+            command = [
+                sys.executable,
+                str(skills["authority"] / "scripts" / "authority_verify.py"),
+                "finalize",
+                "--request",
+                str(requests_dir / f"{request_id}.json"),
+                "--evidence",
+                str(evidence_dir / f"{request_id}.json"),
+                "--output",
+                str(results_dir / f"{request_id}.json"),
+            ]
+            assessment = assessments_dir / f"{request_id}.json"
+            if assessment.exists():
+                command.extend(["--assessment", str(assessment)])
+            statuses.append(run(command).get("status"))
+            point_result = load_json(results_dir / f"{request_id}.json")
+            evidence_gap_count += len(point_result.get("evidenceGaps") or [])
+    except Exception:
+        for result_path in results_dir.glob("*.json"):
+            result_path.unlink()
+        raise
+    final_status = "completed"
     result_hashes = json_file_manifest(results_dir, {f"{request_id}.json" for request_id in request_ids})
     dump_json(authority_gate_path, {
         **authority_gate,
-        "status": "review_pending" if needs_review_count else "finalized",
+        "status": "finalized",
         "finalizedAt": now_iso(),
         "finalizeStatus": final_status,
         "results": str(results_dir.resolve()),
@@ -810,13 +813,9 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     ])
     return {
         "status": final_status,
-        "stage": (
-            "authority_completed"
-            if final_status == "completed"
-            else "authority_needs_review"
-        ),
+        "stage": "authority_completed",
         "taskCount": len(statuses),
-        "needsReviewCount": needs_review_count,
+        "evidenceGapCount": evidence_gap_count,
         "results": str(results_dir.resolve()),
         "artifacts": {
             "verification": str(verification_path.resolve()),
@@ -825,11 +824,7 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
         },
         "deliverables": [
             {
-                "label": (
-                    "权威证据核验报告"
-                    if final_status == "completed"
-                    else "权威证据核验报告（待复核）"
-                ),
+                "label": "权威证据核验报告",
                 "path": str(authority_report.resolve()),
             }
         ],
@@ -838,7 +833,7 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
 
 def merge_verification(comparison: dict, results_dir: Path) -> dict:
     points = []
-    needs_review = []
+    evidence_gaps = []
     request_count = 0
     exempt_count = 0
     authority_verdicts: dict[tuple[str, str], str] = {}
@@ -862,12 +857,12 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             )
         finding = str(authority.get("authoritativeFinding") or "").strip()
         if not finding:
-            finding = "未取得足够权威证据，当前知识点待复核。"
+            finding = "未取得足够权威证据；该知识点保持证据不足。"
             authority = {**authority, "authoritativeFinding": finding}
-        for review in authority.get("needsReview") or []:
-            needs_review.append({"stage": "authority", "knowledgePointId": point["id"], **review})
+        for gap in authority.get("evidenceGaps") or []:
+            evidence_gaps.append({"stage": "authority", "knowledgePointId": point["id"], **gap})
         points.append({**point, "authority": authority})
-    for review in comparison.get("needsReview") or []:
+    for review in comparison.get("analysisGaps") or []:
         key = (
             str(review.get("knowledgePointId") or ""),
             str(review.get("platform") or ""),
@@ -877,33 +872,60 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             and authority_verdicts.get(key) in ("supported", "contradicted")
         ):
             continue
-        needs_review.append(review)
+        evidence_gaps.append({
+            **review,
+            "reason": str(review.get("reason") or "")
+            or "当前分析信息不足，且权威证据未能完成裁决",
+        })
     final_answer_lines = []
     final_answer_point_ids = []
+    excluded_point_ids = []
     for point in points:
+        authority = point.get("authority") or {}
+        claims = authority.get("claims") or {}
+        verdicts = authority.get("verdicts") or {}
+        resolved = any(
+            claims.get(platform, {}).get("covered")
+            and verdict.get("verdict") in {"supported", "contradicted"}
+            for platform, verdict in verdicts.items()
+        )
+        point_id = str(point.get("id") or "")
+        if not resolved:
+            excluded_point_ids.append(point_id)
+            continue
         finding = str(
-            ((point.get("authority") or {}).get("authoritativeFinding") or "")
+            (authority.get("authoritativeFinding") or "")
         ).strip()
-        final_answer_point_ids.append(str(point.get("id") or ""))
+        final_answer_point_ids.append(point_id)
         final_answer_lines.append(
             f"{point.get('description') or point.get('id')}：{finding}"
         )
+    final_answer_status = (
+        "verified"
+        if final_answer_point_ids and not excluded_point_ids
+        else "partially_verified"
+        if final_answer_point_ids
+        else "insufficient_evidence"
+    )
     return {
         "schemaVersion": "fact-check-x/verification@2",
         "question": comparison.get("question"),
         "coreQuestion": comparison.get("coreQuestion"),
         "finalAnswer": {
-            "status": "needs_review" if needs_review else "verified",
-            "answer": "\n".join(final_answer_lines),
+            "status": final_answer_status,
+            "answer": "\n".join(final_answer_lines)
+            or "当前没有足够权威证据形成确定答案；各项证据边界已在报告中列明。",
             "knowledgePointIds": final_answer_point_ids,
+            "excludedKnowledgePointIds": excluded_point_ids,
         },
         "createdAt": now_iso(),
         "platforms": comparison.get("platforms") or [],
         "knowledgePoints": points,
         "trustedSearchRequestCount": request_count,
         "dknowExemptCount": exempt_count,
-        "needsReview": needs_review,
-        "status": "needs_review" if needs_review else "completed",
+        "evidenceGaps": evidence_gaps,
+        "evidenceGapCount": len(evidence_gaps),
+        "status": "completed",
     }
 
 
@@ -1042,7 +1064,7 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     return {
         "status": manifest["status"],
         "manifest": str((run_dir / "pipeline.json").resolve()),
-        "needsReviewCount": len(verification.get("needsReview") or []),
+        "evidenceGapCount": len(verification.get("evidenceGaps") or []),
         "artifacts": manifest["artifacts"],
         "answerReferenceReport": manifest["artifacts"]["answerReferenceReport"],
         "comparisonReport": manifest["artifacts"]["comparisonReport"],
@@ -1114,8 +1136,6 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False))
         if result.get("status") == "configuration_required":
             return 3
-        if args.command in ("finalize-authority", "deliver") and result.get("status") == "needs_review":
-            return 2
         return 0
     except (PipelineError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(json.dumps({"status": "failed", "error": str(exc)}, ensure_ascii=False))

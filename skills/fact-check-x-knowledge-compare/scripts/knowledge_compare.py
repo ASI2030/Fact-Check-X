@@ -446,7 +446,7 @@ def normalize_evidence(items: object, references: list[dict], allowed_indexes: s
     return evidence, invalid
 
 
-def normalize_claim(raw: object, platform: dict, kid: str, needs_review: list[dict]) -> dict:
+def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[dict]) -> dict:
     item = raw if isinstance(raw, dict) else {}
     references = platform.get("references") or []
     answer = str(platform.get("answerMarkdown") or "")
@@ -478,7 +478,7 @@ def normalize_claim(raw: object, platform: dict, kid: str, needs_review: list[di
     excerpt_valid = bool(answer_excerpt) and answer_excerpt in answer
     covered = bool(item.get("covered")) and bool(claim_text)
     if covered and not excerpt_valid:
-        needs_review.append({
+        analysis_gaps.append({
             "stage": "comparison",
             "knowledgePointId": kid,
             "platform": platform["platform"],
@@ -545,7 +545,7 @@ def normalize_claim(raw: object, platform: dict, kid: str, needs_review: list[di
         faithfulness = "supported" if evidence else "insufficient"
         effective_indexes = supported_indexes
     if faithfulness == "insufficient" and covered:
-        needs_review.append({
+        analysis_gaps.append({
             "stage": "comparison",
             "knowledgePointId": kid,
             "platform": platform["platform"],
@@ -605,7 +605,7 @@ def normalize_claim(raw: object, platform: dict, kid: str, needs_review: list[di
     }
 
 
-def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: str, needs_review: list[dict]) -> dict:
+def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: str, analysis_gaps: list[dict]) -> dict:
     item = raw if isinstance(raw, dict) else {}
     pid = "dknowc-chat"
     claim = point_claims.get(pid) or {}
@@ -639,7 +639,7 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
     ) and trusted_provenance and semantic_support and not invalid
     if not valid:
         if item.get("eligible"):
-            needs_review.append({"stage": "comparison", "knowledgePointId": kid, "platform": pid, "reason": "深知晓免查锚点未同时满足可信来源、忠实性与原文定位要求"})
+            analysis_gaps.append({"stage": "comparison", "knowledgePointId": kid, "platform": pid, "reason": "深知晓免查锚点未同时满足可信来源、忠实性与原文定位要求"})
         return {"eligible": False}
     anchor_evidence = []
     for index, evidence_item in enumerate(evidence, 1):
@@ -826,7 +826,7 @@ def validate_analysis_contract(raw: dict, platforms: list[dict]) -> None:
 def normalize(raw: dict, source: dict, question: str, platforms: list[dict]) -> dict:
     validate_analysis_contract(raw, platforms)
     platform_map = {platform["platform"]: platform for platform in platforms}
-    needs_review = []
+    analysis_gaps = []
     points = []
     for position, raw_point in enumerate(raw.get("knowledgePoints") or [], 1):
         if not isinstance(raw_point, dict):
@@ -836,7 +836,7 @@ def normalize(raw: dict, source: dict, question: str, platforms: list[dict]) -> 
         if not description:
             raise SkillError(f"{kid} 缺少知识点描述")
         role = raw_point.get("role") if raw_point.get("role") in ("direct", "reference") else "direct"
-        claims = {pid: normalize_claim((raw_point.get("claims") or {}).get(pid), platform, kid, needs_review) for pid, platform in platform_map.items()}
+        claims = {pid: normalize_claim((raw_point.get("claims") or {}).get(pid), platform, kid, analysis_gaps) for pid, platform in platform_map.items()}
         comparison_raw = raw_point.get("comparison") if isinstance(raw_point.get("comparison"), dict) else {}
         covered_count = sum(claim["covered"] for claim in claims.values())
         comparison_summary = clipped(comparison_raw.get("summary"), 500)
@@ -851,7 +851,7 @@ def normalize(raw: dict, source: dict, question: str, platforms: list[dict]) -> 
             comparison_summary,
             covered_count,
         )
-        anchor = normalize_anchor(raw_point.get("trustedAnchor"), claims, platform_map, kid, needs_review)
+        anchor = normalize_anchor(raw_point.get("trustedAnchor"), claims, platform_map, kid, analysis_gaps)
         points.append({
             "id": kid,
             "description": description,
@@ -879,7 +879,7 @@ def normalize(raw: dict, source: dict, question: str, platforms: list[dict]) -> 
         "sourceSchemaVersion": source.get("schemaVersion"),
         "platforms": [{"platform": p["platform"], "label": p.get("label") or p["platform"]} for p in platforms],
         "knowledgePoints": points,
-        "needsReview": needs_review,
+        "analysisGaps": analysis_gaps,
     }
 
 
@@ -926,7 +926,7 @@ def main() -> int:
             if args.canonical_analysis_output:
                 dump_json(args.canonical_analysis_output, canonical_analysis(result))
             dump_json(args.output, result)
-            print(json.dumps({"status": "completed", "output": str(Path(args.output).resolve()), "knowledgePoints": len(result["knowledgePoints"]), "needsReview": len(result["needsReview"])}, ensure_ascii=False))
+            print(json.dumps({"status": "completed", "output": str(Path(args.output).resolve()), "knowledgePoints": len(result["knowledgePoints"]), "analysisGapCount": len(result["analysisGaps"])}, ensure_ascii=False))
             return 0
         if args.task_output:
             print(json.dumps({"status": "prepared", "task": str(Path(args.task_output).resolve())}, ensure_ascii=False))

@@ -88,13 +88,18 @@ def validate(verification: dict) -> None:
         raise ValueError("权威报告缺少知识点")
     final_answer = verification.get("finalAnswer")
     point_ids = [str(point.get("id") or "") for point in points]
+    included_ids = list((final_answer or {}).get("knowledgePointIds") or [])
+    excluded_ids = list((final_answer or {}).get("excludedKnowledgePointIds") or [])
     if (
         not isinstance(final_answer, dict)
-        or final_answer.get("status") not in {"verified", "needs_review"}
+        or final_answer.get("status") not in {"verified", "partially_verified", "insufficient_evidence"}
         or not compact(final_answer.get("answer"))
-        or final_answer.get("knowledgePointIds") != point_ids
+        or len(included_ids) != len(set(included_ids))
+        or len(excluded_ids) != len(set(excluded_ids))
+        or set(included_ids) & set(excluded_ids)
+        or set(included_ids + excluded_ids) != set(point_ids)
     ):
-        raise ValueError("权威报告缺少与知识点完整绑定的最终答案")
+        raise ValueError("权威报告最终答案与已纳入、证据不足知识点的绑定不完整")
     for point in points:
         point_id = str(point.get("id") or "")
         authority = point.get("authority") or {}
@@ -207,25 +212,21 @@ def render(verification: dict) -> str:
     direct_count = sum(
         1 for verdict in verdicts if verdict.get("category") == "direct_accurate"
     )
-    review_count = len(verification.get("needsReview") or [])
+    evidence_gap_count = len(verification.get("evidenceGaps") or [])
     verification_sha = canonical_sha256(verification)
     point_sections = "".join(render_point(point, platforms) for point in points)
     final_answer = verification.get("finalAnswer") or {}
-    final_status = (
-        "权威核验完成"
-        if final_answer.get("status") == "verified"
-        else "仍有知识点待复核"
-    )
+    final_status = {
+        "verified": "权威核验完成",
+        "partially_verified": "已形成有据结论，证据不足项已排除",
+        "insufficient_evidence": "证据不足，未形成确定答案",
+    }.get(final_answer.get("status"), "权威核验完成")
     final_answer_title = (
         "权威核验后的最终答案"
-        if final_answer.get("status") == "verified"
-        else "当前核验结论（待复核）"
+        if final_answer.get("status") != "insufficient_evidence"
+        else "权威核验结论"
     )
-    final_report_nav = (
-        '<a href="04-final-report.html">最终裁决报告</a>'
-        if final_answer.get("status") == "verified"
-        else '<span class="nav-pending">最终裁决报告待复核完成后生成</span>'
-    )
+    final_report_nav = '<a href="04-final-report.html">平台表现与完整证据</a>'
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -326,7 +327,7 @@ def render(verification: dict) -> str:
       <div class="metric"><b>{len(platforms)}</b><span>参与平台</span></div>
       <div class="metric"><b>{direct_count}</b><span>直接准确裁决</span></div>
       <div class="metric"><b>{verification.get("trustedSearchRequestCount", 0)}</b><span>可信搜索请求</span></div>
-      <div class="metric"><b>{review_count}</b><span>待人工复核</span></div>
+      <div class="metric"><b>{evidence_gap_count}</b><span>证据不足项</span></div>
     </section>
     {point_sections}
   </main>

@@ -162,16 +162,33 @@ def write_complete(
     unified_root = SKILLS_ROOT / "fact-check-x-unified"
 
     with zipfile.ZipFile(target, "w") as archive:
+        written: dict[str, bytes] = {}
+
+        def add_unique(source: Path, arcname: PurePosixPath | str) -> None:
+            name = PurePosixPath(arcname).as_posix()
+            content = source.read_bytes()
+            if name in written:
+                if written[name] != content:
+                    raise RuntimeError(
+                        f"conflicting complete-package source for {name}"
+                    )
+                return
+            add_bytes(archive, content, name, file_mode(source))
+            written[name] = content
+
         for path in public_files(source_root):
-            add_file(
-                archive,
+            relative = path.relative_to(source_root)
+            if relative == Path("package-manifest.json") or (
+                len(relative.parts) == 1 and relative.name in LEGAL_FILES
+            ):
+                continue
+            add_unique(
                 path,
-                archive_root / path.relative_to(source_root).as_posix(),
+                archive_root / relative.as_posix(),
             )
 
         for path in public_files(unified_root / "scripts"):
-            add_file(
-                archive,
+            add_unique(
                 path,
                 archive_root
                 / "scripts"
@@ -184,8 +201,7 @@ def write_complete(
                 relative = path.relative_to(module_root)
                 if relative == Path("SKILL.md") or relative.parts[0] == "agents":
                     continue
-                add_file(
-                    archive,
+                add_unique(
                     path,
                     archive_root / "modules" / skill_name / relative.as_posix(),
                 )
@@ -194,7 +210,7 @@ def write_complete(
             relative = path.relative_to(unified_root / "tests")
             if relative.name == "smoke_test.py":
                 relative = relative.with_name("unified_smoke_test.py")
-            add_file(archive, path, archive_root / "tests" / relative.as_posix())
+            add_unique(path, archive_root / "tests" / relative.as_posix())
 
         fixture_sources = {
             "results.json": SKILLS_ROOT
@@ -214,7 +230,7 @@ def write_complete(
             / "K1-assessment.json",
         }
         for name, source in fixture_sources.items():
-            add_file(archive, source, archive_root / "tests" / "fixtures" / name)
+            add_unique(source, archive_root / "tests" / "fixtures" / name)
 
         package_manifest = {
             "schemaVersion": "fact-check-x/public-workbuddy-package@1",
@@ -226,14 +242,14 @@ def write_complete(
             "upstreamCandidateSha256": candidate_sha,
             "officialPromoteSha256": official_sha,
         }
-        add_bytes(
-            archive,
-            (
-                json.dumps(package_manifest, ensure_ascii=False, indent=2) + "\n"
-            ).encode("utf-8"),
-            archive_root / "package-manifest.json",
-        )
-        add_legal(archive, archive_root)
+        manifest_name = (archive_root / "package-manifest.json").as_posix()
+        manifest_content = (
+            json.dumps(package_manifest, ensure_ascii=False, indent=2) + "\n"
+        ).encode("utf-8")
+        add_bytes(archive, manifest_content, manifest_name)
+        written[manifest_name] = manifest_content
+        for name in LEGAL_FILES:
+            add_unique(ROOT / name, archive_root / name)
     return target
 
 
@@ -247,6 +263,8 @@ def validate_archive(
         if bad_member:
             raise RuntimeError(f"{path.name} is corrupt at {bad_member}")
         names = archive.namelist()
+        if len(names) != len(set(names)):
+            raise RuntimeError(f"{path.name} contains duplicate ZIP members")
         roots = {
             PurePosixPath(name).parts[0]
             for name in names

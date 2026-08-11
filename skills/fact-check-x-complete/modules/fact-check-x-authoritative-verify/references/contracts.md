@@ -33,16 +33,17 @@
   "status": "verified",
   "searchMode": "trusted_search",
   "requestCount": 1,
+  "attemptCount": 1,
   "query": "由 cloudPayload 构造的查询",
   "evidence": [{"id": "E1", "title": "...", "url": "https://...", "date": "...", "body": "官方原文"}]
 }
 ```
 
-`searchMode`：`trusted_search` 或 `dknow_exempt`。免查时 `requestCount` 必须为 0，其余搜索结果包括失败均为 1。
+`searchMode`：`trusted_search` 或 `dknow_exempt`。免查时 `requestCount=0`、`attemptCount=0`；其余知识点的逻辑搜索任务 `requestCount=1`，技术故障自动重试时由 `attemptCount` 记录实际尝试次数，最多 3 次。
 
 ## 单点裁决结果
 
-`fact-check-x/authority-result@1` 保留请求、证据、搜索模式、请求次数、官方结论和逐平台类别。服务错误不得写成事实错误。
+`fact-check-x/authority-result@1` 保留请求、证据、搜索模式、请求次数、权威结论和逐平台类别。服务错误不得写成事实错误；重试后仍失败时不生成裁决结果。证据不足写入 `resolution=insufficient_evidence|partially_resolved` 和 `evidenceGaps`，但结果状态仍为 `completed`。
 
 ## 汇总结果
 
@@ -51,12 +52,12 @@
 ```json
 {
   "finalAnswer": {
-    "status": "verified",
+    "status": "verified|partially_verified|insufficient_evidence",
     "answer": "按知识点顺序合并的权威核验答案",
-    "knowledgePointIds": ["K1"]
+    "knowledgePointIds": ["K1"],
+    "excludedKnowledgePointIds": []
   }
 }
 ```
 
-`finalAnswer` 由已通过裁决门禁的 `authoritativeFinding` 合并生成，不接受脱离知识点
-另写的结论。存在待复核项时状态只能是 `needs_review`。
+`finalAnswer` 只合并已有足够证据完成裁决的 `authoritativeFinding`，不接受脱离知识点另写的结论。证据不足知识点进入 `excludedKnowledgePointIds` 和顶层 `evidenceGaps`，不进入确定答案或准确率分母，也不阻断第四步。

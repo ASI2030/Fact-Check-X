@@ -164,8 +164,10 @@ def main() -> int:
         },
         {},
     )
-    assert no_evidence_result["status"] == "needs_review"
-    assert no_evidence_result["needsReview"]
+    assert no_evidence_result["status"] == "completed"
+    assert no_evidence_result["resolution"] == "insufficient_evidence"
+    assert no_evidence_result["evidenceGaps"]
+    assert "needsReview" not in no_evidence_result
     assert all(
         item["category"] == "unverified"
         for item in no_evidence_result["verdicts"].values()
@@ -182,7 +184,7 @@ def main() -> int:
         "secret.local_credential_private",
         "secret.no_chat_secret",
         "secret.service_error_no_relogin",
-        "authority.no_evidence_needs_review",
+        "authority.no_evidence_completed_with_boundary",
     ]
     output = os.getenv("FACT_CHECK_X_ASSERTIONS_OUTPUT")
     if output:

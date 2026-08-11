@@ -24,6 +24,14 @@ def trusted_search_timeout_seconds() -> float:
         return 90.0
 
 
+def trusted_search_attempt_limit() -> int:
+    raw = os.getenv("FACTCHECK_TRUSTED_SEARCH_ATTEMPTS", "3").strip()
+    try:
+        return max(1, min(int(raw), 3))
+    except ValueError:
+        return 3
+
+
 def trusted_search_ssl_context() -> ssl.SSLContext:
     candidates: list[str] = []
     try:
@@ -238,8 +246,18 @@ def acquire(request: dict, service_area: str = "", limit: int = 6, fixture: obje
         result = {"status": "verified", "error": "", "evidence": anchor_evidence(anchor)}
         mode = "dknow_exempt"
         count = 0
+        attempt_count = 0
     else:
-        result = fixture_search(fixture) if fixture is not None else trusted_search(query, service_area, limit)
+        attempt_limit = 1 if fixture is not None else trusted_search_attempt_limit()
+        result = {"status": "service_error", "error": "可信搜索尚未执行", "evidence": []}
+        attempt_count = 0
+        for attempt in range(attempt_limit):
+            attempt_count += 1
+            result = fixture_search(fixture) if fixture is not None else trusted_search(query, service_area, limit)
+            if result.get("status") != "service_error":
+                break
+            if attempt + 1 < attempt_limit:
+                time.sleep(0.5 * (2 ** attempt))
         mode = "trusted_search"
         count = 1
     return {
@@ -249,6 +267,7 @@ def acquire(request: dict, service_area: str = "", limit: int = 6, fixture: obje
         "status": result["status"],
         "searchMode": mode,
         "requestCount": count,
+        "attemptCount": attempt_count,
         "query": query,
         "serviceArea": service_area,
         "error": result.get("error", ""),
@@ -401,10 +420,16 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
     if evidence.get("schemaVersion") != "fact-check-x/authority-evidence@1" or evidence.get("requestId") != request.get("requestId"):
         raise SkillError("证据包与当前请求不一致")
     status = evidence.get("status")
+    if status == "service_error":
+        raise SkillError(
+            "可信搜索服务在自动重试后仍然失败；这是技术故障，请保留当前证据包并重新执行 search-authority，"
+            "不得转成人工事实复核"
+        )
     validate_assessment(request, evidence, assessment)
     evidence_ids = {str(item.get("id")) for item in evidence.get("evidence") or []}
     verdicts = {}
-    needs_review = []
+    evidence_gaps = []
+    resolved_count = 0
     for pid, claim in (request.get("claims") or {}).items():
         if not claim.get("covered"):
             verdicts[pid] = {"verdict": "omitted", "category": "omitted", "reason": "该平台未覆盖此知识点。", "evidenceIds": []}
@@ -415,30 +440,42 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
                 "reason": "本次可信搜索未返回可用于裁决的权威材料，不能据此判定主张真假。",
                 "evidenceIds": [],
             }
-            needs_review.append({
+            evidence_gaps.append({
                 "platform": pid,
-                "reason": "可信搜索结果为空；未检索到证据不等于主张已被证伪",
+                "reason": "可信搜索结果为空；该主张保持证据不足，不进入确定答案或准确率分母",
             })
-        elif status == "service_error":
-            verdicts[pid] = {"verdict": "insufficient", "category": "unverified", "reason": evidence.get("error") or "可信搜索服务异常。", "evidenceIds": []}
-            needs_review.append({"platform": pid, "reason": "可信搜索服务异常，不能据此判定主张真假"})
         elif status == "verified":
             verdicts[pid] = normalize_verdict(((assessment.get("verdicts") or {}).get(pid) or {}), claim, evidence_ids)
             if evidence.get("searchMode") == "dknow_exempt" and pid == "dknowc-chat":
                 verdicts[pid]["verdict"] = "supported"
                 verdicts[pid]["category"] = "direct_accurate"
             if verdicts[pid]["category"] == "unverified":
-                needs_review.append({"platform": pid, "reason": "已取得权威证据，但当前智能体尚未完成有据裁决"})
+                evidence_gaps.append({
+                    "platform": pid,
+                    "reason": "现有权威证据不足以裁决该平台主张；该项不进入确定答案或准确率分母",
+                })
+            else:
+                resolved_count += 1
         else:
             raise SkillError(f"未知证据状态: {status}")
-    finding = clipped(assessment.get("authoritativeFinding"), 1200) if status == "verified" else ""
-    if status == "verified" and not finding:
-        needs_review.append({"reason": "缺少权威结论"})
+    finding = (
+        clipped(assessment.get("authoritativeFinding"), 1200)
+        if status == "verified"
+        else "本次可信搜索未取得可用于裁决该知识点的权威证据；相关主张保持证据不足。"
+    )
+    resolution = (
+        "insufficient_evidence"
+        if resolved_count == 0
+        else "partially_resolved"
+        if evidence_gaps
+        else "resolved"
+    )
     return {
         "schemaVersion": "fact-check-x/authority-result@1",
         "requestId": request["requestId"],
         "createdAt": now_iso(),
-        "status": "needs_review" if needs_review else "completed",
+        "status": "completed",
+        "resolution": resolution,
         "searchStatus": status,
         "searchMode": evidence.get("searchMode"),
         "requestCount": evidence.get("requestCount"),
@@ -447,7 +484,7 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
         "authoritativeFinding": finding,
         "evidence": evidence.get("evidence") or [],
         "verdicts": verdicts,
-        "needsReview": needs_review,
+        "evidenceGaps": evidence_gaps,
     }
 
 

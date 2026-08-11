@@ -13,7 +13,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 sys.path.insert(0, str(ROOT / "scripts"))
-from authority_verify import trusted_search, trusted_search_timeout_seconds
+from authority_verify import acquire, trusted_search, trusted_search_timeout_seconds
 
 
 def run(arguments: list[str]) -> None:
@@ -56,6 +56,42 @@ def main() -> int:
             os.environ.pop("TRUSTED_SEARCH_KEY", None)
         else:
             os.environ["TRUSTED_SEARCH_KEY"] = previous_key
+
+    retry_request = json.loads(
+        (FIXTURES / "K2-request.json").read_text(encoding="utf-8")
+    )
+    previous_attempts = os.environ.get("FACTCHECK_TRUSTED_SEARCH_ATTEMPTS")
+    os.environ["FACTCHECK_TRUSTED_SEARCH_ATTEMPTS"] = "3"
+    try:
+        with patch(
+            "authority_verify.trusted_search",
+            side_effect=[
+                {"status": "service_error", "error": "temporary", "evidence": []},
+                {"status": "no_evidence", "error": "", "evidence": []},
+            ],
+        ), patch("authority_verify.time.sleep"):
+            recovered = acquire(retry_request)
+        assert recovered["status"] == "no_evidence"
+        assert recovered["requestCount"] == 1
+        assert recovered["attemptCount"] == 2
+
+        with patch(
+            "authority_verify.trusted_search",
+            return_value={
+                "status": "service_error",
+                "error": "still unavailable",
+                "evidence": [],
+            },
+        ), patch("authority_verify.time.sleep"):
+            exhausted = acquire(retry_request)
+        assert exhausted["status"] == "service_error"
+        assert exhausted["requestCount"] == 1
+        assert exhausted["attemptCount"] == 3
+    finally:
+        if previous_attempts is None:
+            os.environ.pop("FACTCHECK_TRUSTED_SEARCH_ATTEMPTS", None)
+        else:
+            os.environ["FACTCHECK_TRUSTED_SEARCH_ATTEMPTS"] = previous_attempts
 
     with tempfile.TemporaryDirectory(prefix="fact-check-authority-") as temp:
         out = Path(temp)
@@ -299,7 +335,7 @@ def main() -> int:
             "coreQuestion": "广州无合同租房提取月上限",
             "platforms": [{"platform": "dknowc-chat", "label": "深知晓"}, {"platform": "doubao", "label": "豆包"}],
             "knowledgePoints": [{"id": "K1", "description": "广州无合同租房提取每人每月最高额度", "role": "direct", "core": True, "claims": json.loads((FIXTURES / "K1-request.json").read_text(encoding="utf-8"))["claims"], "comparison": {"status": "conflict", "summary": "1400元与2000元冲突"}, "trustedAnchor": json.loads((FIXTURES / "K1-request.json").read_text(encoding="utf-8"))["trustedAnchor"]}],
-            "needsReview": [],
+            "evidenceGaps": [],
         }
         verification = {
             "schemaVersion": "fact-check-x/verification@2",
@@ -313,7 +349,7 @@ def main() -> int:
                 "answer": k1["authoritativeFinding"],
                 "knowledgePointIds": ["K1"],
             },
-            "needsReview": [],
+            "evidenceGaps": [],
             "status": "completed",
         }
         results_path = out / "results.json"
@@ -563,10 +599,37 @@ def main() -> int:
         run([sys.executable, str(ROOT / "scripts" / "authority_verify.py"), "search", "--request", str(FIXTURES / "K2-request.json"), "--fixture", str(no_evidence_fixture), "--output", str(no_evidence)])
         run([sys.executable, str(ROOT / "scripts" / "authority_verify.py"), "finalize", "--request", str(FIXTURES / "K2-request.json"), "--evidence", str(no_evidence), "--output", str(no_evidence_result)])
         none = json.loads(no_evidence_result.read_text(encoding="utf-8"))
-        assert none["status"] == "needs_review"
-        assert none["needsReview"]
+        assert none["status"] == "completed"
+        assert none["resolution"] == "insufficient_evidence"
+        assert none["evidenceGaps"]
+        assert "needsReview" not in none
         assert all(item["category"] == "unverified" for item in none["verdicts"].values())
         assert all(item["verdict"] == "insufficient" for item in none["verdicts"].values())
+
+        service_error_evidence = out / "K2-service-error.json"
+        service_error_evidence.write_text(json.dumps({
+            "schemaVersion": "fact-check-x/authority-evidence@1",
+            "requestId": "K2",
+            "status": "service_error",
+            "searchMode": "trusted_search",
+            "requestCount": 1,
+            "attemptCount": 3,
+            "evidence": [],
+        }, ensure_ascii=False), encoding="utf-8")
+        service_error_result = run_failed([
+            sys.executable,
+            str(ROOT / "scripts" / "authority_verify.py"),
+            "finalize",
+            "--request",
+            str(FIXTURES / "K2-request.json"),
+            "--evidence",
+            str(service_error_evidence),
+            "--output",
+            str(out / "K2-service-error-result.json"),
+        ])
+        assert service_error_result["status"] == "failed"
+        assert "技术故障" in service_error_result["error"]
+        assert "人工事实复核" in service_error_result["error"]
 
         keyless_requests = out / "keyless-requests"
         keyless_requests.mkdir()
@@ -613,6 +676,31 @@ def main() -> int:
         batch = json.loads((batch_dir / "batch.json").read_text(encoding="utf-8"))
         assert batch["executionMode"] == "parallel" and batch["taskCount"] == 11
         assert batch["trustedSearchRequestCount"] == 11 and batch["elapsedMs"] < 700
+
+        failed_batch_dir = out / "failed-batch"
+        failed_fixtures = out / "failed-fixtures.json"
+        failed_fixtures.write_text(json.dumps({
+            request_id: {"status": "service_error", "error": "fixture outage"}
+            for request_id in fixtures
+        }, ensure_ascii=False), encoding="utf-8")
+        failed_batch = run_failed([
+            sys.executable,
+            str(ROOT / "scripts" / "batch_search.py"),
+            "--requests-dir",
+            str(requests_dir),
+            "--output-dir",
+            str(failed_batch_dir),
+            "--fixtures",
+            str(failed_fixtures),
+            "--max-workers",
+            "11",
+        ])
+        assert failed_batch["status"] == "failed"
+        assert failed_batch["technicalErrorCount"] == 11
+        failed_batch_manifest = json.loads(
+            (failed_batch_dir / "batch.json").read_text(encoding="utf-8")
+        )
+        assert failed_batch_manifest["trustedSearchAttemptCount"] == 11
     print("PASS 权威证据核验")
     return 0
 

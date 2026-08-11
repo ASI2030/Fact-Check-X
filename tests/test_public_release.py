@@ -13,7 +13,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-VERSION = "1.1.0"
+VERSION = "1.1.1"
+PUBLISHED_VERSION = "1.1.0"
 OFFICIAL_SHA = "7eb4b713be58d3948ca6c44db8dbe9e352a718531eb58dcdf017bff6e104ea59"
 
 
@@ -40,13 +41,16 @@ class PublicReleaseTest(unittest.TestCase):
             (ROOT / "release" / "manifest.json").read_text(encoding="utf-8")
         )
         self.assertEqual(manifest["status"], "published")
-        self.assertEqual(manifest["version"], VERSION)
+        self.assertEqual(manifest["version"], PUBLISHED_VERSION)
         self.assertEqual(
             manifest["formalArtifact"]["sha256"],
             OFFICIAL_SHA,
         )
         self.assertEqual(manifest["distribution"]["skillhub"]["status"], "approved")
-        self.assertEqual(manifest["distribution"]["workbuddy"]["version"], VERSION)
+        self.assertEqual(
+            manifest["distribution"]["workbuddy"]["version"],
+            PUBLISHED_VERSION,
+        )
         self.assertFalse(manifest["publishGate"]["githubUploadAllowed"])
 
     def test_build_is_reproducible_and_manifest_verifies(self):

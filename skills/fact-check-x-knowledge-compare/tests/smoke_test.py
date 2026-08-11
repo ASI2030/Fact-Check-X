@@ -40,7 +40,7 @@ def main() -> int:
         assert point["claims"]["dknowc-chat"]["citedReferenceIndexes"] == [1]
         assert point["claims"]["doubao"]["sourceLevel"] == "nonofficial"
         assert point["trustedAnchor"]["eligible"] is True
-        assert result["needsReview"] == []
+        assert result["analysisGaps"] == []
         assert "platform-grid" in html and "逐知识点完整对照" in html
         assert "综合草案" in html and "尚未经过权威核验" in html
         assert "官方来源" in html
@@ -130,7 +130,7 @@ def main() -> int:
         run([sys.executable, str(ROOT / "scripts" / "knowledge_compare.py"), "--input", str(FIXTURES / "results.json"), "--analysis", str(invalid_path), "--output", str(invalid_result)])
         rejected = json.loads(invalid_result.read_text(encoding="utf-8"))
         assert rejected["knowledgePoints"][0]["claims"]["dknowc-chat"]["citedReferenceIndexes"] == [1]
-        assert rejected["needsReview"] == []
+        assert rejected["analysisGaps"] == []
 
         mixed_source = json.loads((FIXTURES / "results.json").read_text(encoding="utf-8"))
         mixed_source["platforms"][1]["answerMarkdown"] = "每人每月最高提取 2000 元。[1] 2024年11月起执行。"
@@ -230,7 +230,7 @@ def main() -> int:
         assert boundary_claim["citedReferenceIndexes"] == [1]
         assert boundary_claim["sourceLevel"] == "nonofficial"
         assert boundary_claim["referenceBinding"] == "local"
-        assert boundary_data["needsReview"] == []
+        assert boundary_data["analysisGaps"] == []
 
         answer_level_source = json.loads((FIXTURES / "results.json").read_text(encoding="utf-8"))
         answer_level_source["platforms"][1]["answerMarkdown"] = (
@@ -675,7 +675,7 @@ def main() -> int:
             assert forged["knowledgePoints"][0]["trustedAnchor"]["eligible"] is False
             assert any(
                 item.get("stage") == "comparison"
-                for item in forged.get("needsReview") or []
+                for item in forged.get("analysisGaps") or []
             )
     if os.getenv("FACT_CHECK_X_ASSERTIONS_OUTPUT"):
         Path(os.environ["FACT_CHECK_X_ASSERTIONS_OUTPUT"]).write_text(json.dumps({

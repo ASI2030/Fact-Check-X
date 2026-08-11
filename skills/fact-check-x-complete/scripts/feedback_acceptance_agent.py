@@ -67,7 +67,7 @@ def main() -> int:
     metrics = {
         "platformCount": 0,
         "knowledgePointCount": 0,
-        "needsReviewCount": 0,
+        "analysisGapCount": 0,
         "coveredClaimCount": 0,
         "supportedClaimCount": 0,
         "dknowAnchorCount": 0,
@@ -109,11 +109,11 @@ def main() -> int:
 
         points = comparison.get("knowledgePoints") or []
         metrics["knowledgePointCount"] = len(points)
-        metrics["needsReviewCount"] = len(comparison.get("needsReview") or [])
+        metrics["analysisGapCount"] = len(comparison.get("analysisGaps") or [])
         if not points:
             failures.append("knowledge_points_missing")
-        if comparison.get("needsReview"):
-            failures.append("comparison_needs_review")
+        if comparison.get("analysisGaps"):
+            failures.append("comparison_analysis_gaps")
         analysis_points = analysis.get("knowledgePoints") or []
         if len(analysis_points) != len(points):
             failures.append("canonical_analysis_point_count_mismatch")

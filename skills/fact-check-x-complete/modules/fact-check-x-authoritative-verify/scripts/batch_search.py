@@ -60,8 +60,16 @@ def main() -> int:
             futures = [pool.submit(run_one, entry) for entry in requests]
             for future in as_completed(futures):
                 request_id, result, target = future.result()
-                completed[request_id] = {"file": str(target.resolve()), "status": result["status"], "searchMode": result["searchMode"], "requestCount": result["requestCount"]}
+                completed[request_id] = {
+                    "file": str(target.resolve()),
+                    "status": result["status"],
+                    "searchMode": result["searchMode"],
+                    "requestCount": result["requestCount"],
+                    "attemptCount": result.get("attemptCount", result["requestCount"]),
+                    "error": result.get("error", ""),
+                }
         ordered = [completed[str(request.get("requestId") or path.stem)] for path, request in requests]
+        technical_errors = [item for item in ordered if item["status"] == "service_error"]
         manifest = {
             "schemaVersion": "fact-check-x/authority-batch@1",
             "createdAt": now_iso(),
@@ -69,13 +77,33 @@ def main() -> int:
             "taskCount": len(requests),
             "maxWorkers": workers,
             "trustedSearchRequestCount": sum(item["requestCount"] for item in ordered),
+            "trustedSearchAttemptCount": sum(item["attemptCount"] for item in ordered),
             "dknowExemptCount": sum(item["searchMode"] == "dknow_exempt" for item in ordered),
+            "technicalErrorCount": len(technical_errors),
             "elapsedMs": round((time.monotonic() - started) * 1000),
             "results": ordered,
         }
         dump_json(output_dir / "batch.json", manifest)
-        print(json.dumps({"status": "completed", **{key: manifest[key] for key in ("executionMode", "taskCount", "maxWorkers", "trustedSearchRequestCount", "dknowExemptCount", "elapsedMs")}}, ensure_ascii=False))
-        return 0
+        response_status = "failed" if technical_errors else "completed"
+        print(json.dumps({
+            "status": response_status,
+            **{key: manifest[key] for key in (
+                "executionMode",
+                "taskCount",
+                "maxWorkers",
+                "trustedSearchRequestCount",
+                "trustedSearchAttemptCount",
+                "dknowExemptCount",
+                "technicalErrorCount",
+                "elapsedMs",
+            )},
+            **(
+                {"error": "可信搜索服务在自动重试后仍有失败项；请重试当前搜索阶段"}
+                if technical_errors
+                else {}
+            ),
+        }, ensure_ascii=False))
+        return 1 if technical_errors else 0
     except (SkillError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(json.dumps({"status": "failed", "error": str(exc)}, ensure_ascii=False))
         return 1

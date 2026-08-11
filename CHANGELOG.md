@@ -2,6 +2,12 @@
 
 All notable changes are documented in this file. The project follows Semantic Versioning.
 
+## [1.1.1] - 2026-08-11
+
+- Separated Trusted Search technical failures from evidence insufficiency: service failures now retry up to three times and remain a technical stage error if exhausted.
+- Made `no_evidence` and unresolved claims deliverable as explicit evidence gaps, without requiring human review or blocking the fourth-stage report.
+- Excluded evidence-insufficient claims from deterministic final answers and accuracy denominators while retaining them in the evidence-boundary reports.
+
 ## [1.1.0] - 2026-07-30
 
 - Reframed the public product around four user-facing deliverables: original answers and citations, unverified knowledge comparison, authoritative evidence verification, and platform performance with complete evidence.
