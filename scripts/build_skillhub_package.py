@@ -87,7 +87,8 @@ def build(source: Path, output: Path, version: str) -> dict:
                 or original.parts[0] != ROOT
             ):
                 raise RuntimeError(f"unsafe source path: {info.filename}")
-            target = normalized_name(info.filename)
+            relative = PurePosixPath(*original.parts[1:])
+            target = normalized_name(relative.as_posix())
             if target in seen:
                 raise RuntimeError(f"duplicate normalized path: {target}")
             seen.add(target)
@@ -104,12 +105,12 @@ def build(source: Path, output: Path, version: str) -> dict:
 
     with zipfile.ZipFile(output) as archive:
         names = archive.namelist()
-        if f"{ROOT}/SKILL.md" not in names:
+        if "SKILL.md" not in names:
             raise RuntimeError("output ZIP misses SKILL.md")
         if any(PurePosixPath(name).name in {"LICENSE", "NOTICE"} for name in names):
             raise RuntimeError("output ZIP contains extensionless legal files")
         validate_skill(
-            archive.read(f"{ROOT}/SKILL.md").decode("utf-8"),
+            archive.read("SKILL.md").decode("utf-8"),
             version,
         )
 

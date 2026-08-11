@@ -14,8 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 VERSION = "1.1.1"
-PUBLISHED_VERSION = "1.1.0"
-OFFICIAL_SHA = "7eb4b713be58d3948ca6c44db8dbe9e352a718531eb58dcdf017bff6e104ea59"
+PUBLISHED_VERSION = "1.1.1"
+WORKBUDDY_VERSION = "1.1.0"
+OFFICIAL_SHA = "cd4ed3917ed586c34770352fdecd359ba6c7497a737a6304fd22b5bacfe986ea"
 
 
 def load_module(name: str, path: Path):
@@ -48,8 +49,12 @@ class PublicReleaseTest(unittest.TestCase):
         )
         self.assertEqual(manifest["distribution"]["skillhub"]["status"], "approved")
         self.assertEqual(
-            manifest["distribution"]["workbuddy"]["version"],
+            manifest["distribution"]["skillhub"]["version"],
             PUBLISHED_VERSION,
+        )
+        self.assertEqual(
+            manifest["distribution"]["workbuddy"]["version"],
+            WORKBUDDY_VERSION,
         )
         self.assertFalse(manifest["publishGate"]["githubUploadAllowed"])
 
@@ -172,9 +177,11 @@ class PublicReleaseTest(unittest.TestCase):
                 self.assertEqual(sha256(left_package), sha256(right_package))
                 with zipfile.ZipFile(left_package) as archive:
                     names = archive.namelist()
-                    skill = archive.read(
-                        "fact-check-x-complete/SKILL.md"
-                    ).decode("utf-8")
+                    skill = archive.read("SKILL.md").decode("utf-8")
+                self.assertIn("package-manifest.json", names)
+                self.assertFalse(
+                    any(name.startswith("fact-check-x-complete/") for name in names)
+                )
                 self.assertFalse(
                     any(Path(name).name in {"LICENSE", "NOTICE"} for name in names)
                 )
