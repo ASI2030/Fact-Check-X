@@ -2,6 +2,12 @@
 
 All notable changes are documented in this file. The project follows Semantic Versioning.
 
+## [1.1.2] - 2026-08-12
+
+- Added a product overview image to the GitHub README and SkillHub description.
+- Aligned the Chinese and English product introductions with the evidence-gap behavior introduced in v1.1.1.
+- Corrected the documented SkillHub installation command to use the namespace flag.
+
 ## [1.1.1] - 2026-08-11
 
 - Separated Trusted Search technical failures from evidence insufficiency: service failures now retry up to three times and remain a technical stage error if exhausted.

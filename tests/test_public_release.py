@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 PUBLISHED_VERSION = "1.1.1"
 WORKBUDDY_VERSION = "1.1.0"
 OFFICIAL_SHA = "cd4ed3917ed586c34770352fdecd359ba6c7497a737a6304fd22b5bacfe986ea"
@@ -36,6 +36,14 @@ class PublicReleaseTest(unittest.TestCase):
         audit = load_module("audit_public_tree", SCRIPTS / "audit_public_tree.py")
         result = audit.scan(ROOT)
         self.assertEqual(result["status"], "passed", result["findings"])
+        overview = ROOT / "assets" / "fact-check-x-overview.png"
+        self.assertTrue(overview.is_file())
+        self.assertTrue(overview.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
+        for readme in ("README.md", "README.en.md"):
+            self.assertIn(
+                "assets/fact-check-x-overview.png",
+                (ROOT / readme).read_text(encoding="utf-8"),
+            )
 
     def test_release_source_manifest_is_promoted(self):
         manifest = json.loads(
@@ -187,6 +195,10 @@ class PublicReleaseTest(unittest.TestCase):
                 )
                 self.assertNotIn("](references/", skill)
                 self.assertNotIn("V8", skill)
+                self.assertIn(
+                    "https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png",
+                    skill,
+                )
                 for platform in (
                     "深知晓（深度研究）",
                     "豆包",

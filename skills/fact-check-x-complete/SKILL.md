@@ -5,13 +5,15 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.1"
+  version: "1.1.2"
   summary: 正式支持 6 个 AI 平台，完整采集回答与引用、比较关键事实，并按需用权威证据逐点核验。
   tags: [事实核验, 多平台对比, 可信搜索, 深度研究]
   homepage: https://github.com/ASI2030/Fact-Check-X
 ---
 
 # 全知晓（Fact-Check-X）
+
+![Fact-Check-X 产品总览：六个平台与四步事实核验流程](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png)
 
 把同一个问题交给多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并形成可追溯结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 

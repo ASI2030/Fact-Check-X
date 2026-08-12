@@ -4,10 +4,14 @@
 
 Compare complete answers and citations from several AI services, then verify atomic facts against authoritative evidence. Fact-Check-X makes each platform's answer, source support, disagreements and final finding traceable.
 
+<p align="center">
+  <img src="assets/fact-check-x-overview.png" alt="Fact-Check-X overview: six platforms, four-stage fact-checking workflow, and SkillHub installation" width="1200">
+</p>
+
 ## Quick start
 
 ```bash
-skillhub install @user_186e37d0/fact-check-x
+skillhub install fact-check-x --namespace user_186e37d0
 ```
 
 Install through the Agent Skills CLI:
@@ -53,7 +57,7 @@ The selected set is dynamic. `N=1` runs a complete single-platform verification.
 
 1. **Original answers and citations**: complete answers, references, screenshots and HTML evidence.
 2. **Knowledge comparison (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness.
-3. **Authoritative evidence verification**: evidence, findings, platform verdicts and review items.
+3. **Authoritative evidence verification**: evidence, findings, platform verdicts and explicit evidence boundaries.
 4. **Platform performance and complete evidence**: accuracy, completeness, source quality and a portable report package.
 
 Capture and comparison require no API key. Trusted Search is an optional enhancement used only at the authoritative verification stage. On first use, the user signs in to the DKnow MaaS page; the skill obtains or creates a dedicated local key without asking the user to paste secrets into chat. Semantic analysis runs in the current host and does not call an external model API.
@@ -333,8 +337,8 @@ See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 | One platform fails | Repair or recapture it; the capture gate must stay closed |
 | `capture-recovery.json` appears | Use Computer Use on the same page or stop at original-answer capture |
 | `configuration_required` | Run the returned configuration command in the foreground |
-| Trusted Search times out | Preserve the Key and move to review |
-| `needs_review` | Fix evidence or assessment structure; do not report completion |
+| Trusted Search times out | Preserve the Key and retry up to three times; if it still fails, stop with a technical error |
+| `insufficient_evidence` | Keep the evidence boundary explicit, exclude it from deterministic answers and accuracy denominators, and continue to the fourth report |
 | Local report link cannot be shared | Upload the report package or individual report files |
 
 ## Validation

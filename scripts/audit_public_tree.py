@@ -66,6 +66,9 @@ TEXT_SUFFIXES = {
     ".yaml",
     ".yml",
 }
+ALLOWED_BINARY_FILES = {
+    "assets/fact-check-x-overview.png": b"\x89PNG\r\n\x1a\n",
+}
 CONTENT_RULES = {
     "private_key": re.compile(
         r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
@@ -172,6 +175,14 @@ def scan(root: Path) -> dict:
         bytes_scanned += path.stat().st_size
         if path.name in FORBIDDEN_FILE_NAMES or path.suffix in FORBIDDEN_SUFFIXES:
             findings.append({"rule": "forbidden_file", "path": relative.as_posix()})
+            continue
+
+        expected_header = ALLOWED_BINARY_FILES.get(relative.as_posix())
+        if expected_header is not None:
+            if not path.read_bytes().startswith(expected_header):
+                findings.append(
+                    {"rule": "invalid_binary_asset", "path": relative.as_posix()}
+                )
             continue
 
         mode = path.stat().st_mode
