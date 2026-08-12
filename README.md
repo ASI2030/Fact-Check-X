@@ -2,10 +2,10 @@
 
 [English](README.en.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete) · [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) · [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete) · [版本发布](https://github.com/ASI2030/Fact-Check-X/releases) · [安全](SECURITY.md) · [隐私](PRIVACY.md)
 
-比较多个 AI 对同一问题的完整回答与引用，再用权威证据逐点核验。不是“再生成一个答案”，而是把各家说法、引用依据、共识冲突和最终结论放在同一条可追溯证据链上。
+对一个或多个 AI 的完整回答与引用进行事实核验：无损采集原回答，结构化比较关键事实，逐点核验权威证据，再评估各平台表现。最终答案只是核验产物之一，原始证据、冲突和证据边界全程可追溯。
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png" alt="Fact-Check-X 产品总览：六个平台、四步事实核验流程与 SkillHub 安装方式" width="1200">
+  <img src="assets/fact-check-x-overview.png?v=1.1.3" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
 </p>
 
 ## 三分钟开始
@@ -69,7 +69,7 @@ claude plugin install fact-check-x@fact-check-x-marketplace
 
 1. **原始答案与引用**：完整回答、参考文献、引用关系、截图和 HTML 存证。
 2. **知识点对比（未核验）**：原子事实、各家主张、共识、冲突与引用忠实性。
-3. **权威证据核验**：逐知识点展示权威结论、证据、平台裁决和证据边界。
+3. **权威核验与答案生成**：逐知识点核验权威证据，只把证据支持的内容写入最终答案；冲突和证据不足明确保留。
 4. **平台表现与完整证据**：准确性、完整性、来源质量、关键发现和完整报告包。
 
 默认每一步都让用户选择继续、修正或结束。用户一开始明确要求完整跑完时可以连续执行，但四份产物仍会逐步交付。

@@ -2,6 +2,12 @@
 
 All notable changes are documented in this file. The project follows Semantic Versioning.
 
+## [1.1.3] - 2026-08-12
+
+- Re-centered the public presentation on the complete fact-checking workflow while retaining authoritative answer generation as the third-stage capability.
+- Added a high-information-density poster covering the six supported platforms, four independent deliverables, evidence boundaries, API Key rule and current SkillHub installation command.
+- Aligned the GitHub and SkillHub descriptions with the rule that only evidence-supported claims enter the final answer.
+
 ## [1.1.2] - 2026-08-12
 
 - Added a product overview image to the GitHub README and SkillHub description.

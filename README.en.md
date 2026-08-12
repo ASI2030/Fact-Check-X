@@ -2,10 +2,10 @@
 
 [中文](README.md) · [SkillHub](https://skillhub.cn/skills/user_186e37d0/fact-check-x) · [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete) · [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) · [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete) · [Releases](https://github.com/ASI2030/Fact-Check-X/releases) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
 
-Compare complete answers and citations from several AI services, then verify atomic facts against authoritative evidence. Fact-Check-X makes each platform's answer, source support, disagreements and final finding traceable.
+Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png" alt="Fact-Check-X overview: six platforms, four-stage fact-checking workflow, and SkillHub installation" width="1200">
+  <img src="assets/fact-check-x-overview.png?v=1.1.3" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start
@@ -57,7 +57,7 @@ The selected set is dynamic. `N=1` runs a complete single-platform verification.
 
 1. **Original answers and citations**: complete answers, references, screenshots and HTML evidence.
 2. **Knowledge comparison (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness.
-3. **Authoritative evidence verification**: evidence, findings, platform verdicts and explicit evidence boundaries.
+3. **Authoritative verification and answer generation**: verify each claim, include only evidence-supported content in the final answer, and preserve conflicts and evidence gaps.
 4. **Platform performance and complete evidence**: accuracy, completeness, source quality and a portable report package.
 
 Capture and comparison require no API key. Trusted Search is an optional enhancement used only at the authoritative verification stage. On first use, the user signs in to the DKnow MaaS page; the skill obtains or creates a dedicated local key without asking the user to paste secrets into chat. Semantic analysis runs in the current host and does not call an external model API.
