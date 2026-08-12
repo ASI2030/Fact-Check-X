@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.1",
+  "version": "1.1.2",
   "tag": null,
-  "sourceCommitSha": "89ea4a0c35fb8369288ed53d52199ee60d361cbd",
-  "publishedAt": "2026-08-11T16:33:46+08:00",
+  "sourceCommitSha": "16b95ae7ded1044ef97dcb1fa9318e808a1cfb90",
+  "publishedAt": "2026-08-12T16:59:05+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度研究）",
@@ -19,51 +19,51 @@
     "通义千问"
   ],
   "formalArtifact": {
-    "file": "fact-check-x-complete-v1.1.1.zip",
-    "bytes": 283561,
+    "file": "fact-check-x-complete-v1.1.2.zip",
+    "bytes": 283635,
     "files": 94,
-    "sha256": "cd4ed3917ed586c34770352fdecd359ba6c7497a737a6304fd22b5bacfe986ea",
-    "skillSourceTreeSha256": "cde93948056bd9b996f88100235894fab71700b57529b528993dc276da1d867b"
+    "sha256": "29e11c06142b58cdac9f427b37a6425524e68a18498d2eb96d92894134b28514",
+    "skillSourceTreeSha256": "203fa4c525d00d2fad7d71d3804a47c614f1e9b0a0a76977681103ddc6e97844"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.1.zip",
+      "file": "llm-answer-reference-compare-v1.1.2.zip",
       "sha256": "6caa69b0444f7199511bf351ba764a694fa51d4598dc388f89b9bd1b0e634807"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.1.zip",
+      "file": "fact-check-x-knowledge-compare-v1.1.2.zip",
       "sha256": "32492dde57b159ab449c250e56107914af043503394ba70e8156b860f7050a45"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.1.zip",
+      "file": "fact-check-x-authoritative-verify-v1.1.2.zip",
       "sha256": "4befe681b55b301742513e381d72896688436554b3acc8bd0793084a6771d24b"
     },
     {
-      "file": "fact-check-x-unified-v1.1.1.zip",
+      "file": "fact-check-x-unified-v1.1.2.zip",
       "sha256": "94b28994f7e2a6f01b6d713af1c720fb59a137e0a2a5e96992773fa72fa45ac9"
     },
     {
-      "file": "fact-check-x-suite-v1.1.1.zip",
-      "sha256": "c0d0d3728cf5968536580f51833c640b47d347847e9762a027850cb345145527"
+      "file": "fact-check-x-suite-v1.1.2.zip",
+      "sha256": "a0350b0e432e5129d31d35479b168a0ec72ac7629f232bf98cf53cb4db24d2f8"
     },
     {
-      "file": "fact-check-x-complete-v1.1.1.zip",
-      "sha256": "cd4ed3917ed586c34770352fdecd359ba6c7497a737a6304fd22b5bacfe986ea"
+      "file": "fact-check-x-complete-v1.1.2.zip",
+      "sha256": "29e11c06142b58cdac9f427b37a6425524e68a18498d2eb96d92894134b28514"
     }
   ],
   "distribution": {
     "github": {
       "status": "source_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/commit/89ea4a0c35fb8369288ed53d52199ee60d361cbd"
+      "url": "https://github.com/ASI2030/Fact-Check-X/commit/16b95ae7ded1044ef97dcb1fa9318e808a1cfb90"
     },
     "skillhub": {
       "status": "approved",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.1",
-      "versionId": 229456,
-      "submittedPackageSha256": "c5157bfc306272c633ffa28d4b50286d0bca5cfb93069dd2a989c853fec3bf12",
-      "verifiedPackageSha256": "fd2a4fed329dc25a4900fb53c8a83fe98fba5261b50ac37b48c824405199a679",
-      "contentFingerprint": "e49d1769e1c0f0f9d6cee37f9d6d9fa50a9273491113e86fe3b30678fd133072",
+      "version": "1.1.2",
+      "versionId": 231324,
+      "submittedPackageSha256": "251fc43c4580c879b0faa35724402563c9c647c467ee980c1540d256f2c7cc11",
+      "verifiedPackageSha256": "be1fe9ce83704e1a1e9d7fd4544b270a0064e6d523d9a337b141d6d5eb5b8a53",
+      "contentFingerprint": "1a68164e87f0be9a416d6fc313aa6d40511ec50129a0b403bf09f89b62ae06cc",
       "platformSignature": "verified"
     },
     "workbuddy": {
@@ -86,20 +86,20 @@
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "28e8308846ab8c72ed86a9fb44094b22f4e622edcbbb182b5c403c8a676a95d3"
+      "sha256": "c4f496e23f1dfcbdd2786d197ce95ff937478a57b62c6d74d22f70da759e24ca"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "821df74bbcd94b6e7b307c9b63c2b84bd79d82d76e5f95e07bdabad6631af78c"
+      "sha256": "ef3c71405c213ce88208f900dbb12e5fe82f9d190a1f218629c753b99f20e5b0"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "72b78f0a58c88489808e0ce3228a701c5234f16b702e5956311da9b668685460"
+      "sha256": "b8bfd5d340a8d96e5035ef86a8ee7ace54fe50450e5f48ff6b5faabe873cf1cf"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.1 is published; subsequent changes require a new version."
+    "blockingReason": "v1.1.2 is published; subsequent changes require a new version."
   }
 }
