@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.3",
+  "version": "1.1.4",
   "tag": null,
-  "sourceCommitSha": "fa25801d8e4823e31133bd71aac867325f27a95b",
-  "publishedAt": "2026-08-12T18:00:58+08:00",
+  "sourceCommitSha": "1f657790fd0c5a2628df5db1616806afc04fc502",
+  "publishedAt": "2026-08-14T16:23:05+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度研究）",
@@ -19,51 +19,51 @@
     "通义千问"
   ],
   "formalArtifact": {
-    "file": "fact-check-x-complete-v1.1.3.zip",
-    "bytes": 283719,
+    "file": "fact-check-x-complete-v1.1.4.zip",
+    "bytes": 286758,
     "files": 94,
-    "sha256": "6cb3de9502e9522cdcfd684c1b7942d15859d308341302fe8717d143ee75573e",
-    "skillSourceTreeSha256": "772815bf56e0e43cc2127bb237cc3fc1f258632d63d8cbc7e500d0b4cfd36cf3"
+    "sha256": "7bafa44106dfdd032cd73446065f6c3fd6659a1edd9c4d15488491de33b8ad6f",
+    "skillSourceTreeSha256": "da7592e908409dd36754ac9ec9c30784dcac373823646141b50571cc246febcb"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.3.zip",
-      "sha256": "6caa69b0444f7199511bf351ba764a694fa51d4598dc388f89b9bd1b0e634807"
+      "file": "llm-answer-reference-compare-v1.1.4.zip",
+      "sha256": "cf6c75e89011b2acea247ccf6fb739e7c6f2f47450acf4d6d5a1a7df227922cc"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.3.zip",
-      "sha256": "32492dde57b159ab449c250e56107914af043503394ba70e8156b860f7050a45"
+      "file": "fact-check-x-knowledge-compare-v1.1.4.zip",
+      "sha256": "8fcd4aa17cce82e54a1fa8b426addb892b85767b96670975bc81280761144ffa"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.3.zip",
-      "sha256": "4befe681b55b301742513e381d72896688436554b3acc8bd0793084a6771d24b"
+      "file": "fact-check-x-authoritative-verify-v1.1.4.zip",
+      "sha256": "a236d3815c186b78e5c289efc4e4c96a6a5f10dc62a20cbdddf3105de7da4521"
     },
     {
-      "file": "fact-check-x-unified-v1.1.3.zip",
+      "file": "fact-check-x-unified-v1.1.4.zip",
       "sha256": "94b28994f7e2a6f01b6d713af1c720fb59a137e0a2a5e96992773fa72fa45ac9"
     },
     {
-      "file": "fact-check-x-suite-v1.1.3.zip",
-      "sha256": "e6fc8d99be20f51c38fe61efa1e17d2def9505b2dd6290674ec0cdf6b3fbd8c0"
+      "file": "fact-check-x-suite-v1.1.4.zip",
+      "sha256": "4a6eb83816ef13df1b27c83477f8bb16eeadef6be66eaf580a19ef903fa3c61f"
     },
     {
-      "file": "fact-check-x-complete-v1.1.3.zip",
-      "sha256": "6cb3de9502e9522cdcfd684c1b7942d15859d308341302fe8717d143ee75573e"
+      "file": "fact-check-x-complete-v1.1.4.zip",
+      "sha256": "7bafa44106dfdd032cd73446065f6c3fd6659a1edd9c4d15488491de33b8ad6f"
     }
   ],
   "distribution": {
     "github": {
       "status": "source_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/commit/fa25801d8e4823e31133bd71aac867325f27a95b"
+      "url": "https://github.com/ASI2030/Fact-Check-X/commit/1f657790fd0c5a2628df5db1616806afc04fc502"
     },
     "skillhub": {
       "status": "approved",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.3",
-      "versionId": 231443,
-      "submittedPackageSha256": "bbf48ae06eeb2455975e4915e459c874c73314cae63aa5fdf8a9ecfb6d7493d2",
-      "verifiedPackageSha256": "ed6777d80717a1ced9e766b51a28b0e82de83292829229dbf21787e66953d2e4",
-      "contentFingerprint": "03b4ddc6d82ba21afdf53129db97e8701df7ebc08d007a18163a039d8717a118",
+      "version": "1.1.4",
+      "versionId": 236550,
+      "submittedPackageSha256": "68d065c2aee4cb950c1d97a157bcd07afcdeb7dc984396c25e1213f1889fe709",
+      "verifiedPackageSha256": "c0f1e62d47cf78232246ea3fb76d8618cc6c082c2dcb26e32140ad07b403880d",
+      "contentFingerprint": "b360524c879db4a6c12733b6e2cc9d723c63ffb51dd3fc307c6aab61cc0f586f",
       "platformSignature": "verified"
     },
     "workbuddy": {
@@ -78,7 +78,7 @@
     "publicTreeAudit": "passed",
     "publicReleaseTests": 4,
     "goldenRegressions": "15/15",
-    "feedbackCoverage": "27/27",
+    "feedbackCoverage": "29/29",
     "marketplaceCleanInstall": "verified",
     "marketplaceSignature": "verified"
   },
@@ -86,20 +86,20 @@
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "6c0a529886039c6c9b77af54e4a84b41f2f86f1d8d56bc9fc3bce2a7e7b19059"
+      "sha256": "185ad00a90b07d5394e4056ba13cb800dcd4c3516450e9ecd940bc4626b42e98"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "b2a691b3694b4f29d5888f2876e2f3cf72b8e87799f56b37591b7441ab3072f7"
+      "sha256": "cbd8b9415a6fc2b15bc40c1d3ec1b01dcafdb68f3104f5ecbaed8efc06061a2d"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "35d32b88898027a2317baf4676f6f8866238a6b1d9afe318e94a0c998d61a37d"
+      "sha256": "32f3396e9b76507fe04428a80cbe5fc673db63143b9a32b2747627d4b6ebb9c9"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.3 is published; subsequent changes require a new version."
+    "blockingReason": "v1.1.4 is published; subsequent changes require a new version."
   }
 }
