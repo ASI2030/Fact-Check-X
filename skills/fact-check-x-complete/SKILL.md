@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.3"
+  version: "1.1.4"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度研究]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.3)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.4)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，证据不足的内容不会写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -137,7 +137,7 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
 
 保留完整原答案、原始 URL、引用标记、引用正文、截图和失败状态。不得摘要、改写或用搜索结果替换原始来源。
 
-当深知平台所附来源只有标题或截断摘要时，采集阶段用可信搜索 `return_full_content=true` 补全与该标题或原始 URL 匹配的同一材料全文；返回全文或段落直接用于判断，不访问源网址二次抓取正文。可信搜索返回的 `源网址` 作为官方来源主链接，深知收录页作为辅助链接；未返回源网址时保留深知收录页兜底。不得另找材料替换平台引用。其他平台已绑定 PDF 经可信搜索与直接提取仍无正文时必须失败关闭并进入 OCR 或 Computer Use，不能把采集缺口计为平台幻觉。
+当深知平台所附来源只有标题或截断摘要时，采集阶段用可信搜索 `return_full_content=true` 补全与该标题或原始 URL 匹配的同一材料全文；返回全文或段落直接用于判断，不访问源网址二次抓取正文。深知晓与深知晓（深度研究）的可信搜索来源统一按“官方来源”处理，不以 `.gov` 域名或外链是否返回降级；返回的 `源网址` 仅作回溯链接，未返回时保留深知收录页且不伪造外链。其他平台的回答区上下文只用于现场存证，不得当作链接原文；已绑定 PDF 经可信搜索与直接提取仍无正文时必须失败关闭并进入 OCR 或 Computer Use，不能把采集缺口计为平台幻觉。
 
 ### 采集完成硬门禁与 Computer Use 恢复
 
@@ -316,4 +316,4 @@ python3 scripts/trusted_search_config.py configure
 - 权威层一次只处理一个知识点，可信搜索只返回证据，不负责最终裁决。
 - 运行载体是 WorkBuddy、Codex、Claude Code 等智能体，不把运行载体称为“模型”。
 - 任何登录失败、验证码、搜索错误、证据不足和抽取异常都必须显式报告，不得伪装成功。
-- 深知晓来源列表由可信搜索生成；程序在回答主张、来源原文和链接均可定位时自动生成 `trustedAnchor.eligible=true`。外部官方链接与深知内部收录链接均按官方来源直接准确处理；只有自动锚点不合格的知识点才进入二次可信搜索。
+- 深知晓与深知晓（深度研究）的来源列表统一按官方来源处理。只有普通深知晓 `dknowc-chat` 在回答主张与来源原文可定位且语义一致时，才自动生成 `trustedAnchor.eligible=true`；深度研究不继承该免查锚点。

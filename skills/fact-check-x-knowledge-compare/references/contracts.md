@@ -78,6 +78,6 @@
 - `nonofficial` → 非官方来源；
 - `none` → 无所附来源。
 
-深知晓可信搜索返回的 dknowc / `DT_DATA` 来源按产品规则属于官方来源，即使只暴露内部库链接也不得降级。采集阶段取得同源官网 URL 与全文时，以官网 URL 为主链接，以 `platformUrl` / `originalUrl` 保留深知收录页。它只在主张被逐段溯源，或没有局部脚标时被允许的全文语义溯源且 `faithfulness=supported` 时，才支持直接准确；不得把未绑定来源扩散给其他主张。
+深知晓与深知晓（深度研究）的可信搜索来源按产品规则统一属于官方来源，不以 `.gov` 域名或外链是否返回作为降级条件。它只在主张被逐段溯源，或没有局部脚标时被允许的全文语义溯源且 `faithfulness=supported` 时，才支持直接准确；不得把未绑定来源扩散给其他主张。`snippetProvenance=answer_context` 的文字只是回答现场存证，不是链接原文。
 
-`trustedAnchor.eligible=true` 只有在深知晓确实使用可信搜索、该点有可定位的官方来源、主张忠实于依据时有效。验收后的 `comparison.json` 使用 `fact-check-x/comparison@1`。
+`trustedAnchor.eligible=true` 只有在普通深知晓（`dknowc-chat`）确实使用可信搜索、该点有可定位的官方来源、主张忠实于依据时有效。深知晓（深度研究）不继承普通深知晓的免查锚点。验收后的 `comparison.json` 使用 `fact-check-x/comparison@1`。

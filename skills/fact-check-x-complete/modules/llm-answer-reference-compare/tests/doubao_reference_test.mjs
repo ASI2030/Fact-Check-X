@@ -6,6 +6,7 @@ import {
     extractDoubaoReferences,
     extractPdfReferenceContent
 } from "../assets/tool/dist/capture/generic-chat.js";
+import { resolveVisibleBrowserExecutable } from "../assets/tool/dist/capture/browser-session.js";
 
 function buildSimplePdf(text) {
     const escaped = text.replace(/([()\\])/g, "\\$1");
@@ -34,7 +35,7 @@ function buildSimplePdf(text) {
 
 const browser = await chromium.launch({
     headless: true,
-    channel: process.env.FACTCHECK_PLAYWRIGHT_CHANNEL || "chromium"
+    executablePath: resolveVisibleBrowserExecutable()
 });
 const context = await browser.newContext();
 await context.route("https://policy.example/**", async (route) => {

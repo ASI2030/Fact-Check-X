@@ -2096,7 +2096,8 @@ async function extractDeepSeekReferences(page, baseUrl) {
                 normalizedUrl,
                 marker,
                 text: marker ? `[${marker}]` : undefined,
-                snippet: containerText ? containerText.slice(0, 500) : undefined
+                snippet: containerText ? containerText.slice(0, 500) : undefined,
+                snippetProvenance: "answer_context"
             });
         }
         return items;

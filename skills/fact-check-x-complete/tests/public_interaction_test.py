@@ -17,7 +17,7 @@ def main() -> int:
     assert "第一句话、过程更新、命令说明、阶段检查点、错误说明和最终答复全部只使用简体中文" in instructions
     assert "不得输出英文句子" in instructions
     assert "第一条回复直接使用“我会核验这个问题" in instructions
-    assert "原始答案与引用、知识点对比（未核验）、权威证据核验、平台表现与完整证据" in instructions
+    assert "原始答案与引用、知识点对比（未核验）、权威核验与答案生成、平台表现与完整证据" in instructions
     assert "不存在固定“五平台模式”或固定上限" in instructions
     assert "平台组合完全按用户输入决定" in instructions
     assert "**分阶段交付门禁**" in instructions
@@ -130,10 +130,11 @@ def main() -> int:
     )
     direct_conditions = truth_contract["trustedSearch"]["directAccurateWhen"]
     assert "trusted_search_used" not in direct_conditions
-    assert "reference_has_valid_http_url" in direct_conditions
+    assert "reference_classified_as_dknow_trusted_source" in direct_conditions
+    assert "reference_has_valid_http_url" not in direct_conditions
     assert (
         truth_contract["trustedSearch"]["dknowReferenceScope"]
-        == "external_official_url_or_dknow_internal_collection_url"
+        == "trusted_search_source_with_optional_origin_url_or_dknow_internal_collection_record"
     )
     assert "03-authority-report.html" in truth_contract["stageArtifacts"]
     assert "04-final-report.html" in truth_contract["stageArtifacts"]

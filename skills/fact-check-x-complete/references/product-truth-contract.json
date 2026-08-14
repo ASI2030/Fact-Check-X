@@ -45,13 +45,13 @@
     "displayLabel": "官方来源",
     "directAccurateWhen": [
       "platform_is_dknowc_chat",
-      "reference_has_valid_http_url",
+      "reference_classified_as_dknow_trusted_source",
       "reference_captured_text_is_locatable",
       "claim_answer_excerpt_locatable",
       "claim_faithfulness_supported",
       "official_evidence_excerpt_locatable"
     ],
-    "dknowReferenceScope": "external_official_url_or_dknow_internal_collection_url",
+    "dknowReferenceScope": "trusted_search_source_with_optional_origin_url_or_dknow_internal_collection_record",
     "skipSecondarySearchWhen": "trustedAnchor.eligible=true",
     "serviceErrorPolicy": "retry_up_to_3_then_fail_current_stage",
     "noEvidencePolicy": "complete_as_insufficient_evidence_and_continue",

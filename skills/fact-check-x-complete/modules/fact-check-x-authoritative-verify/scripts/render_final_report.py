@@ -28,7 +28,17 @@ def original_platforms(results: dict) -> dict[str, dict]:
 def reference_primary_url(reference: dict) -> str:
     if reference.get("originAttributionStatus") == "trusted_search_no_source_url":
         return str(reference.get("url") or "")
-    for key in ("officialUrl", "official_url", "resourceUrl", "resource_url", "sourceUrl", "source_url", "url"):
+    for key in (
+        "originUrl",
+        "origin_url",
+        "officialUrl",
+        "official_url",
+        "resourceUrl",
+        "resource_url",
+        "sourceUrl",
+        "source_url",
+        "url",
+    ):
         candidate = str(reference.get(key) or "").strip()
         if candidate.startswith(("http://", "https://")):
             return candidate
@@ -44,6 +54,11 @@ def attached_provenance(claim: dict, platform: dict) -> list[dict]:
             continue
         reference = references[index - 1]
         primary_url = reference_primary_url(reference)
+        fallback_excerpt = (
+            ""
+            if reference.get("snippetProvenance") == "answer_context"
+            else str(reference.get("snippet") or "")
+        )
         platform_url = str(
             reference.get("platformUrl")
             or reference.get("platform_url")
@@ -59,7 +74,7 @@ def attached_provenance(claim: dict, platform: dict) -> list[dict]:
                 "platform_url": platform_url,
                 "origin_attribution_status": str(reference.get("originAttributionStatus") or ""),
                 "origin_attribution_reason": str(reference.get("originAttributionReason") or ""),
-                "excerpt": str(evidence.get(index) or reference.get("snippet") or ""),
+                "excerpt": str(evidence.get(index) or fallback_excerpt),
             }
         )
     return output

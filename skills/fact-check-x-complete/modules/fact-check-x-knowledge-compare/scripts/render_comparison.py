@@ -80,9 +80,9 @@ def render_references(platform: dict) -> str:
             else ""
         )
         attribution = (
-            ' <span class="source-level">官方来源</span>'
+            ' <span class="source-level">已返回来源链接</span>'
             if reference.get("originAttributionStatus") == "trusted_search_official_url"
-            else ' <span class="source-level">可信搜索未返回源网址·保留收录页</span>'
+            else ' <span class="source-level">来源链接待补·不影响官方来源口径</span>'
             if reference.get("originAttributionStatus") == "trusted_search_no_source_url"
             else ""
         )

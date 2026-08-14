@@ -87,8 +87,9 @@ def main() -> int:
         assert "官方来源" in html
         assert "官方原站" not in html
         assert html.count("官方来源") >= 2
-        assert "可信搜索返回官方来源链接" in html
-        assert "可信搜索未返回源网址" in html
+        assert "已返回来源链接" in html
+        assert "来源链接待补" in html
+        assert "不影响官方来源口径" in html
         assert "DeepSeek" in html and "3 个平台" in html
         assert 'platform-layout-compact platform-count-3' in html
         assert 'style="--platform-count:3"' in html
@@ -105,6 +106,7 @@ def main() -> int:
         markdown = (Path(temp) / "report.md").read_text(encoding="utf-8")
         assert "Source labels shown by the page without accessible URLs" in markdown
         assert markdown.count("【官方来源】") >= 2
+        assert "来源链接待补，不影响官方来源口径" in markdown
         assert "DeepSeek" in markdown
         assert "可信库来源" not in markdown
         assert "DT库·gov一手收录" not in markdown

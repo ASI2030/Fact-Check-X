@@ -53,7 +53,7 @@
 
 豆包来源浮层只显示标题时，采集器先用可信搜索 `return_full_content=true` 补全与该标题或 URL 匹配的同一材料全文，再回退到页面或 PDF 直接提取，并以 `contentAcquisition` 记录正文取得方式。这属于引用存证，不得另找材料或替换 URL。已绑定 PDF 仍无法取得正文时必须失败关闭，不得继续产出平台幻觉结论。
 
-深知晓引用优先用可信搜索 `return_full_content=true` 做同源回填。可信搜索返回的同一材料全文或段落直接写入 `content` 用于判断，不再访问源网址二次抓取正文；可信搜索返回的 `源网址` 直接作为官方来源主链接，写入 `url`、`officialUrl`、`resourceUrl` 与 `sourceUrl`，并用 `platformUrl` 与 `originalUrl` 保留深知收录页。可信搜索未返回源网址时使用 `trusted_search_no_source_url`，保留深知收录页作为兜底，不伪造外链。
+深知晓与深知晓（深度研究）的引用优先用可信搜索 `return_full_content=true` 做同源回填。可信搜索返回的同一材料全文或段落直接写入 `content` 用于判断，不再访问源网址二次抓取正文；可信搜索返回的 `源网址` 是可选回溯链接，写入 `url`、`officialUrl`、`resourceUrl` 与 `sourceUrl`，并用 `platformUrl` 与 `originalUrl` 保留深知收录页。可信搜索未返回源网址时使用 `trusted_search_no_source_url`，保留深知收录页，不伪造外链，也不降级官方来源口径。
 
 `status=success` 时 `answerMarkdown` 必须非空。失败状态保留 `error`，引用可为空。普通平台引用的 `url` 是原始事实，不允许后续程序覆盖；深知可信搜索同源回填按上一段双链接契约处理。`sourceMentions` 只记录页面显示但未暴露 URL 的来源名称，不能作为可回溯参考文献或来源忠实性证据。
 
@@ -68,7 +68,9 @@
 - 官方来源；
 - 非官方来源。
 
-深知晓可信搜索返回的 dknowc / `DT_DATA` 来源属于官方来源，即使对外只暴露内部库链接，也统一标为“官方来源”，可注明“由深知可信搜索收录”。`originUrl`、`resourceUrl`、`officialUrl` 或 `sourceUrl`（兼容 snake_case）仅作为可选官网回链，不作为官方性与直接准确的前置条件。
+深知晓与深知晓（深度研究）的可信搜索来源统一标为“官方来源”。`originUrl`、`resourceUrl`、`officialUrl` 或 `sourceUrl`（兼容 snake_case）仅作为可选回溯链接，不以 `.gov` 域名或外链是否返回作为官方性与直接准确的前置条件。
+
+`snippetProvenance=answer_context` 表示摘录来自 AI 平台的回答区，只作现场存证，不是链接原文，不得用于来源忠实性判定。
 
 可见或交互采集使用 Playwright `launchPersistentContext` 直接启动系统 Chromium 浏览器；命令运行期间保留深知晓与豆包主页面，登录、验证码或人机验证交给用户本人处理，检测完成后自动续采。命令结束时关闭浏览器进程但保留独立配置目录中的登录状态。无头/CI 模式同样关闭浏览器，正文提取用的临时来源页始终关闭。
 

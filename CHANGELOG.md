@@ -2,6 +2,13 @@
 
 All notable changes are documented in this file. The project follows Semantic Versioning.
 
+## [1.1.4] - 2026-08-14
+
+- Unified 深知晓 and 深知晓（深度研究）trusted-search materials under the public label “官方来源” without requiring a `.gov` domain or an external source URL.
+- Preserved optional source trace links while preventing answer-page context from being treated as linked source text or supporting evidence.
+- Improved authority-report readability by showing the most relevant evidence excerpt first and folding the full source text, while keeping stage 4 bound to the locked stage-3 verification data.
+- Updated browser regressions to use an installed system Chromium browser instead of depending on Chrome for Testing.
+
 ## [1.1.3] - 2026-08-12
 
 - Re-centered the public presentation on the complete fact-checking workflow while retaining authoritative answer generation as the third-stage capability.

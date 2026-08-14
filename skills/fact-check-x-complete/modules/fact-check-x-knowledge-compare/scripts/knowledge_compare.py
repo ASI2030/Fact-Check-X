@@ -11,6 +11,7 @@ from common import SkillError, clipped, dump_json, load_json, now_iso
 
 
 OFFICIAL_MEDIA = ("people.com.cn", "xinhuanet.com", "qstheory.cn", "gmw.cn")
+DKNOW_OFFICIAL_PLATFORMS = {"dknowc-chat", "dknowc-deep-research"}
 OFFICIAL_ORIGIN_KEYS = (
     "originUrl",
     "origin_url",
@@ -30,32 +31,38 @@ def is_official_url(url: object) -> bool:
     return False
 
 
-def verified_official_origin(reference: dict) -> str:
+def valid_http_url(value: object) -> bool:
+    parsed = urlparse(str(value or "").strip())
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def verified_official_origin(reference: dict, platform_id: str = "") -> str:
+    if reference.get("originAttributionStatus") == "trusted_search_no_source_url":
+        return ""
     for key in OFFICIAL_ORIGIN_KEYS:
         candidate = str(reference.get(key) or "").strip()
-        if candidate and is_official_url(candidate):
+        if candidate and (
+            is_official_url(candidate)
+            or (
+                platform_id in DKNOW_OFFICIAL_PLATFORMS
+                and reference.get("originAttributionStatus")
+                == "trusted_search_official_url"
+                and valid_http_url(candidate)
+            )
+        ):
             return candidate
     return ""
 
 
 def is_dknow_trusted_reference(reference: dict, platform_id: str = "") -> bool:
-    if platform_id != "dknowc-chat":
+    if platform_id not in DKNOW_OFFICIAL_PLATFORMS:
         return False
-    # 深知晓的来源列表本身由可信搜索生成。外部官方链接和深知内部
-    # 收录链接均属于同一可信来源链，不因链接形态不同而降级。
-    url = str(
-        reference.get("url")
-        or reference.get("platformUrl")
-        or reference.get("platform_url")
-        or reference.get("originalUrl")
-        or reference.get("original_url")
-        or ""
-    ).strip()
-    parsed = urlparse(url)
-    return (
-        parsed.scheme in {"http", "https"}
-        and bool(parsed.netloc)
-        and bool(reference_text(reference))
+    # 两个深知平台的来源列表都由可信搜索提供。官网回链是
+    # 可选的回溯信息，不是“官方来源”的判定前提。
+    return bool(
+        reference_text(reference)
+        or str(reference.get("title") or "").strip()
+        or str(reference.get("url") or "").strip()
     )
 
 
@@ -142,6 +149,8 @@ def source_level(reference: dict, platform_id: str = "") -> str:
 def reference_text(reference: dict) -> str:
     parts = []
     for key in ("snippet", "text", "content", "body"):
+        if key == "snippet" and reference.get("snippetProvenance") == "answer_context":
+            continue
         value = str(reference.get(key) or "").strip()
         if value and value not in parts:
             parts.append(value)
@@ -322,6 +331,7 @@ def task_platform(platform: dict) -> dict:
             "platformTrustSource",
             "contentAcquisition",
             "originAttributionStatus",
+            "snippetProvenance",
             "zone",
         ):
             value = str(reference.get(field) or "").strip()
@@ -338,7 +348,9 @@ def task_platform(platform: dict) -> dict:
         )
         if platform_url and platform_url != normalized_reference["originalUrl"]:
             normalized_reference["platformUrl"] = platform_url
-        official_origin = verified_official_origin(reference)
+        official_origin = verified_official_origin(
+            reference, str(platform.get("platform") or "")
+        )
         if official_origin:
             normalized_reference["verifiedOfficialOriginUrl"] = official_origin
         references.append(normalized_reference)
@@ -395,13 +407,14 @@ def build_task(question: str, platforms: list[dict]) -> dict:
             "回答级语义匹配不是整篇来源自动继承：只有证据原文实际支持当前主张才能判 supported，支持其他补充点的官方来源不得抬高核心点",
             "citationMode=mixed 表示平台同时提供逐句脚标与全局来源列表，不能因存在脚标就丢弃全局来源",
             "sourceMentions 只是页面显示但未暴露 URL 的来源标签，不是可回溯参考文献，不能用于来源忠实性证据",
-            "深知晓可信搜索返回的 dknowc / DT_DATA 来源按产品规则属于官方来源，内部链接不构成降级理由；但仍必须与当前主张局部绑定或通过允许的回答级语义匹配绑定",
+            "深知晓与深知晓（深度研究）的可信搜索来源统一按官方来源处理，不以 .gov 域名或外链是否返回作为降级条件；但仍必须与当前主张局部绑定或通过允许的回答级语义匹配绑定",
+            "snippetProvenance=answer_context 表示该摘录来自平台回答区，只用于现场存证，不得当作链接原文或来源忠实性证据",
             "evidence.excerpt 必须是对应 capturedText 的原文子串",
             "comparison.status 只比较平台主张的事实语义；主张语义相同即 consensus，不得因来源忠实性等级不同降为 partial",
             "核心结论、适用对象和关键条件相同，仅有不改变结论的轻微措辞、范围说明或细节差异时使用 mostly_consensus（外显“基本一致”）",
             "存在会改变适用性、风险判断或结论的重要条件缺失或新增时使用 partial；结论互斥时使用 conflict",
             "不以 normalizedUrl 或重新搜索的 URL 替换 originalUrl",
-            "trustedAnchor 只允许用于深知晓已使用可信搜索、回答忠实且有官方原文的知识点",
+            "trustedAnchor 只允许用于普通深知晓（dknowc-chat）已使用可信搜索、回答忠实且有官方原文的知识点；深度研究不继承该免查锚点",
             "必须生成 synthesisDraft：它只综合本阶段知识点，不得冒充权威结论，status 固定为 unverified",
         ],
         "outputShape": {

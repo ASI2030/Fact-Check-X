@@ -886,16 +886,16 @@ function renderReferenceItem(platform, reference, index) {
     const source = sourceDescriptor(reference, platform.platform);
     const sourceBadge = `<span class="badge neutral" title="${escapeAttribute(source.note || "按当前捕获结果的来源类型分级")}">${escapeHtml(source.label)}</span> `;
     const originLink = source.officialOriginUrl && source.officialOriginUrl !== reference.url
-        ? ` <a href="${escapeAttribute(source.officialOriginUrl)}">官方来源链接</a>`
+        ? ` <a href="${escapeAttribute(source.officialOriginUrl)}">来源链接</a>`
         : "";
     const platformUrl = reference.platformUrl || reference.platform_url || reference.originalUrl || reference.original_url || "";
     const platformLink = platformUrl && platformUrl !== reference.url
         ? ` <a href="${escapeAttribute(platformUrl)}">深知收录页</a>`
         : "";
     const attribution = reference.originAttributionStatus === "trusted_search_no_source_url"
-        ? `<span class="badge neutral" title="${escapeAttribute(reference.originAttributionReason || "可信搜索未返回源网址")}">未返回源网址·保留收录页</span> `
+        ? `<span class="badge neutral" title="${escapeAttribute(reference.originAttributionReason || "不影响官方来源口径")}">来源链接待补</span> `
         : reference.originAttributionStatus === "trusted_search_official_url"
-            ? `<span class="badge neutral">官方来源</span> `
+            ? `<span class="badge neutral">已返回来源链接</span> `
             : "";
     const scope = reference.citationScope === "global"
         ? `<span class="badge neutral">来源清单</span> `
@@ -903,7 +903,7 @@ function renderReferenceItem(platform, reference, index) {
             ? `<span class="badge neutral">间接查找</span> `
             : "";
     const snippet = reference.snippet
-        ? `<details class="ref-snippet"><summary>查看摘录</summary><p>${escapeHtml(reference.snippet)}</p></details>`
+        ? `<details class="ref-snippet"><summary>${reference.snippetProvenance === "answer_context" ? "查看回答上下文（非来源原文）" : "查看摘录"}</summary><p>${escapeHtml(reference.snippet)}</p></details>`
         : "";
     return `<li id="${referenceId(platform.platform, reference)}">${marker}${sourceBadge}${attribution}${scope}<a href="${escapeAttribute(reference.url)}">${escapeHtml(title)}</a>${originLink}${platformLink}${snippet}</li>`;
 }

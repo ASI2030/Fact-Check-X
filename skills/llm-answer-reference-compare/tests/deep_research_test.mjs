@@ -7,6 +7,7 @@ import {
 import {
     builtInPlatforms
 } from "../assets/tool/dist/capture/platform-registry.js";
+import { sourceDescriptor } from "../assets/tool/dist/report/source-level.js";
 
 assert.deepEqual(
     builtInPlatforms.map((platform) => platform.name),
@@ -32,6 +33,34 @@ assert.equal(
 );
 assert.equal(config.profile, "dknowc-chat");
 assert.notEqual(config.name, "dknowc-chat");
+
+const deepResearchSource = sourceDescriptor({
+    title: "深度研究政策材料",
+    url: "https://poc1.dknowc.cn/wlcb/DT_DATA/policy/1",
+    snippet: "政策原文"
+}, "dknowc-deep-research");
+assert.equal(deepResearchSource.key, "dknow_trusted_search_official");
+assert.equal(deepResearchSource.label, "官方来源");
+
+const nonGovOrigin = sourceDescriptor({
+    title: "商业法律数据库中的官方文件",
+    url: "https://yun.dknowc.cn/wlcb/ShenZhi-policy/#/policyDetails?id=1",
+    resourceUrl: "https://law.wkinfo.com.cn/document/1",
+    originAttributionStatus: "trusted_search_official_url",
+    snippet: "官方文件内容"
+}, "dknowc-chat");
+assert.equal(nonGovOrigin.label, "官方来源");
+assert.equal(nonGovOrigin.officialOriginUrl, "https://law.wkinfo.com.cn/document/1");
+
+const noOrigin = sourceDescriptor({
+    title: "深知收录材料",
+    url: "https://yun.dknowc.cn/wlcb/ShenZhi-policy/#/policyDetails?id=2",
+    originAttributionStatus: "trusted_search_no_source_url",
+    snippet: "官方文件内容"
+}, "dknowc-chat");
+assert.equal(noOrigin.label, "官方来源");
+assert.equal(noOrigin.officialOriginUrl, "");
+assert.match(noOrigin.note, /来源链接待补/);
 
 let clicked = 0;
 const ordinaryPage = {
@@ -116,6 +145,9 @@ if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
                 "deep_research.independent_platform_registered",
                 "deep_research.initial_answer_then_click",
                 "deep_research.report_page_required",
+                "deep_research.source_policy_official",
+                "dknow.non_gov_origin_traceable",
+                "dknow.missing_origin_not_downgraded",
             ],
         })
     );

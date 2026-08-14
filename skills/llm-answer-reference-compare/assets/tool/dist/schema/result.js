@@ -6,6 +6,11 @@ export const ReferenceSchema = z.object({
     marker: z.string().optional(),
     text: z.string().optional(),
     snippet: z.string().optional(),
+    snippetProvenance: z.enum([
+        "source_surface",
+        "answer_context",
+        "source_document"
+    ]).optional(),
     content: z.string().optional(),
     originUrl: z.string().optional(),
     origin_url: z.string().optional(),

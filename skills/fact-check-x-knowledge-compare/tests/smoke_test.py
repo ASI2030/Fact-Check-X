@@ -276,6 +276,81 @@ def main() -> int:
         assert semantic_claim["faithfulness"] == "supported"
         assert semantic_claim["reason"] == "全文语义溯源；来源原文支持当前主张"
 
+        answer_context_source = json.loads(
+            answer_level_source_path.read_text(encoding="utf-8")
+        )
+        for reference in answer_context_source["platforms"][1]["references"]:
+            reference["snippetProvenance"] = "answer_context"
+        answer_context_path = out / "answer-context-results.json"
+        answer_context_path.write_text(
+            json.dumps(answer_context_source, ensure_ascii=False), encoding="utf-8"
+        )
+        answer_context_result = out / "answer-context-comparison.json"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(answer_context_path),
+            "--analysis",
+            str(answer_level_analysis_path),
+            "--output",
+            str(answer_context_result),
+        ])
+        answer_context_data = json.loads(
+            answer_context_result.read_text(encoding="utf-8")
+        )
+        answer_context_claim = answer_context_data["knowledgePoints"][0]["claims"][
+            "doubao"
+        ]
+        assert answer_context_claim["faithfulness"] == "insufficient"
+        assert answer_context_claim["sourceLevel"] == "none"
+        assert answer_context_claim["evidence"] == []
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(answer_context_path),
+            "--task-output",
+            str(out / "answer-context-task.json"),
+        ])
+        answer_context_task = json.loads(
+            (out / "answer-context-task.json").read_text(encoding="utf-8")
+        )
+        assert answer_context_task["platforms"][1]["references"][1][
+            "snippetProvenance"
+        ] == "answer_context"
+        assert answer_context_task["platforms"][1]["references"][1][
+            "capturedText"
+        ] == ""
+
+        deep_research_results = json.loads(
+            (FIXTURES / "results.json").read_text(encoding="utf-8")
+        )
+        deep_research_results["platforms"][0]["platform"] = "dknowc-deep-research"
+        deep_research_results["platforms"][0]["label"] = "深知晓（深度研究）"
+        deep_research_task_path = out / "deep-research-task.json"
+        deep_research_results_path = out / "deep-research-results.json"
+        deep_research_results_path.write_text(
+            json.dumps(deep_research_results, ensure_ascii=False), encoding="utf-8"
+        )
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(deep_research_results_path),
+            "--task-output",
+            str(deep_research_task_path),
+        ])
+        deep_research_task = json.loads(
+            deep_research_task_path.read_text(encoding="utf-8")
+        )
+        assert deep_research_task["platforms"][0]["references"][0][
+            "sourceLevel"
+        ] == "dknow_trusted_search_official"
+        assert "深度研究不继承该免查锚点" in "\n".join(
+            deep_research_task["rules"]
+        )
+
         supplement_only_analysis = json.loads(answer_level_analysis_path.read_text(encoding="utf-8"))
         supplement_only_claim = supplement_only_analysis["knowledgePoints"][0]["claims"]["doubao"]
         supplement_only_claim["faithfulness"] = "insufficient"
@@ -684,6 +759,8 @@ def main() -> int:
                 "contract.missing_fields_blocked",
                 "contract.authority_not_entered",
                 "citation.decimal_not_marker",
+                "source.answer_context_not_source_body",
+                "deep_research.official_without_anchor_inheritance",
             ],
         }), encoding="utf-8")
     print("PASS 知识点结构化对比")

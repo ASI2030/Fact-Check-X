@@ -1,4 +1,5 @@
 const OFFICIAL_MEDIA = ["people.com.cn", "xinhuanet.com", "qstheory.cn", "gmw.cn"];
+const DKNOW_OFFICIAL_PLATFORMS = new Set(["dknowc-chat", "dknowc-deep-research"]);
 const OFFICIAL_ORIGIN_KEYS = [
     "originUrl",
     "origin_url",
@@ -26,40 +27,44 @@ function isOfficialUrl(value) {
         || OFFICIAL_MEDIA.some((domain) => host === domain || host.endsWith(`.${domain}`));
 }
 
-function officialOrigin(reference) {
+function isHttpUrl(value) {
+    try {
+        const url = new URL(String(value || ""));
+        return url.protocol === "http:" || url.protocol === "https:";
+    }
+    catch {
+        return false;
+    }
+}
+
+function officialOrigin(reference, platformId) {
     if (reference?.originAttributionStatus === "trusted_search_no_source_url") {
         return "";
     }
-    const primary = String(reference?.url || "").trim();
-    if (primary && isOfficialUrl(primary)) {
-        return primary;
-    }
-    for (const key of OFFICIAL_ORIGIN_KEYS) {
-        const candidate = String(reference?.[key] || "").trim();
-        if (candidate && isOfficialUrl(candidate)) {
+    const candidates = OFFICIAL_ORIGIN_KEYS.map((key) => reference?.[key])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean);
+    for (const candidate of candidates) {
+        if (isOfficialUrl(candidate)
+            || (DKNOW_OFFICIAL_PLATFORMS.has(platformId)
+                && reference?.originAttributionStatus === "trusted_search_official_url"
+                && isHttpUrl(candidate))) {
             return candidate;
         }
     }
-    return "";
+    const primary = String(reference?.url || "").trim();
+    return isOfficialUrl(primary) ? primary : "";
 }
 
 function isDknowTrustedReference(reference, platformId) {
-    if (platformId !== "dknowc-chat") {
+    if (!DKNOW_OFFICIAL_PLATFORMS.has(platformId)) {
         return false;
     }
-    const urls = [
-        reference?.url,
-        reference?.platformUrl,
-        reference?.platform_url,
-        reference?.originalUrl,
-        reference?.original_url
-    ].map((value) => String(value || ""));
-    const host = hostname(urls.find(Boolean));
-    const zone = String(reference?.zone || "").trim().toUpperCase();
-    return urls.some((url) => hostname(url).includes("dknowc.cn") || url.toUpperCase().includes("/DT_DATA/"))
-        || host.includes("dknowc.cn")
-        || zone === "DT_DATA"
-        || reference?.contentAcquisition === "trusted_search_full_content";
+    return Boolean(reference?.url
+        || reference?.title
+        || reference?.snippet
+        || reference?.text
+        || reference?.content);
 }
 
 export function sourceDescriptor(reference, platformId = "") {
@@ -69,10 +74,10 @@ export function sourceDescriptor(reference, platformId = "") {
         return {
             key: "dknow_trusted_search_official",
             label: "官方来源",
-            officialOriginUrl: officialOrigin(reference),
+            officialOriginUrl: officialOrigin(reference, platformId),
             note: hasOfficialSourceUrl
-                ? "可信搜索返回官方来源链接；判断直接使用可信搜索返回材料"
-                : "可信搜索未返回源网址；保留深知收录页作为兜底"
+                ? "由深知可信搜索提供，统一按官方来源处理；已返回来源链接"
+                : "由深知可信搜索提供，统一按官方来源处理；来源链接待补"
         };
     }
     if (isOfficialUrl(url)) {

@@ -55,19 +55,22 @@ export function renderMarkdownReport(run) {
                         ? "（间接查找）"
                         : "";
                 const snippet = reference.snippet ? ` — ${reference.snippet}` : "";
+                const snippetKind = reference.snippetProvenance === "answer_context"
+                    ? "（回答上下文，非来源原文）"
+                    : "";
                 const origin = source.officialOriginUrl && source.officialOriginUrl !== reference.url
-                    ? `（[官网回链](${source.officialOriginUrl})）`
+                    ? `（[来源链接](${source.officialOriginUrl})）`
                     : "";
                 const platformUrl = reference.platformUrl || reference.platform_url || reference.originalUrl || reference.original_url || "";
                 const platformLink = platformUrl && platformUrl !== reference.url
                     ? `（[深知收录页](${platformUrl})）`
                     : "";
                 const attribution = reference.originAttributionStatus === "trusted_search_official_url"
-                    ? "（官方来源）"
+                    ? "（已返回来源链接）"
                     : reference.originAttributionStatus === "trusted_search_no_source_url"
-                        ? "（可信搜索未返回源网址，保留深知收录页）"
+                        ? "（来源链接待补，不影响官方来源口径）"
                         : "";
-                lines.push(`${index + 1}. ${marker}【${source.label}】${attribution}${scope}[${title}](${reference.url})${origin}${platformLink}${snippet}`);
+                lines.push(`${index + 1}. ${marker}【${source.label}】${attribution}${scope}[${title}](${reference.url})${origin}${platformLink}${snippetKind}${snippet}`);
             });
             lines.push("");
         }

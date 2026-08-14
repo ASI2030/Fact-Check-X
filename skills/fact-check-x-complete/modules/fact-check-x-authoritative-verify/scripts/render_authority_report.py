@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import html
 import json
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -113,23 +114,97 @@ def validate(verification: dict) -> None:
             raise ValueError(f"{point_id} 缺少权威结论")
 
 
+def relevant_excerpt(body: object, context: object, limit: int = 520) -> str:
+    text = str(body or "").strip()
+    if len(text) <= limit:
+        return text
+    context_text = re.sub(r"\s+", "", str(context or ""))
+    context_numbers = set(re.findall(r"\d+(?:\.\d+)?", context_text))
+    context_terms = {
+        context_text[index:index + 2]
+        for index in range(max(0, len(context_text) - 1))
+        if len(context_text[index:index + 2]) == 2
+    }
+    sentences = [
+        match.group(0).strip()
+        for match in re.finditer(r"[^\u3002！？；!?;\n]+(?:[\u3002！？；!?;]+|$)", text)
+        if match.group(0).strip()
+    ]
+    if not sentences:
+        return text[:limit].rstrip() + "…"
+
+    def score(sentence: str) -> tuple[int, int, int]:
+        compact = re.sub(r"\s+", "", sentence)
+        number_hits = sum(value in compact for value in context_numbers)
+        term_hits = sum(term in compact for term in context_terms)
+        return number_hits, term_hits, -len(sentence)
+
+    best = max(range(len(sentences)), key=lambda index: score(sentences[index]))
+    selected = sentences[best]
+    left = best - 1
+    right = best + 1
+    while len(selected) < limit and (left >= 0 or right < len(sentences)):
+        candidate = ""
+        take_left = left >= 0 and (
+            right >= len(sentences) or score(sentences[left]) >= score(sentences[right])
+        )
+        if take_left:
+            candidate = sentences[left] + selected
+            left -= 1
+        else:
+            candidate = selected + sentences[right]
+            right += 1
+        if len(candidate) > limit:
+            break
+        selected = candidate
+    return selected if selected == text else selected.rstrip() + "…"
+
+
+def evidence_context(authority: dict, evidence_id: str) -> str:
+    claims = authority.get("claims") or {}
+    verdicts = authority.get("verdicts") or {}
+    parts = [str(authority.get("authoritativeFinding") or "")]
+    for platform, verdict in verdicts.items():
+        if evidence_id in (verdict.get("evidenceIds") or []):
+            claim = claims.get(platform) or {}
+            parts.extend(
+                [
+                    str(claim.get("claim") or ""),
+                    str(claim.get("answerExcerpt") or ""),
+                    str(verdict.get("reason") or ""),
+                ]
+            )
+    return "\n".join(part for part in parts if part)
+
+
 def render_evidence(authority: dict) -> str:
     items = []
     for evidence in authority.get("evidence") or []:
-        evidence_id = escaped(evidence.get("id"))
+        raw_evidence_id = str(evidence.get("id") or "")
+        evidence_id = escaped(raw_evidence_id)
         title = escaped(evidence.get("title") or evidence.get("url") or evidence_id)
-        body = escaped(evidence.get("body"))
+        raw_body = str(evidence.get("body") or "").strip()
+        excerpt = relevant_excerpt(
+            raw_body, evidence_context(authority, raw_evidence_id)
+        )
         url = safe_url(evidence.get("url"))
         heading = (
             f'<a href="{escaped(url)}" target="_blank" rel="noreferrer">{title}</a>'
             if url
             else title
         )
+        full_text = (
+            '<details class="evidence-full"><summary>查看完整原文</summary>'
+            f'<pre>{escaped(raw_body)}</pre></details>'
+            if raw_body and excerpt != raw_body
+            else ""
+        )
         items.append(
             '<article class="evidence">'
             f'<div class="evidence-id">{evidence_id}</div>'
             f"<h4>{heading}</h4>"
-            f"<blockquote>{body}</blockquote>"
+            f'<blockquote class="evidence-excerpt">{escaped(excerpt)}</blockquote>'
+            f"{full_text}"
             "</article>"
         )
     return "".join(items) or '<p class="empty">未取得可交付的权威证据。</p>'
@@ -271,6 +346,9 @@ def render(verification: dict) -> str:
     .evidence-id {{ color: #637083; font-size: 12px; font-weight: 750; }}
     .evidence h4 {{ font-size: 14px; line-height: 1.45; margin: 5px 0 8px; }}
     blockquote {{ background: #f6f8fb; border-left: 3px solid #aab5c4; color: #344054; line-height: 1.55; margin: 0; padding: 9px 11px; }}
+    .evidence-full {{ margin-top: 10px; }}
+    .evidence-full summary {{ color: #1458a6; cursor: pointer; font-size: 13px; font-weight: 650; }}
+    .evidence-full pre {{ background: #f6f8fb; border: 1px solid #d7dde7; border-radius: 4px; color: #344054; font: inherit; line-height: 1.55; margin: 8px 0 0; max-height: 420px; overflow: auto; padding: 10px; white-space: pre-wrap; }}
     .table-wrap {{ overflow-x: auto; width: 100%; }}
     table {{ border-collapse: collapse; min-width: 900px; table-layout: fixed; width: 100%; }}
     th, td {{ border: 1px solid #d7dde7; font-size: 13px; line-height: 1.5; padding: 10px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }}

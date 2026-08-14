@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 sys.path.insert(0, str(ROOT / "scripts"))
 from authority_verify import acquire, trusted_search, trusted_search_timeout_seconds
+from render_final_report import attached_provenance, reference_primary_url
 
 
 def run(arguments: list[str]) -> None:
@@ -31,6 +32,23 @@ def run_failed(arguments: list[str], environment: dict[str, str] | None = None) 
 
 
 def main() -> int:
+    traced_reference = {
+        "title": "官方材料",
+        "url": "https://yun.dknowc.cn/wlcb/policy/1",
+        "originUrl": "https://example.org/official-policy",
+        "originAttributionStatus": "trusted_search_official_url",
+        "snippet": "这是回答区上下文，不是来源原文。",
+        "snippetProvenance": "answer_context",
+    }
+    assert reference_primary_url(traced_reference) == "https://example.org/official-policy"
+    provenance = attached_provenance(
+        {"citedReferenceIndexes": [1], "evidence": []},
+        {"references": [traced_reference]},
+    )
+    assert provenance[0]["url"] == "https://example.org/official-policy"
+    assert provenance[0]["platform_url"] == "https://yun.dknowc.cn/wlcb/policy/1"
+    assert provenance[0]["excerpt"] == ""
+
     previous_timeout = os.environ.get("FACTCHECK_TRUSTED_SEARCH_TIMEOUT_SECONDS")
     os.environ["FACTCHECK_TRUSTED_SEARCH_TIMEOUT_SECONDS"] = "120"
     assert trusted_search_timeout_seconds() == 120.0
@@ -403,7 +421,7 @@ def main() -> int:
             json.dumps(verification, ensure_ascii=False)
         )
         long_anchor_point = long_anchor_verification["knowledgePoints"][0]
-        long_anchor_body = "权威材料正文。" * 30 + "家庭提取额度上限提高至5600元/月。"
+        long_anchor_body = "权威材料正文。" * 120 + "家庭提取额度上限提高至5600元/月。"
         long_anchor_point["trustedAnchor"]["evidence"][0]["excerpt"] = long_anchor_body
         long_anchor_authority = long_anchor_point["authority"]
         long_anchor_authority["evidence"][0]["body"] = long_anchor_body
@@ -433,6 +451,21 @@ def main() -> int:
             json.dumps(long_anchor_verification, ensure_ascii=False),
             encoding="utf-8",
         )
+        long_anchor_authority_report = out / "long-anchor-authority-report.html"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "render_authority_report.py"),
+            "--verification",
+            str(long_anchor_path),
+            "--output",
+            str(long_anchor_authority_report),
+        ])
+        long_anchor_authority_html = long_anchor_authority_report.read_text(
+            encoding="utf-8"
+        )
+        assert '查看完整原文' in long_anchor_authority_html
+        assert 'class="evidence-excerpt"' in long_anchor_authority_html
+        assert long_anchor_body in long_anchor_authority_html
         long_anchor_report = out / "long-anchor-report.html"
         run([
             sys.executable,

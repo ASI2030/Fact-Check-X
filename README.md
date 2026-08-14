@@ -5,7 +5,7 @@
 对一个或多个 AI 的完整回答与引用进行事实核验：无损采集原回答，结构化比较关键事实，逐点核验权威证据，再评估各平台表现。最终答案只是核验产物之一，原始证据、冲突和证据边界全程可追溯。
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.3" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.4" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
 </p>
 
 ## 三分钟开始

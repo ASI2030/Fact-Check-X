@@ -158,6 +158,7 @@ KP_MIN_WIDTH = 440 + 210 * PLATFORM_COUNT
 
 # ──────────────── 来源可验证性标注 ────────────────
 OFFICIAL_MEDIA = ("people.com.cn", "xinhuanet.com", "qstheory.cn", "gmw.cn")
+DKNOW_OFFICIAL_SIDES = {"dknow", "dknowc-chat", "dknowc-deep-research"}
 OFFICIAL_ORIGIN_KEYS = (
     "originUrl", "origin_url", "resourceUrl", "resource_url",
     "officialUrl", "official_url", "sourceUrl", "source_url",
@@ -169,35 +170,30 @@ def _official_url(url):
         or host.endswith(".gov.cn")
         or any(host == d or host.endswith("." + d) for d in OFFICIAL_MEDIA)
     )
-def _official_origin(reference):
+def _http_url(url):
+    parsed = urlparse(str(url or "").strip())
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+def _official_origin(reference, side=""):
     if reference.get("originAttributionStatus") == "trusted_search_no_source_url":
         return ""
     for key in OFFICIAL_ORIGIN_KEYS:
         candidate = str(reference.get(key) or "").strip()
-        if candidate and _official_url(candidate):
+        if candidate and (
+            _official_url(candidate)
+            or (
+                side in DKNOW_OFFICIAL_SIDES
+                and reference.get("originAttributionStatus") == "trusted_search_official_url"
+                and _http_url(candidate)
+            )
+        ):
             return candidate
     return ""
 def source_kind(reference, side=""):
     url = str(reference.get("url") or "")
     host = (urlparse(url).hostname or "").lower()
-    dt_host = urlparse(os.environ.get("FACTCHECK_DT_BASE", "")).hostname or ""
-    zone = str(reference.get("zone") or "").strip().upper()
-    captured_urls = [
-        str(reference.get(key) or "")
-        for key in ("url", "platformUrl", "platform_url", "originalUrl", "original_url")
-    ]
-    if side in ("dknow", "dknowc-chat") and (
-        any(
-            "dknowc.cn" in (urlparse(candidate).hostname or "").lower()
-            or (
-                dt_host
-                and dt_host in (urlparse(candidate).hostname or "").lower()
-            )
-            or "/DT_DATA/" in candidate.upper()
-            for candidate in captured_urls
-        )
-        or zone == "DT_DATA"
-        or reference.get("contentAcquisition") == "trusted_search_full_content"
+    if side in DKNOW_OFFICIAL_SIDES and any(
+        str(reference.get(key) or "").strip()
+        for key in ("url", "webTitle", "title", "content", "snippet")
     ):
         return "dknow_trusted_search_official"
     if _official_url(url):
@@ -210,9 +206,9 @@ def src_badge(reference, side=""):
     if kind == "dknow_trusted_search_official":
         attribution = reference.get("originAttributionStatus")
         note = (
-            "可信搜索返回官方来源链接；判断直接使用可信搜索返回材料"
+            "由深知可信搜索提供，统一按官方来源处理；已返回来源链接"
             if attribution == "trusted_search_official_url"
-            else "可信搜索未返回源网址；保留深知收录页作为兜底"
+            else "由深知可信搜索提供，统一按官方来源处理；来源链接待补"
             if attribution == "trusted_search_no_source_url"
             else "官方来源"
         )
@@ -560,9 +556,9 @@ def raw_block(sk, sname, color):
         f'<li>{b} <a href="{_safe_href(r.get("url",""))}" target="_blank">'
         f'{escape((r.get("webTitle") or r.get("title") or r.get("url",""))[:70])}</a>'
         + (
-            ' <span class="muted small">[可信搜索未返回源网址·保留收录页]</span>'
+            ' <span class="muted small">[来源链接待补·不影响官方来源口径]</span>'
             if r.get("originAttributionStatus") == "trusted_search_no_source_url"
-            else ' <span class="muted small">[官方来源]</span>'
+            else ' <span class="muted small">[已返回来源链接]</span>'
             if r.get("originAttributionStatus") == "trusted_search_official_url"
             else ""
         )
