@@ -16,7 +16,7 @@ ZIP_TIME = (2026, 7, 30, 0, 0, 0)
 ROOT = "fact-check-x-complete"
 REQUIRED_PLATFORMS = (
     "深知晓",
-    "深知晓（深度研究）",
+    "深知晓（深度溯源）",
     "豆包",
     "腾讯元宝",
     "DeepSeek",

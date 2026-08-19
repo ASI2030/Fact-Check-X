@@ -150,10 +150,10 @@ def expected_portable_files(run_dir: Path) -> dict[str, bytes]:
         f"{root}/README.txt": (
             "Fact-Check-X 完整事实核验报告包\n\n"
             "建议按以下顺序打开：\n"
-            "1. 01-capture-report.html：原始答案、参考文献与引用存证\n"
-            "2. 02-comparison-report.html：知识点结构化对比\n"
-            "3. 03-authority-report.html：权威证据核验\n"
-            "4. 04-final-report.html：平台表现与完整证据\n\n"
+            "1. 01-capture-report.html：各方答案汇总\n"
+            "2. 02-comparison-report.html：各方答案聚合（未核验）\n"
+            "3. 03-authority-report.html：全知晓“完美答案”\n"
+            "4. 04-final-report.html：各方答案测评报告\n\n"
             "请先解压整个压缩包，再用浏览器打开 HTML 文件，以保留截图、页面存证和报告导航。\n"
         ).encode("utf-8")
     }

@@ -232,7 +232,7 @@ export function createProgram() {
         .version("0.1.0");
     program
         .command("report")
-        .description("从已有 results.json 生成原始答案与引用报告。")
+        .description("从已有 results.json 生成各方答案汇总。")
         .requiredOption("--input <path>", "results.json 路径")
         .requiredOption("--out <dir>", "输出目录")
         .action(async (options) => {

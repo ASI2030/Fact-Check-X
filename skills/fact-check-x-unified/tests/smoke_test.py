@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +40,7 @@ def command(*arguments: str) -> list[str]:
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="fact-check-x-unified-") as temp:
         sys.path.insert(0, str(ROOT / "scripts"))
+        import fact_check_x
         from fact_check_x import merge_verification
 
         merge_results = Path(temp) / "merge-results"
@@ -109,6 +111,29 @@ def main() -> int:
         assessments.mkdir(parents=True)
         assessment = json.loads((AUTHORITY_FIXTURES / "K1-assessment.json").read_text(encoding="utf-8"))
         (assessments / "K1.json").write_text(json.dumps(assessment, ensure_ascii=False), encoding="utf-8")
+        original_pipeline_run = fact_check_x.run
+
+        def fail_authority_report(arguments, environment=None):
+            if any(Path(str(item)).name == "render_authority_report.py" for item in arguments):
+                raise fact_check_x.PipelineError("强制报告渲染失败")
+            return original_pipeline_run(arguments, environment)
+
+        with patch.object(fact_check_x, "run", side_effect=fail_authority_report):
+            try:
+                fact_check_x.finalize_authority(
+                    type("Args", (), {"run_dir": str(run_dir), "assessments_dir": None})(),
+                    {key: Path(value) for key, value in located["skills"].items()},
+                )
+            except fact_check_x.PipelineError as exc:
+                assert "强制报告渲染失败" in str(exc)
+            else:
+                raise AssertionError("报告渲染失败应回滚权威核验事务")
+        assert json.loads(
+            (run_dir / "authority-gate.json").read_text(encoding="utf-8")
+        )["status"] == "searched"
+        assert not list((run_dir / "authority" / "results").glob("*.json"))
+        assert not (run_dir / "verification.json").exists()
+        assert not (run_dir / "03-authority-report.html").exists()
         finalized = run(command("finalize-authority", "--run-dir", str(run_dir)))
         assert finalized["status"] == "completed"
         assert finalized["stage"] == "authority_completed"
@@ -145,8 +170,8 @@ def main() -> int:
         assert verification["finalAnswer"]["status"] == "verified"
         assert verification["finalAnswer"]["knowledgePointIds"] == ["K1"]
         assert verification["knowledgePoints"][0]["authority"]["verdicts"]["doubao"]["category"] == "misleading"
-        assert "权威证据核验报告" in authority_report
-        assert "权威核验后的最终答案" in authority_report
+        assert "全知晓“完美答案”（问题：" in authority_report
+        assert "完美答案（已核验，可权威溯源）" in authority_report
         assert "深知晓" in authority_report and "豆包" in authority_report
         assert "data-fcx-authority-binding-sha256" in authority_report
         assert all(
@@ -160,7 +185,7 @@ def main() -> int:
         assert "① 参考性" in report and "④ 原始答案与参考文献（存证）" in report
         assert (run_dir / "comparison.html").exists()
         capture_report = (run_dir / "capture" / "report.html").read_text(encoding="utf-8")
-        assert "原始答案、参考文献与引用存证报告" in capture_report
+        assert "各方答案汇总（问题：" in capture_report
         assert "每人每月最高提取 1400 元" in capture_report
         assert (run_dir / "capture" / "report.md").exists()
         assert manifest["artifacts"]["answerReferenceReport"] == str((run_dir / "capture" / "report.html").resolve())
@@ -458,6 +483,8 @@ def main() -> int:
                 "report.checkpoints_indexed",
                 "report.unverified_draft_visible",
                 "report.verified_final_answer_visible",
+                "report.renamed_four_stages",
+                "authority.finalize_transaction_rollback",
             ],
         }), encoding="utf-8")
     print("PASS Fact-Check-X 统一入口")

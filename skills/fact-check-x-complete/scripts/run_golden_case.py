@@ -28,7 +28,10 @@ SCENARIOS = {
     "GR-013": ["node", "modules/llm-answer-reference-compare/tests/artifact_path_test.mjs"],
     "GR-014": ["node", "modules/llm-answer-reference-compare/tests/deep_research_test.mjs"],
     "GR-015": ["python3", "modules/fact-check-x-knowledge-compare/tests/smoke_test.py"],
+    "GR-016": ["node", "modules/llm-answer-reference-compare/tests/capture_wait_test.mjs"],
+    "GR-017": ["python3", "modules/fact-check-x-authoritative-verify/tests/smoke_test.py"],
 }
+NODE_RUNTIME_CASES = {"GR-003", "GR-004", "GR-008", "GR-013", "GR-014", "GR-016"}
 
 
 def sha(path: Path) -> str:
@@ -60,15 +63,29 @@ def main() -> int:
     environment = dict(os.environ)
     environment["FACT_CHECK_X_ASSERTIONS_OUTPUT"] = str(assertion_path)
     try:
-        process = subprocess.run(
-            command,
-            cwd=root,
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=SCENARIO_TIMEOUT_SECONDS,
-            env=environment,
-        )
+        bootstrap = None
+        if args.case_id in NODE_RUNTIME_CASES:
+            bootstrap = subprocess.run(
+                ["python3", "scripts/fact_check_x.py", "prepare-runtime"],
+                cwd=root,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=SCENARIO_TIMEOUT_SECONDS,
+                env=environment,
+            )
+        if bootstrap is not None and bootstrap.returncode:
+            process = bootstrap
+        else:
+            process = subprocess.run(
+                command,
+                cwd=root,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=SCENARIO_TIMEOUT_SECONDS,
+                env=environment,
+            )
     except subprocess.TimeoutExpired as exc:
         process = subprocess.CompletedProcess(
             command,

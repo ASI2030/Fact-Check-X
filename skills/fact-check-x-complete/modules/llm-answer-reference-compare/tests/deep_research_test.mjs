@@ -26,7 +26,7 @@ const config = builtInPlatforms.find(
     (platform) => platform.name === "dknowc-deep-research"
 );
 assert.ok(config);
-assert.equal(config.label, "深知晓（深度研究）");
+assert.equal(config.label, "深知晓（深度溯源）");
 assert.equal(
     config.url,
     "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/"

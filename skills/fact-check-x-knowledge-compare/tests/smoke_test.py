@@ -47,8 +47,9 @@ def main() -> int:
         assert "可信搜索官方原站" not in html
         assert "非官方来源" in html
         assert "trusted_repository" not in html
-        assert 'href="capture/report.html"' in html
-        assert 'href="report.html"' in html
+        assert 'href="01-capture-report.html"' in html
+        assert 'href="03-authority-report.html"' in html
+        assert 'href="04-final-report.html"' in html
         for current_term in ("依据展示", "溯源方式", "直接展示", "逐段溯源", "无对应的清单"):
             assert current_term in html
         for retired_term in ("页面模式", "绑定方式", "显式标记", "局部角标绑定", "平台声明全局来源"):
@@ -327,7 +328,7 @@ def main() -> int:
             (FIXTURES / "results.json").read_text(encoding="utf-8")
         )
         deep_research_results["platforms"][0]["platform"] = "dknowc-deep-research"
-        deep_research_results["platforms"][0]["label"] = "深知晓（深度研究）"
+        deep_research_results["platforms"][0]["label"] = "深知晓（深度溯源）"
         deep_research_task_path = out / "deep-research-task.json"
         deep_research_results_path = out / "deep-research-results.json"
         deep_research_results_path.write_text(
@@ -347,9 +348,37 @@ def main() -> int:
         assert deep_research_task["platforms"][0]["references"][0][
             "sourceLevel"
         ] == "dknow_trusted_search_official"
-        assert "深度研究不继承该免查锚点" in "\n".join(
+        assert "可凭自身回答所附官方材料独立形成锚点" in "\n".join(
             deep_research_task["rules"]
         )
+        deep_research_analysis = json.loads(
+            (FIXTURES / "comparison-analysis.json").read_text(encoding="utf-8")
+        )
+        deep_point = deep_research_analysis["knowledgePoints"][0]
+        deep_point["claims"]["dknowc-deep-research"] = deep_point["claims"].pop(
+            "dknowc-chat"
+        )
+        deep_point["trustedAnchor"]["platform"] = "dknowc-deep-research"
+        deep_research_analysis_path = out / "deep-research-analysis.json"
+        deep_research_analysis_path.write_text(
+            json.dumps(deep_research_analysis, ensure_ascii=False), encoding="utf-8"
+        )
+        deep_research_output = out / "deep-research-comparison.json"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(deep_research_results_path),
+            "--analysis",
+            str(deep_research_analysis_path),
+            "--output",
+            str(deep_research_output),
+        ])
+        deep_anchor = json.loads(
+            deep_research_output.read_text(encoding="utf-8")
+        )["knowledgePoints"][0]["trustedAnchor"]
+        assert deep_anchor["eligible"] is True
+        assert deep_anchor["platform"] == "dknowc-deep-research"
 
         supplement_only_analysis = json.loads(answer_level_analysis_path.read_text(encoding="utf-8"))
         supplement_only_claim = supplement_only_analysis["knowledgePoints"][0]["claims"]["doubao"]
@@ -520,6 +549,63 @@ def main() -> int:
         assert decimal_claim["locallyBoundReferenceIndexes"] == []
         assert decimal_claim["answerLevelReferenceIndexes"] == [2]
         assert decimal_claim["faithfulness"] == "supported"
+
+        time_marker_source = json.loads(
+            (FIXTURES / "results.json").read_text(encoding="utf-8")
+        )
+        time_marker_source["platforms"][0]["answerMarkdown"] = (
+            "线下培训结束时间不得晚于20:30，"
+            "线上培训结束时间不得晚于21:00【12】；"
+        )
+        time_marker_source["platforms"][0]["references"] = [
+            {"title": "无关来源1", "url": "https://example.gov.cn/1", "marker": "1", "snippet": "无关材料。"},
+            {"title": "无关来源2", "url": "https://example.gov.cn/2", "marker": "2", "snippet": "无关材料。"},
+            {"title": "无关来源30", "url": "https://example.gov.cn/30", "marker": "30", "snippet": "无关材料。"},
+            {
+                "title": "校外培训管理规定",
+                "url": "https://example.gov.cn/policy/12",
+                "marker": "12",
+                "snippet": "线下培训结束时间不得晚于20:30，线上培训结束时间不得晚于21:00。",
+            },
+        ]
+        time_marker_path = out / "time-marker-results.json"
+        time_marker_path.write_text(
+            json.dumps(time_marker_source, ensure_ascii=False), encoding="utf-8"
+        )
+        time_marker_analysis = json.loads(
+            (FIXTURES / "comparison-analysis.json").read_text(encoding="utf-8")
+        )
+        time_marker_claim = time_marker_analysis["knowledgePoints"][0]["claims"]["dknowc-chat"]
+        time_marker_claim["claim"] = "线下培训不晚于20:30，线上培训不晚于21:00"
+        time_marker_claim["answerExcerpt"] = time_marker_source["platforms"][0]["answerMarkdown"]
+        time_marker_claim["citedReferenceIndexes"] = [1, 2, 3, 4]
+        time_marker_claim["answerLevelReferenceIndexes"] = []
+        time_marker_claim["evidence"] = [{
+            "referenceIndex": 4,
+            "excerpt": "线下培训结束时间不得晚于20:30，线上培训结束时间不得晚于21:00。",
+        }]
+        time_marker_analysis_path = out / "time-marker-analysis.json"
+        time_marker_analysis_path.write_text(
+            json.dumps(time_marker_analysis, ensure_ascii=False), encoding="utf-8"
+        )
+        time_marker_result = out / "time-marker-comparison.json"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(time_marker_path),
+            "--analysis",
+            str(time_marker_analysis_path),
+            "--output",
+            str(time_marker_result),
+        ])
+        normalized_time_claim = json.loads(
+            time_marker_result.read_text(encoding="utf-8")
+        )["knowledgePoints"][0]["claims"]["dknowc-chat"]
+        assert normalized_time_claim["locallyBoundReferenceIndexes"] == [4]
+        assert normalized_time_claim["citedReferenceIndexes"] == [4]
+        assert normalized_time_claim["referenceBinding"] == "local"
+        assert normalized_time_claim["faithfulness"] == "supported"
 
         short_marker_source = json.loads((FIXTURES / "results.json").read_text(encoding="utf-8"))
         short_marker_source["platforms"][0]["answerMarkdown"] = (
@@ -759,8 +845,9 @@ def main() -> int:
                 "contract.missing_fields_blocked",
                 "contract.authority_not_entered",
                 "citation.decimal_not_marker",
+                "citation.time_not_marker",
                 "source.answer_context_not_source_body",
-                "deep_research.official_without_anchor_inheritance",
+                "deep_trace.independent_official_anchor",
             ],
         }), encoding="utf-8")
     print("PASS 知识点结构化对比")

@@ -247,7 +247,11 @@ if (originalTrustedSearchUrl === undefined) {
 else {
     process.env.FACTCHECK_TRUSTED_SEARCH_URL = originalTrustedSearchUrl;
 }
-await new Promise((resolve, reject) => pdfServer.close((error) => error ? reject(error) : resolve()));
+await Promise.all([pdfPage.close(), trustedPage.close()]);
+await new Promise((resolve, reject) => {
+    pdfServer.close((error) => error ? reject(error) : resolve());
+    pdfServer.closeAllConnections?.();
+});
 
 const mixedPage = await context.newPage();
 await mixedPage.setContent(`
@@ -281,6 +285,30 @@ assert.deepEqual(
     ["global", "global"]
 );
 
+const overlappingInlinePage = await context.newPage();
+await overlappingInlinePage.setContent(`
+    <div class="search-summary"><div>搜索 2 个关键词，参考 2 篇资料</div></div>
+    <div class="md-box-root">
+        <p><a href="https://policy.example/already-visible">正文内官方链接</a></p>
+    </div>
+    <script>
+        document.querySelector(".search-summary").addEventListener("click", () => {
+            const dialog = document.createElement("div");
+            dialog.innerHTML = '<a href="https://policy.example/second-source">来源清单第二条</a>';
+            document.body.appendChild(dialog);
+        });
+    </script>
+`);
+const overlappingReferences = await extractDoubaoReferences(
+    overlappingInlinePage,
+    "https://www.doubao.com/chat/"
+);
+assert.equal(overlappingReferences.length, 2);
+assert.deepEqual(
+    overlappingReferences.map((reference) => reference.citationScope),
+    ["inline", "global"]
+);
+
 const incompletePage = await context.newPage();
 await incompletePage.setContent(`
     <div class="search-summary"><div>搜索 2 个关键词，参考 2 篇资料</div></div>
@@ -296,7 +324,12 @@ await incompletePage.setContent(`
 `);
 await assert.rejects(
     () => extractDoubaoReferences(incompletePage, "https://www.doubao.com/chat/"),
-    /声明参考 2 篇资料，但仅捕获 1 篇/
+    (error) => {
+        assert.match(error.message, /声明参考 2 篇资料，但仅捕获 1 篇/);
+        assert.equal(error.captureStatus, "failed");
+        assert.equal(error.partialReferences.length, 1);
+        return true;
+    }
 );
 
 await browser.close();
@@ -304,7 +337,13 @@ if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
     const { writeFile } = await import("node:fs/promises");
     await writeFile(process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT, JSON.stringify({
         schemaVersion: "fact-check-x/test-assertions@1",
-        actualAssertionIds: ["pdf.direct_extract", "pdf.trusted_search_hydrate", "pdf.fail_closed"]
+        actualAssertionIds: [
+            "pdf.direct_extract",
+            "pdf.trusted_search_hydrate",
+            "pdf.fail_closed",
+            "citation.doubao_overlap_counted",
+            "capture.partial_reference_evidence_retained"
+        ]
     }));
 }
 console.log("PASS 豆包脚标、全局来源与完整性门禁");

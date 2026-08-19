@@ -58,12 +58,13 @@ export function renderHtmlReport(run) {
     const totalSourceMentions = platforms.reduce((sum, platform) => sum + (platform.sourceMentions || []).length, 0);
     const maxReferences = Math.max(1, ...platforms.map((platform) => platform.references.length));
     const mostCitedPlatform = platforms.reduce((best, platform) => (platform.references.length > best.references.length ? platform : best), platforms[0]);
+    const reportTitle = `各方答案汇总（问题：${String(run.question || "").trim()}）`;
     return `<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>原始答案、参考文献与引用存证报告</title>
+  <title>${escapeHtml(reportTitle)}</title>
   <style>
     :root {
       color-scheme: light;
@@ -682,7 +683,7 @@ export function renderHtmlReport(run) {
 <body>
   <main class="shell ${platformLayout} platform-count-${platforms.length}" style="--platform-count:${platforms.length}">
     <nav class="topbar">
-      <div class="brand"><span class="brand-mark"></span><span>原始答案与引用存证<span class="brand-en">Raw Answers, References & Citations</span></span></div>
+	      <div class="brand"><span class="brand-mark"></span><span>各方答案汇总<span class="brand-en">Raw Answers, References & Citations</span></span></div>
         <div class="topnav">
           <a href="#status">平台状态</a>
           <a href="#answers">答案对比</a>
@@ -695,7 +696,7 @@ export function renderHtmlReport(run) {
       <div class="hero-main">
         <div class="hero-copy">
           <p class="eyebrow">本地对比报告 / Local comparison report</p>
-          <h1>原始答案、参考文献与引用存证报告</h1>
+	          <h1>${escapeHtml(reportTitle)}</h1>
           <div class="question"><strong>问题 / Question</strong><br />${escapeHtml(run.question)}</div>
           <div class="insight-bar">
             <div class="insight"><strong>${escapeHtml(mostCitedPlatform?.label || "N/A")}</strong>捕获来源最多 / Most references</div>
@@ -1069,7 +1070,7 @@ function linkInlineCitations(html, platform) {
     if (!["dknowc-chat", "dknowc-deep-research"].includes(platform.platform)) {
         return withBracketLinks;
     }
-    return withBracketLinks.replace(/(^|[^\d[])(\d{1,8})(?=<|\s|。|；|，|、|\.|,|;|:|：|）|\)|$)/g, (_whole, prefix, digits) => {
+    return withBracketLinks.replace(/(^|[^\d\[:：])(\d{1,8})(?=<|\s|。|；|，|、|\.|,|;|）|\)|$)/g, (_whole, prefix, digits) => {
         const split = splitBareCitationSuffix(digits, sortedMarkers, markers);
         if (!split) {
             return `${prefix}${digits}`;

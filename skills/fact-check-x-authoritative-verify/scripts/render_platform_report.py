@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fact-Check-X 平台表现与完整证据报告渲染器。
+Fact-Check-X 各方答案测评报告渲染器。
 
 稳定指标口径：
   分母 N = 合法直接答案知识点（剔除补充参考 + 剔除编造）
@@ -38,7 +38,7 @@ a = p.parse_args()
 A = json.load(open(a.analysis))
 R = json.load(open(a.result)) if Path(a.result).exists() else {}
 
-query = A.get('query', '?')
+query = str(A.get('query') or '?').strip()
 N_list = A.get('answer_knowledge_points', [])
 SE = A.get('side_evaluation', {})
 
@@ -621,16 +621,16 @@ appeal_block = ('''
 </div>''' if _appeal_needed else '')
 
 html = f'''<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
-<title>Fact-Check-X 平台表现与完整证据报告</title><style>
+<title>各方答案测评报告（问题：{escape(query)}）</title><style>
 *{{box-sizing:border-box}}
 body{{font-family:-apple-system,"PingFang SC",sans-serif;max-width:1440px;width:100%;margin:24px auto;padding:0 24px;color:#1f2937;line-height:1.6}}
 h1{{color:#1e3a8a;border-bottom:3px solid #e5e7eb;padding-bottom:10px}}
 h2{{color:#1e40af;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6px}}
 .muted{{color:#6b7280}} .small{{font-size:12px}}
 .tt{{cursor:help;border-bottom:1px dotted #9ca3af}}
-.hero{{background:linear-gradient(135deg,#eef2ff,#f0fdfa);padding:20px;border-radius:14px;margin:16px 0}}
+.hero{{background:#f6f8fb;border:1px solid #d8dee9;border-left:5px solid #0f766e;padding:20px;border-radius:6px;margin:16px 0}}
 .mwrap{{display:grid;grid-template-columns:repeat(var(--platform-count),minmax(0,1fr));gap:16px;margin:14px 0}}
-.mcard{{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}}
+.mcard{{background:#fff;border:1px solid #e1e6ee;border-radius:6px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}}
 .mtitle{{font-size:18px;font-weight:700}}
 .kpi-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 8px}}
 .kpi{{min-width:0;border:1px solid #e5e7eb;border-radius:10px;padding:10px;text-align:center;background:#f8fafc}}
@@ -735,8 +735,8 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   h1{{font-size:18px}} h2{{font-size:15px}}
 }}
 </style></head><body class="{PLATFORM_LAYOUT} platform-count-{PLATFORM_COUNT}" style="--platform-count:{PLATFORM_COUNT};--kp-min-width:{KP_MIN_WIDTH}px">
-<h1>📋 事实核查报告 <span class="muted small">裁定层 + 直接答案区（覆盖率/准确率）+ 补充参考分析 + 编造检出 · 全链路可溯源</span></h1>
-<p class="muted">查询：<b>{escape(query)}</b> · {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
+<h1>各方答案测评报告（问题：{escape(query)}）</h1>
+<p class="muted">准确性、完整性、来源质量与完整证据 · {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
 <div class="toolbar">
   <button class="btn" onclick="window.print()">⎙ 导出 PDF / 打印</button>
   <button class="btn" onclick="document.querySelectorAll('details.rawd').forEach(d=>d.open=true)">▽ 展开全部存证</button>
@@ -816,7 +816,7 @@ ts = datetime.now().strftime("%Y%m%d_%H%M")
 out = Path(a.out) if a.out else (Path(__file__).parent / "reports" / f"factcheck_{ts}_{a.topic}.html")
 out.parent.mkdir(exist_ok=True, parents=True)
 out.write_text(html, encoding="utf-8")
-print(f"✅ 平台表现与完整证据报告: {out}")
+print(f"各方答案测评报告: {out}")
 print(f"   大小: {len(html):,} 字符")
 for sk, sn, _ in SIDE:
     m = M.get(sk, {})

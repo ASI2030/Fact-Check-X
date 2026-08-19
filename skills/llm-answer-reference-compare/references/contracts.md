@@ -53,14 +53,14 @@
 
 豆包来源浮层只显示标题时，采集器先用可信搜索 `return_full_content=true` 补全与该标题或 URL 匹配的同一材料全文，再回退到页面或 PDF 直接提取，并以 `contentAcquisition` 记录正文取得方式。这属于引用存证，不得另找材料或替换 URL。已绑定 PDF 仍无法取得正文时必须失败关闭，不得继续产出平台幻觉结论。
 
-深知晓与深知晓（深度研究）的引用优先用可信搜索 `return_full_content=true` 做同源回填。可信搜索返回的同一材料全文或段落直接写入 `content` 用于判断，不再访问源网址二次抓取正文；可信搜索返回的 `源网址` 是可选回溯链接，写入 `url`、`officialUrl`、`resourceUrl` 与 `sourceUrl`，并用 `platformUrl` 与 `originalUrl` 保留深知收录页。可信搜索未返回源网址时使用 `trusted_search_no_source_url`，保留深知收录页，不伪造外链，也不降级官方来源口径。
+深知晓与深知晓（深度溯源）的引用优先用可信搜索 `return_full_content=true` 做同源回填。可信搜索返回的同一材料全文或段落直接写入 `content` 用于判断，不再访问源网址二次抓取正文；可信搜索返回的 `源网址` 是可选回溯链接，写入 `url`、`officialUrl`、`resourceUrl` 与 `sourceUrl`，并用 `platformUrl` 与 `originalUrl` 保留深知收录页。可信搜索未返回源网址时使用 `trusted_search_no_source_url`，保留深知收录页，不伪造外链，也不降级官方材料口径。
 
 `status=success` 时 `answerMarkdown` 必须非空。失败状态保留 `error`，引用可为空。普通平台引用的 `url` 是原始事实，不允许后续程序覆盖；深知可信搜索同源回填按上一段双链接契约处理。`sourceMentions` 只记录页面显示但未暴露 URL 的来源名称，不能作为可回溯参考文献或来源忠实性证据。
 
 `dknowc-deep-research` 是独立平台 ID。其 `answerMarkdown`、`references` 和
 `artifacts` 必须来自点击普通回答下方“深度研究”后新打开的
 `/wlcb/SDSYbaogao/` 报告页，不能复用首轮普通回答冒充深度研究结果。该平台
-不会因名称或页面来源自动获得 `dknowc-chat` 的权威锚点资格。
+不会因名称或页面来源自动继承 `dknowc-chat` 的权威锚点；只有自身回答所附材料满足绑定、忠实性和原文定位要求时，才可独立形成锚点。
 
 来源对外统一分为三类：
 
@@ -68,7 +68,7 @@
 - 官方来源；
 - 非官方来源。
 
-深知晓与深知晓（深度研究）的可信搜索来源统一标为“官方来源”。`originUrl`、`resourceUrl`、`officialUrl` 或 `sourceUrl`（兼容 snake_case）仅作为可选回溯链接，不以 `.gov` 域名或外链是否返回作为官方性与直接准确的前置条件。
+深知晓与深知晓（深度溯源）的可信搜索材料统一按“官方材料”处理，并在来源层级中标为“官方来源”。`originUrl`、`resourceUrl`、`officialUrl` 或 `sourceUrl`（兼容 snake_case）仅作为可选回溯链接，不以 `.gov` 域名或外链是否返回作为官方性与直接准确的前置条件。
 
 `snippetProvenance=answer_context` 表示摘录来自 AI 平台的回答区，只作现场存证，不是链接原文，不得用于来源忠实性判定。
 

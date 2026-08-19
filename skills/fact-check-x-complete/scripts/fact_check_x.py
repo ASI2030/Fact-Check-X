@@ -32,6 +32,12 @@ DEPENDENCY_ENTRYPOINTS = {
     "authority": Path("scripts/authority_verify.py"),
 }
 
+COLLECTOR_RUNTIME_PACKAGES = (
+    Path("node_modules/@playwright/test/package.json"),
+    Path("node_modules/commander/package.json"),
+    Path("node_modules/zod/package.json"),
+)
+
 TRUSTED_SEARCH_CONFIGURATION_PROMPT = (
     "部分知识点还需要调用可信搜索。首次使用时，我会打开深知智能 MaaS 平台"
     f"（{PROVIDER_URL}）。您只需完成登录；技能会自动读取已有的可用 Key，"
@@ -45,10 +51,10 @@ PORTABLE_REPORT_ROOT = Path("fact-check-x-report")
 PORTABLE_REPORT_README = """Fact-Check-X 完整事实核验报告包
 
 建议按以下顺序打开：
-1. 01-capture-report.html：原始答案、参考文献与引用存证
-2. 02-comparison-report.html：知识点结构化对比
-3. 03-authority-report.html：权威证据核验
-4. 04-final-report.html：平台表现与完整证据
+1. 01-capture-report.html：各方答案汇总
+2. 02-comparison-report.html：各方答案聚合（未核验）
+3. 03-authority-report.html：全知晓“完美答案”
+4. 04-final-report.html：各方答案测评报告
 
 请先解压整个压缩包，再用浏览器打开 HTML 文件，以保留截图、页面存证和报告导航。
 """
@@ -83,6 +89,68 @@ def locate_skills() -> dict[str, Path]:
             searched = ", ".join(str(path / directory) for path in skill_candidates())
             raise PipelineError(f"未找到依赖技能 {directory}；已检查：{searched}")
     return found
+
+
+def prepare_runtime(skills: dict[str, Path]) -> dict:
+    tool_root = skills["collector"] / "assets" / "tool"
+    package_json = tool_root / "package.json"
+    package_lock = tool_root / "package-lock.json"
+    if not package_json.is_file() or not package_lock.is_file():
+        raise PipelineError("采集运行时缺少 package.json 或 package-lock.json")
+
+    node = shutil.which("node")
+    if not node:
+        raise PipelineError("未找到 Node.js；请安装 Node.js 20 或更高版本后重试")
+
+    def runtime_ready() -> bool:
+        if not all((tool_root / relative).is_file() for relative in COLLECTOR_RUNTIME_PACKAGES):
+            return False
+        probe = subprocess.run(
+            [node, "dist/cli.js", "platforms"],
+            cwd=tool_root,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+        return probe.returncode == 0
+
+    if runtime_ready():
+        return {
+            "status": "completed",
+            "runtime": "ready",
+            "installAction": "skipped",
+            "toolRoot": str(tool_root.resolve()),
+        }
+
+    npm = shutil.which("npm")
+    if not npm:
+        raise PipelineError("未找到 npm；请安装 Node.js 20 或更高版本后重试")
+    environment = os.environ.copy()
+    environment["PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD"] = "1"
+    try:
+        install = subprocess.run(
+            [npm, "ci", "--omit=dev", "--no-audit", "--no-fund"],
+            cwd=tool_root,
+            text=True,
+            capture_output=True,
+            check=False,
+            env=environment,
+            timeout=600,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise PipelineError("采集运行依赖安装超时，请检查 npm 网络后重试") from exc
+    if install.returncode:
+        detail = install.stderr.strip() or install.stdout.strip() or "npm ci 执行失败"
+        raise PipelineError(f"采集运行依赖安装失败：{detail}")
+    if not runtime_ready():
+        raise PipelineError("采集运行依赖安装完成，但运行时自检未通过")
+    return {
+        "status": "completed",
+        "runtime": "ready",
+        "installAction": "installed",
+        "toolRoot": str(tool_root.resolve()),
+    }
 
 
 def run(command: list[str], environment: dict[str, str] | None = None) -> dict:
@@ -296,7 +364,7 @@ def normalize_comparison_navigation(content: bytes) -> bytes:
     if b'href="03-authority-report.html"' not in content:
         content = content.replace(
             b'<a href="04-final-report.html">',
-            b'<a href="03-authority-report.html">\xe4\xba\x91\xe7\xab\xaf\xe6\x9d\x83\xe5\xa8\x81\xe6\xa0\xb8\xe9\xaa\x8c</a>'
+            b'<a href="03-authority-report.html">\xe5\x85\xa8\xe7\x9f\xa5\xe6\x99\x93\xe2\x80\x9c\xe5\xae\x8c\xe7\xbe\x8e\xe7\xad\x94\xe6\xa1\x88\xe2\x80\x9d</a>'
             b'<a href="04-final-report.html">',
         )
     return content
@@ -492,7 +560,7 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
         },
         "deliverables": [
             {
-                "label": "原始答案与引用报告",
+                "label": "各方答案汇总",
                 "path": str(capture_deliverable.resolve()),
             }
         ],
@@ -543,7 +611,7 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
         },
         "deliverables": [
             {
-                "label": "知识点对比报告（未核验）",
+                "label": "各方答案聚合（未核验）",
                 "path": str(comparison_deliverable.resolve()),
             }
         ],
@@ -763,6 +831,8 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     assessment_hashes = json_file_manifest(assessments_dir, expected_assessments)
     statuses = []
     evidence_gap_count = 0
+    verification_path = run_dir / "verification.json"
+    authority_report = run_dir / "03-authority-report.html"
     try:
         for entry in manifest.get("requests") or []:
             request_id = entry["requestId"]
@@ -783,34 +853,37 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
             statuses.append(run(command).get("status"))
             point_result = load_json(results_dir / f"{request_id}.json")
             evidence_gap_count += len(point_result.get("evidenceGaps") or [])
+        final_status = "completed"
+        result_hashes = json_file_manifest(
+            results_dir, {f"{request_id}.json" for request_id in request_ids}
+        )
+        comparison = load_json(run_dir / "comparison.json")
+        verification = merge_verification(comparison, results_dir)
+        dump_json(verification_path, verification)
+        run([
+            sys.executable,
+            str(skills["authority"] / "scripts" / "render_authority_report.py"),
+            "--verification",
+            str(verification_path),
+            "--output",
+            str(authority_report),
+        ])
+        dump_json(authority_gate_path, {
+            **authority_gate,
+            "status": "finalized",
+            "finalizedAt": now_iso(),
+            "finalizeStatus": final_status,
+            "results": str(results_dir.resolve()),
+            "assessmentHashes": assessment_hashes,
+            "resultHashes": result_hashes,
+        })
     except Exception:
         for result_path in results_dir.glob("*.json"):
             result_path.unlink()
+        verification_path.unlink(missing_ok=True)
+        authority_report.unlink(missing_ok=True)
+        dump_json(authority_gate_path, authority_gate)
         raise
-    final_status = "completed"
-    result_hashes = json_file_manifest(results_dir, {f"{request_id}.json" for request_id in request_ids})
-    dump_json(authority_gate_path, {
-        **authority_gate,
-        "status": "finalized",
-        "finalizedAt": now_iso(),
-        "finalizeStatus": final_status,
-        "results": str(results_dir.resolve()),
-        "assessmentHashes": assessment_hashes,
-        "resultHashes": result_hashes,
-    })
-    comparison = load_json(run_dir / "comparison.json")
-    verification = merge_verification(comparison, results_dir)
-    verification_path = run_dir / "verification.json"
-    authority_report = run_dir / "03-authority-report.html"
-    dump_json(verification_path, verification)
-    run([
-        sys.executable,
-        str(skills["authority"] / "scripts" / "render_authority_report.py"),
-        "--verification",
-        str(verification_path),
-        "--output",
-        str(authority_report),
-    ])
     return {
         "status": final_status,
         "stage": "authority_completed",
@@ -824,7 +897,7 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
         },
         "deliverables": [
             {
-                "label": "权威证据核验报告",
+                "label": "全知晓“完美答案”",
                 "path": str(authority_report.resolve()),
             }
         ],
@@ -1070,10 +1143,10 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
         "comparisonReport": manifest["artifacts"]["comparisonReport"],
         "report": str(report_path.resolve()),
         "deliverables": [
-            {"label": "原始答案与引用报告", "path": str(capture_deliverable.resolve())},
-            {"label": "知识点对比报告（未核验）", "path": str(comparison_deliverable.resolve())},
-            {"label": "权威证据核验报告", "path": str(authority_deliverable.resolve())},
-            {"label": "平台表现与完整证据报告", "path": str(final_deliverable.resolve())},
+            {"label": "各方答案汇总", "path": str(capture_deliverable.resolve())},
+            {"label": "各方答案聚合（未核验）", "path": str(comparison_deliverable.resolve())},
+            {"label": "全知晓“完美答案”", "path": str(authority_deliverable.resolve())},
+            {"label": "各方答案测评报告", "path": str(final_deliverable.resolve())},
             {
                 "label": "完整可分发报告包",
                 "path": package["path"],
@@ -1090,6 +1163,7 @@ def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description="Fact-Check-X 轻量统一编排入口。")
     commands = root.add_subparsers(dest="command", required=True)
     commands.add_parser("locate")
+    commands.add_parser("prepare-runtime")
     prepare = commands.add_parser("prepare-comparison")
     prepare.add_argument("--results", required=True)
     prepare.add_argument("--run-dir", required=True)
@@ -1121,6 +1195,8 @@ def main() -> int:
         skills = locate_skills()
         if args.command == "locate":
             result = {"status": "completed", "skills": {key: str(path) for key, path in skills.items()}}
+        elif args.command == "prepare-runtime":
+            result = prepare_runtime(skills)
         elif args.command == "prepare-comparison":
             result = prepare_comparison(args, skills)
         elif args.command == "complete-comparison":

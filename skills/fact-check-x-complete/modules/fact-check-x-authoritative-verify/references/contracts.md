@@ -21,7 +21,7 @@
 
 `differingClaims` 只在 `comparisonStatus=conflict|partial|mostly_consensus` 且至少两家主张确实不同时允许出现。一致、单方覆盖时必须省略。`cloudPayload` 不得包含完整原答案或无关知识点。
 
-`sourceLevel=official|dknow_trusted_search_official` 且所附正文忠实时可进入直接准确；其中 `dknow_trusted_search_official` 表示深知晓或深知晓（深度研究）的可信搜索官方来源，不以 `.gov` 域名或外链是否返回作为降级条件。深度研究仍不继承普通深知晓的 `dknow_exempt` 免查锚点。`sourceLevel=nonofficial` 即使内容忠实，也必须由独立权威证据验证后进入间接准确。最终报告的官方验证依据严格按各平台 `verdict.evidenceIds` 映射，不得默认取证据列表第一项。
+`sourceLevel=official|dknow_trusted_search_official` 且所附正文忠实时可进入直接准确；其中 `dknow_trusted_search_official` 表示深知晓或深知晓（深度溯源）的可信搜索官方材料，不以 `.gov` 域名或外链是否返回作为降级条件。深度溯源不继承普通深知晓结果，但自身材料满足锚点条件时可独立使用 `dknow_exempt`。`sourceLevel=nonofficial` 即使内容忠实，也必须由独立权威证据验证后进入间接准确。最终报告的官方验证依据严格按各平台 `verdict.evidenceIds` 映射，不得默认取证据列表第一项。
 
 ## 取证结果
 

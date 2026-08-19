@@ -2,6 +2,21 @@
 
 All notable changes are documented in this file. The project follows Semantic Versioning.
 
+## [Unreleased]
+
+## [1.1.5] - 2026-08-19
+
+- Fixed the authority verifier so 深知晓（深度溯源） can independently use its own qualified official materials as a zero-request trusted anchor, without inheriting another platform's trust state.
+- Made authority finalization transactional: result merging and report rendering must finish before the gate becomes `finalized`; failures now restore `searched`, remove transient artifacts and allow a direct retry.
+- 修复权威核验报告在手机窄屏下被长链接撑宽的问题，证据卡片与原文摘录现在会在卡片内安全换行。
+
+- Preserved DeepKnown citation superscripts before text extraction, excluded time values such as `20:30` and `21:00` from bare citation markers, and removed source-card prose from the captured main answer.
+- Renamed the optional platform to “深知晓（深度溯源）” and made its captured official materials independently eligible for direct verification without inheriting another platform's trust status.
+- Renamed and polished the four user-facing reports, separated verified conclusions from unresolved claims, and kept stage-four evaluation bound to stage-three verification data.
+- Added an idempotent `prepare-runtime` bootstrap that installs the locked Node.js dependencies on a clean machine, skips browser downloads, and verifies the collector before use instead of relying on stale `node_modules`.
+- Counted Doubao sources across both inline answer links and the expanded source list, including overlap, while retaining confirmed answer text and partial references when completeness checks fail.
+- Recognized Qianwen's slider-verification wording as a human-verification gate instead of waiting until answer extraction times out.
+
 ## [1.1.4] - 2026-08-14
 
 - Unified 深知晓 and 深知晓（深度研究）trusted-search materials under the public label “官方来源” without requiring a `.gov` domain or an external source URL.
@@ -31,7 +46,7 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 - Reframed the public product around four user-facing deliverables: original answers and citations, unverified knowledge comparison, authoritative evidence verification, and platform performance with complete evidence.
 - Added market-first SkillHub metadata, a clear first-run experience, optional Trusted Search onboarding, and an explicit six-platform support matrix.
-- Limited the formal support commitment to 深知晓, 深知晓（深度研究）, 豆包, 腾讯元宝, DeepSeek and 通义千问; removed unverified generic adapters from the built-in platform list.
+- Limited the formal support commitment to 深知晓, 深知晓（深度溯源）, 豆包, 腾讯元宝, DeepSeek and 通义千问; removed unverified generic adapters from the built-in platform list.
 - Removed internal revision labels and carrier-specific acceptance links from public descriptions and generated reports.
 - Renamed final report scripts and visible report labels to stable product terms.
 - Added a deterministic SkillHub package builder that rejects relative documentation links, internal terminology and extensionless legal files.

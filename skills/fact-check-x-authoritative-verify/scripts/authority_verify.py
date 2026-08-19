@@ -16,6 +16,9 @@ from urllib.parse import urlparse
 from common import SkillError, clipped, dump_json, load_json, now_iso
 
 
+DKNOW_OFFICIAL_PLATFORMS = {"dknowc-chat", "dknowc-deep-research"}
+
+
 def trusted_search_timeout_seconds() -> float:
     raw = os.getenv("FACTCHECK_TRUSTED_SEARCH_TIMEOUT_SECONDS", "90").strip()
     try:
@@ -168,10 +171,11 @@ def anchor_evidence(anchor: dict) -> list[dict]:
 
 def valid_trusted_anchor(request: dict) -> bool:
     anchor = request.get("trustedAnchor") or {}
-    claim = (request.get("claims") or {}).get("dknowc-chat") or {}
+    anchor_platform = str(anchor.get("platform") or "")
+    claim = (request.get("claims") or {}).get(anchor_platform) or {}
     if not (
         anchor.get("eligible")
-        and anchor.get("platform") == "dknowc-chat"
+        and anchor_platform in DKNOW_OFFICIAL_PLATFORMS
         and anchor.get("trustedSearchUsed")
         and claim.get("covered")
         and claim.get("faithfulness") == "supported"
@@ -366,6 +370,7 @@ def validate_assessment(request: dict, evidence: dict, assessment: dict) -> None
     if evidence.get("status") != "verified":
         return
     anchor_mode = evidence.get("searchMode") == "dknow_exempt"
+    anchor_platform = str((request.get("trustedAnchor") or {}).get("platform") or "")
     if anchor_mode:
         anchor = request.get("trustedAnchor") or {}
         if not valid_trusted_anchor(request):
@@ -407,8 +412,11 @@ def validate_assessment(request: dict, evidence: dict, assessment: dict) -> None
             raise SkillError(f"{platform} 引用了证据包中不存在的 evidenceIds：{sorted(invalid_ids)}")
         if verdict in ("supported", "contradicted") and not ids:
             raise SkillError(f"{platform} 的 {verdict} 裁决必须至少引用一个 evidenceId")
-        if anchor_mode and platform == "dknowc-chat" and verdict != "supported":
-            raise SkillError("合法 trustedAnchor 已建立，dknowc-chat 必须裁决为 supported；请在本阶段重写 assessment")
+        if anchor_mode and platform == anchor_platform and verdict != "supported":
+            raise SkillError(
+                f"合法 trustedAnchor 已建立，{anchor_platform} 必须裁决为 supported；"
+                "请在本阶段重写 assessment"
+            )
         if verdict == "supported" and not anchor_mode and not evidence_supports_claim(
             claim, evidence.get("evidence") or [], ids
         ):
@@ -430,6 +438,11 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
     verdicts = {}
     evidence_gaps = []
     resolved_count = 0
+    anchor_platform = (
+        str((request.get("trustedAnchor") or {}).get("platform") or "")
+        if evidence.get("searchMode") == "dknow_exempt"
+        else ""
+    )
     for pid, claim in (request.get("claims") or {}).items():
         if not claim.get("covered"):
             verdicts[pid] = {"verdict": "omitted", "category": "omitted", "reason": "该平台未覆盖此知识点。", "evidenceIds": []}
@@ -446,7 +459,7 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
             })
         elif status == "verified":
             verdicts[pid] = normalize_verdict(((assessment.get("verdicts") or {}).get(pid) or {}), claim, evidence_ids)
-            if evidence.get("searchMode") == "dknow_exempt" and pid == "dknowc-chat":
+            if pid == anchor_platform:
                 verdicts[pid]["verdict"] = "supported"
                 verdicts[pid]["category"] = "direct_accurate"
             if verdicts[pid]["category"] == "unverified":

@@ -154,7 +154,7 @@ export const builtInPlatforms = [
     },
     {
         name: "dknowc-deep-research",
-        label: "深知晓（深度研究）",
+        label: "深知晓（深度溯源）",
         url: "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/",
         adapter: "dknowc-deep-research",
         profile: "dknowc-chat",

@@ -1,6 +1,6 @@
 ---
 name: fact-check-x-unified
-description: Fact-Check-X 流程编排能力，依次组织多平台原始答案与引用采集、知识点结构化对比、权威证据核验和平台表现评估，生成可打开、可审计、可迁移的阶段产物与完整报告包。
+description: Fact-Check-X 流程编排能力，依次组织各方答案汇总、各方答案聚合（未核验）、全知晓“完美答案”和各方答案测评，生成可打开、可审计、可迁移的阶段产物与完整报告包。
 license: Apache-2.0
 ---
 
@@ -38,7 +38,7 @@ python3 scripts/fact_check_x.py prepare-comparison \
   --run-dir <run>
 ```
 
-命令会同步生成原始答案与引用报告，在运行目录顶层生成 `01-capture-report.html`，并通过 `deliverables` 返回用户可见路径。调用方必须先用该路径发送真正的 Markdown 文件链接，再继续知识点对比；禁止只显示反引号路径。
+命令会同步生成“各方答案汇总”，在运行目录顶层生成 `01-capture-report.html`，并通过 `deliverables` 返回用户可见路径。调用方必须先用该路径发送真正的 Markdown 文件链接，再继续知识点对比；禁止只显示反引号路径。
 
 默认交互模式下，调用方发送本阶段产物后必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，收到继续指令后才能进入下一阶段。只有用户在最初请求中明确要求完整自动跑完时才可连续执行，但各阶段产物仍须逐步展示。
 
@@ -90,7 +90,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 python3 scripts/fact_check_x.py finalize-authority --run-dir <run>
 ```
 
-`finalize-authority` 生成权威核验后的最终答案，将证据充分的知识点纳入确定答案，将证据不足的知识点写入 `evidenceGaps` 并排除在确定答案和准确率分母之外；只要技术链路成功，命令返回 `status=completed`，调用方继续生成第四步。只有技术命令返回非零状态时才停止并重试当前阶段。
+`finalize-authority` 生成“完美答案（已核验，可权威溯源）”，将证据充分的知识点纳入确定答案，将证据不足的知识点写入 `evidenceGaps`，并在“以下经权威溯源后，无法证实也无法证伪，仅供参考”中单列；只要技术链路成功，命令返回 `status=completed`，调用方继续生成第四步。只有技术命令返回非零状态时才停止并重试当前阶段。
 
 `finalize-authority` 完成裁决后会独立生成 `03-authority-report.html`，并通过
 `deliverables` 返回路径。调用方必须先展示这份权威报告；默认交互模式下，
@@ -104,10 +104,10 @@ python3 scripts/fact_check_x.py deliver --results <results.json> --run-dir <run>
 
 `deliver` 必须在运行目录顶层生成并返回四份独立可读报告：
 
-- `01-capture-report.html`：原始答案、参考文献与引用存证；
-- `02-comparison-report.html`：知识点结构化对比；
-- `03-authority-report.html`：逐知识点权威结论、官方证据和各平台裁决；
-- `04-final-report.html`：平台表现、综合指标、关键发现与完整证据。
+- `01-capture-report.html`：各方答案汇总；
+- `02-comparison-report.html`：各方答案聚合（未核验）；
+- `03-authority-report.html`：全知晓“完美答案”、官方证据和各平台裁决；
+- `04-final-report.html`：各方答案测评报告。
 
 缺少任一报告都不得生成或交付 `05-complete-report-package.zip`。
 

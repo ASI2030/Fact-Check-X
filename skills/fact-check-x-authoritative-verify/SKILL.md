@@ -1,6 +1,6 @@
 ---
 name: fact-check-x-authoritative-verify
-description: 对单个知识点调用可信搜索取得官方证据，由当前运行载体裁决各平台主张，并生成权威证据核验报告与平台表现报告。支持多知识点独立并发、深知晓可信搜索锚点免重复检索，以及直接准确、间接准确、结果巧合、严重误导、凭空编造等分类。可用于 Fact-Check-X 完整流程，也可作为独立的权威证据核验能力使用。
+description: 对单个知识点调用可信搜索取得官方证据，由当前运行载体裁决各平台主张，并生成全知晓“完美答案”与各方答案测评报告。支持多知识点独立并发、深知晓官方材料锚点免重复检索，以及直接准确、间接准确、结果巧合、严重误导、凭空编造等分类。可用于 Fact-Check-X 完整流程，也可作为独立的权威证据核验能力使用。
 license: Apache-2.0
 ---
 
@@ -88,7 +88,7 @@ python3 scripts/authority_verify.py finalize \
 
 ## 报告交付
 
-`verification.json` 必须先生成独立权威证据核验报告：
+`verification.json` 必须先生成独立的全知晓“完美答案”报告：
 
 ```bash
 python3 scripts/render_authority_report.py \
@@ -100,9 +100,9 @@ python3 scripts/render_authority_report.py \
 的主张、裁决理由和证据绑定。平台集合必须与 `verification.json` 完全一致，
 缺少任一已选平台裁决时拒绝生成；平台数量由输入决定，只要求 `N≥1`。`N=1` 为单平台权威核验，`N≥2` 同时保留跨平台差异。
 报告顶部必须先展示与全部知识点 ID 完整绑定的 `finalAnswer`，作为本阶段可直接
-使用的“权威核验后的最终答案”；证据不足知识点必须从确定答案中排除并在证据边界中单列。
+使用的“完美答案（已核验，可权威溯源）”；证据不足知识点必须从确定答案中排除，并在“以下经权威溯源后，无法证实也无法证伪，仅供参考”中单列。
 
-汇总后的 `verification.json` 可直接生成平台表现与完整证据报告：
+汇总后的 `verification.json` 可直接生成各方答案测评报告：
 
 ```bash
 python3 scripts/render_final_report.py \

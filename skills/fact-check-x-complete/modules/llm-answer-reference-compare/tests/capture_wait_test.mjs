@@ -20,7 +20,7 @@ const started = Date.now();
 const deepResearchConfig = builtInPlatforms.find(
     (platform) => platform.name === "dknowc-deep-research"
 );
-assert.equal(deepResearchConfig.label, "深知晓（深度研究）");
+assert.equal(deepResearchConfig.label, "深知晓（深度溯源）");
 assert.equal(
     deepResearchConfig.url,
     "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/"
@@ -222,7 +222,7 @@ const deepProgressPage = {
 const completeDeepResearchAnswer = await waitForAnswer(
     {
         name: "dknowc-deep-research",
-        label: "深知晓（深度研究）",
+        label: "深知晓（深度溯源）",
         selectors: {},
         completionStableMs: 40
     },
@@ -367,6 +367,11 @@ assert.equal(
 );
 promptValue = promptQuestion;
 promptBody = "请完成人机验证";
+assert.equal(
+    await confirmPromptSubmission(promptConfig, promptPage, promptInput, promptQuestion, "", 100),
+    "verification_required"
+);
+promptBody = "亲，请拖动下方滑块完成验证，通过验证以确保正常访问";
 assert.equal(
     await confirmPromptSubmission(promptConfig, promptPage, promptInput, promptQuestion, "", 100),
     "verification_required"
@@ -642,7 +647,11 @@ if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
     const { writeFile } = await import("node:fs/promises");
     await writeFile(process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT, JSON.stringify({
         schemaVersion: "fact-check-x/test-assertions@1",
-        actualAssertionIds: ["browser.question_replayed", "browser.retry_submitted"]
+        actualAssertionIds: [
+            "browser.question_replayed",
+            "browser.retry_submitted",
+            "verification.qianwen_slider_detected"
+        ]
     }));
 }
 console.log("PASS 采集等待完整回答");

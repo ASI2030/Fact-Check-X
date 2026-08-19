@@ -5,7 +5,7 @@
 Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.4" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.5" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start
@@ -45,7 +45,7 @@ Platforms: DeepSeek, Qwen and Doubao.
 | Platform ID | Name | Capture |
 |---|---|---|
 | `dknowc-chat` | DKnow Chat / 深知晓 | Standard answer, citations and official sources |
-| `dknowc-deep-research` | DKnow Deep Research | Runs after the normal answer and is saved as a separate platform result |
+| `dknowc-deep-research` | DKnow Deep Trace | Runs after the normal answer, opens the Deep Research report, and is saved as a separate platform result |
 | `doubao` | Doubao | Complete answer, citations and page evidence |
 | `yuanbao` | Tencent Yuanbao | Complete answer, citations and page evidence |
 | `deepseek` | DeepSeek | Complete answer, citations and page evidence |
@@ -55,14 +55,14 @@ The selected set is dynamic. `N=1` runs a complete single-platform verification.
 
 ## Four independent deliverables
 
-1. **Original answers and citations**: complete answers, references, screenshots and HTML evidence.
-2. **Knowledge comparison (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness.
-3. **Authoritative verification and answer generation**: verify each claim, include only evidence-supported content in the final answer, and preserve conflicts and evidence gaps.
-4. **Platform performance and complete evidence**: accuracy, completeness, source quality and a portable report package.
+1. **Answer collection**: complete answers, references, screenshots and HTML evidence.
+2. **Answer aggregation (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness.
+3. **Fact-Check-X verified answer**: verify each claim, include only evidence-supported content in the traceable answer, and separate unresolved claims.
+4. **Answer performance report**: accuracy, completeness, source quality and a portable report package.
 
 Capture and comparison require no API key. Trusted Search is an optional enhancement used only at the authoritative verification stage. On first use, the user signs in to the DKnow MaaS page; the skill obtains or creates a dedicated local key without asking the user to paste secrets into chat. Semantic analysis runs in the current host and does not call an external model API.
 
-### Deep Research is a separate platform result
+### DKnow Deep Trace is a separate platform result
 
 `dknowc-deep-research` is not an alias or a longer wait:
 
@@ -73,7 +73,7 @@ Capture and comparison require no API key. Trusted Search is an optional enhance
 5. wait for it to finish;
 6. save its answer, sources, screenshot and page evidence separately.
 
-A missing button, unopened report or incomplete result is a capture failure. Deep Research does not automatically inherit the trusted-anchor exemption reserved for a qualified `dknowc-chat` result.
+A missing button, unopened report or incomplete result is a capture failure. DKnow Deep Trace does not inherit the normal DKnow result; it can establish an official-material anchor only from its own captured evidence.
 
 ## Requirements
 
@@ -87,12 +87,11 @@ A missing button, unopened report or incomplete result is a capture failure. Dee
 Inside an extracted `fact-check-x-complete` skill:
 
 ```bash
-cd modules/llm-answer-reference-compare/assets/tool
-npm ci --omit=dev
-cd ../../../..
-
 python3 scripts/fact_check_x.py locate
+python3 scripts/fact_check_x.py prepare-runtime
 ```
+
+`prepare-runtime` is idempotent. On a clean install it uses the bundled lockfile to install dependencies and probes the collector CLI; when the runtime is already complete it exits without reinstalling. It does not reuse another skill's stale `node_modules` and skips Playwright browser downloads.
 
 The visible workflow prefers an installed system Chromium browser. Install Playwright's test browser only for headless or CI validation:
 

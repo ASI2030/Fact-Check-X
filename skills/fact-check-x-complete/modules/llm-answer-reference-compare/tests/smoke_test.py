@@ -81,7 +81,7 @@ def main() -> int:
         if report.returncode:
             raise AssertionError(report.stdout or report.stderr)
         html = (Path(temp) / "report.html").read_text(encoding="utf-8")
-        assert "原始答案、参考文献与引用存证报告" in html
+        assert "各方答案汇总（问题：" in html
         assert "广州住房公积金管理中心" in html
         assert "无可访问 URL" in html
         assert "官方来源" in html

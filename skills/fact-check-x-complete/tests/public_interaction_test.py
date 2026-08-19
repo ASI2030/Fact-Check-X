@@ -17,7 +17,8 @@ def main() -> int:
     assert "第一句话、过程更新、命令说明、阶段检查点、错误说明和最终答复全部只使用简体中文" in instructions
     assert "不得输出英文句子" in instructions
     assert "第一条回复直接使用“我会核验这个问题" in instructions
-    assert "原始答案与引用、知识点对比（未核验）、权威核验与答案生成、平台表现与完整证据" in instructions
+    assert "各方答案汇总、各方答案聚合（未核验）、全知晓“完美答案”、各方答案测评报告" in instructions
+    assert "深知晓、深知晓（深度溯源）、豆包、DeepSeek、通义千问、腾讯元宝" in instructions
     assert "不存在固定“五平台模式”或固定上限" in instructions
     assert "平台组合完全按用户输入决定" in instructions
     assert "**分阶段交付门禁**" in instructions
@@ -26,7 +27,7 @@ def main() -> int:
     assert "完整跑完、无需逐步确认" in instructions
     assert "逐阶段发送可打开产物和状态" in instructions
     assert "综合草案（未核验）" in instructions
-    assert "权威核验后的最终答案" in instructions
+    assert "完美答案（已核验，可权威溯源）" in instructions
     assert "`dknowc-deep-research`" in instructions
     assert "用户只完成登录，技能自动获取或创建专用 Key" in instructions
     assert "Codex、Claude Code、WorkBuddy 等载体共同复用" in instructions
@@ -97,7 +98,7 @@ def main() -> int:
     platform_registry = onboarding.parent / "capture" / "platform-registry.js"
     registry_text = platform_registry.read_text(encoding="utf-8")
     assert 'name: "dknowc-deep-research"' in registry_text
-    assert 'label: "深知晓（深度研究）"' in registry_text
+    assert 'label: "深知晓（深度溯源）"' in registry_text
     assert "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/" in registry_text
     for platform in (
         "dknowc-chat",
@@ -155,6 +156,18 @@ def main() -> int:
     collector_test = ROOT / "modules/llm-answer-reference-compare/tests/smoke_test.py"
     if not collector_test.is_file():
         collector_test = ROOT.parent / "llm-answer-reference-compare/tests/smoke_test.py"
+    runtime = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), "prepare-runtime"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert runtime.returncode == 0, runtime.stderr or runtime.stdout
+    runtime_result = json.loads(runtime.stdout)
+    assert runtime_result["runtime"] == "ready"
+    assert runtime_result["installAction"] in {"installed", "skipped"}
+
     collector = subprocess.run(
         [sys.executable, str(collector_test)],
         cwd=ROOT,
@@ -175,6 +188,8 @@ def main() -> int:
                         "ui.preflight_no_false_start",
                         "ui.source_matrix_layout",
                         "ui.stage_confirmation_choices",
+                        "ui.deep_trace_initial_selection",
+                        "ui.report_names",
                     ],
                 },
                 ensure_ascii=False,

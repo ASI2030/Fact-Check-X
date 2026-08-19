@@ -247,9 +247,9 @@ def render_platform_rows(point: dict, platforms: list[dict]) -> str:
 def render_point(point: dict, platforms: list[dict]) -> str:
     authority = point.get("authority") or {}
     mode = (
-        "深知可信材料直接核验，免重复搜索"
+        "官方材料"
         if authority.get("searchMode") == "dknow_exempt"
-        else "可信搜索独立核验"
+        else "追加可信搜索，证实为官方材料"
     )
     point_id = escaped(point.get("id"))
     return (
@@ -275,6 +275,37 @@ def render_point(point: dict, platforms: list[dict]) -> str:
     )
 
 
+def render_unverified_boundary(points: list[dict], final_answer: dict) -> str:
+    excluded_ids = set(final_answer.get("excludedKnowledgePointIds") or [])
+    if not excluded_ids:
+        return ""
+    items = []
+    for point in points:
+        if point.get("id") not in excluded_ids:
+            continue
+        claims = []
+        for claim in (point.get("claims") or {}).values():
+            value = compact((claim or {}).get("claim"))
+            if value and value not in claims:
+                claims.append(value)
+        claim_text = "；".join(claims) or "本知识点没有可纳入确定答案的平台主张。"
+        items.append(
+            "<li>"
+            f"<h3>{escaped(point.get('id'))} · {escaped(point.get('description'))}</h3>"
+            f"<p>{escaped(claim_text)}</p>"
+            "</li>"
+        )
+    if not items:
+        return ""
+    return (
+        '<section class="unverified-boundary" aria-label="无法证实也无法证伪的参考内容">'
+        "<h2>以下经权威溯源后，无法证实也无法证伪，仅供参考</h2>"
+        "<p>这些内容未纳入上方已核验答案，也不进入准确率分母。</p>"
+        f'<ol>{"".join(items)}</ol>'
+        "</section>"
+    )
+
+
 def render(verification: dict) -> str:
     validate(verification)
     platforms = verification.get("platforms") or []
@@ -296,12 +327,11 @@ def render(verification: dict) -> str:
         "partially_verified": "已形成有据结论，证据不足项已排除",
         "insufficient_evidence": "证据不足，未形成确定答案",
     }.get(final_answer.get("status"), "权威核验完成")
-    final_answer_title = (
-        "权威核验后的最终答案"
-        if final_answer.get("status") != "insufficient_evidence"
-        else "权威核验结论"
-    )
-    final_report_nav = '<a href="04-final-report.html">平台表现与完整证据</a>'
+    final_answer_title = "完美答案（已核验，可权威溯源）"
+    question = str(verification.get("question") or "").strip()
+    report_title = f"全知晓“完美答案”（问题：{question}）"
+    unverified_boundary = render_unverified_boundary(points, final_answer)
+    final_report_nav = '<a href="04-final-report.html">各方答案测评报告</a>'
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -309,7 +339,7 @@ def render(verification: dict) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="fact-check-x-authority-report" content="1">
   <meta name="fact-check-x-verification-sha256" content="{verification_sha}">
-  <title>Fact-Check-X 权威证据核验报告</title>
+  <title>{escaped(report_title)}</title>
   <style>
     * {{ box-sizing: border-box; }}
     html {{ background: #eef1f5; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
@@ -327,9 +357,10 @@ def render(verification: dict) -> str:
     .metric {{ background: #fff; border: 1px solid #d7dde7; border-radius: 6px; padding: 16px; }}
     .metric b {{ display: block; font-size: 24px; }}
     .metric span {{ color: #637083; display: block; font-size: 13px; margin-top: 5px; }}
-    .final-answer {{ background: #fff; border: 1px solid #9dcfbe; border-left: 5px solid #148266; border-radius: 6px; margin-bottom: 22px; padding: 20px; }}
+    .final-answer {{ background: #fff; border: 1px solid #9dcfbe; border-left: 6px solid #148266; border-radius: 6px; box-shadow: 0 12px 30px rgba(23, 32, 51, .08); margin-bottom: 22px; padding: 24px; }}
     .final-answer-head {{ align-items: center; display: flex; gap: 12px; justify-content: space-between; }}
     .final-answer h2 {{ font-size: 20px; margin: 0; }}
+    .final-kicker {{ color: #17624f; font-size: 12px; font-weight: 800; margin: 0 0 6px; }}
     .final-status {{ background: #e7f5f1; border: 1px solid #a8d8ca; border-radius: 4px; color: #17624f; font-size: 12px; font-weight: 750; padding: 4px 7px; }}
     .final-answer-body {{ font-size: 17px; font-weight: 650; line-height: 1.75; margin: 14px 0 0; white-space: pre-wrap; }}
     .point {{ background: #fff; border: 1px solid #d7dde7; border-radius: 6px; margin-bottom: 20px; padding: 22px; }}
@@ -342,10 +373,10 @@ def render(verification: dict) -> str:
     .finding p {{ font-size: 17px; font-weight: 650; line-height: 1.6; margin: 5px 0 0; }}
     h3 {{ font-size: 15px; margin: 22px 0 10px; }}
     .evidence-grid {{ display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }}
-    .evidence {{ border: 1px solid #d7dde7; border-radius: 5px; padding: 14px; }}
+    .evidence {{ border: 1px solid #d7dde7; border-radius: 5px; min-width: 0; padding: 14px; }}
     .evidence-id {{ color: #637083; font-size: 12px; font-weight: 750; }}
     .evidence h4 {{ font-size: 14px; line-height: 1.45; margin: 5px 0 8px; }}
-    blockquote {{ background: #f6f8fb; border-left: 3px solid #aab5c4; color: #344054; line-height: 1.55; margin: 0; padding: 9px 11px; }}
+    blockquote {{ background: #f6f8fb; border-left: 3px solid #aab5c4; color: #344054; line-height: 1.55; margin: 0; overflow-wrap: anywhere; padding: 9px 11px; word-break: break-word; }}
     .evidence-full {{ margin-top: 10px; }}
     .evidence-full summary {{ color: #1458a6; cursor: pointer; font-size: 13px; font-weight: 650; }}
     .evidence-full pre {{ background: #f6f8fb; border: 1px solid #d7dde7; border-radius: 4px; color: #344054; font: inherit; line-height: 1.55; margin: 8px 0 0; max-height: 420px; overflow: auto; padding: 10px; white-space: pre-wrap; }}
@@ -366,6 +397,13 @@ def render(verification: dict) -> str:
     .verdict.warn {{ background: #fff0c7; color: #7a5200; }}
     .verdict.bad {{ background: #fde4e2; color: #9b2c25; }}
     .verdict.muted {{ background: #e9edf2; color: #526071; }}
+    .unverified-boundary {{ background: #fffaf0; border: 1px solid #e7c980; border-left: 5px solid #b7791f; border-radius: 6px; margin: 0 0 22px; padding: 20px 24px; }}
+    .unverified-boundary h2 {{ color: #7a5200; font-size: 18px; margin: 0; }}
+    .unverified-boundary > p {{ color: #6c5a32; margin: 6px 0 12px; }}
+    .unverified-boundary ol {{ margin: 0; padding-left: 22px; }}
+    .unverified-boundary li {{ border-top: 1px solid #ead9af; padding: 10px 0; }}
+    .unverified-boundary li h3 {{ margin: 0 0 4px; }}
+    .unverified-boundary li p {{ margin: 0; }}
     .empty {{ color: #637083; }}
     footer {{ color: #637083; font-size: 12px; padding: 0 24px 28px; text-align: center; }}
     @media (max-width: 760px) {{
@@ -384,22 +422,22 @@ def render(verification: dict) -> str:
 <body>
   <header class="top">
     <p class="eyebrow">Fact-Check-X · 第三阶段</p>
-    <h1>权威证据核验报告</h1>
-    <p class="question">{escaped(verification.get("question"))}</p>
+    <h1>{escaped(report_title)}</h1>
   </header>
   <nav class="nav">
-    <a href="01-capture-report.html">原始答案与引用</a>
-    <a href="02-comparison-report.html">知识点对比</a>
+    <a href="01-capture-report.html">各方答案汇总</a>
+    <a href="02-comparison-report.html">各方答案聚合</a>
     {final_report_nav}
   </nav>
   <main>
     <section class="final-answer" aria-label="{escaped(final_answer_title)}">
       <div class="final-answer-head">
-        <h2>{escaped(final_answer_title)}</h2>
+        <div><p class="final-kicker">权威证据逐点核验完成</p><h2>{escaped(final_answer_title)}</h2></div>
         <span class="final-status">{escaped(final_status)}</span>
       </div>
       <p class="final-answer-body">{escaped(final_answer.get("answer"))}</p>
     </section>
+    {unverified_boundary}
     <section class="metrics" aria-label="权威核验摘要">
       <div class="metric"><b>{len(points)}</b><span>核验知识点</span></div>
       <div class="metric"><b>{len(platforms)}</b><span>参与平台</span></div>
@@ -409,14 +447,14 @@ def render(verification: dict) -> str:
     </section>
     {point_sections}
   </main>
-  <footer>报告由已锁定的 comparison、authority evidence、assessment 与 result 生成；不得脱离原始存证单独解释。</footer>
+  <footer>报告由已锁定的知识点聚合、权威证据、裁决与结果数据生成；不得脱离原始存证单独解释。</footer>
 </body>
 </html>
 """
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="生成独立权威证据核验报告。")
+    parser = argparse.ArgumentParser(description="生成独立的全知晓完美答案报告。")
     parser.add_argument("--verification", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()

@@ -46,6 +46,9 @@ export async function captureGenericChat(config, options) {
     let session;
     let context;
     let page;
+    let capturedAnswerMarkdown = "";
+    let capturedReferences = [];
+    let capturedSourceMentions = [];
     try {
         if (options.headed && options.interactive) {
             console.log(`${config.label}：将打开浏览器。请先完成登录或验证；检测到可提问界面后会自动继续采集。`);
@@ -207,11 +210,14 @@ export async function captureGenericChat(config, options) {
                 }
             );
         }
+        capturedAnswerMarkdown = answerMarkdown;
         const references = await extractReferences(config, page, options.question);
+        capturedReferences = references;
         const sourceMentions = config.name === "doubao"
             ? (await extractDoubaoSourceMentions(page))
                 .filter((mention) => !references.some((reference) => reference.text === mention.label))
             : [];
+        capturedSourceMentions = sourceMentions;
         const artifacts = await saveArtifacts(page, artifactDir, options.outDir);
         if (looksLikeLoginOnlyText(answerMarkdown) || looksLikeNonAnswerPrompt(answerMarkdown)) {
             return {
@@ -241,7 +247,24 @@ export async function captureGenericChat(config, options) {
         const status = error && typeof error === "object" && "captureStatus" in error
             ? error.captureStatus
             : "failed";
-        return failure(config, status, started, error instanceof Error ? error.message : String(error), page ? await saveArtifacts(page, artifactDir, options.outDir).catch(() => undefined) : undefined);
+        const references = error && typeof error === "object" && Array.isArray(error.partialReferences)
+            ? error.partialReferences
+            : capturedReferences;
+        const answerMarkdown = capturedAnswerMarkdown;
+        const sourceMentions = capturedSourceMentions.length > 0
+            ? capturedSourceMentions
+            : config.name === "doubao" && page
+                ? (await extractDoubaoSourceMentions(page).catch(() => []))
+                    .filter((mention) => !references.some((reference) => reference.text === mention.label))
+                : [];
+        return failure(
+            config,
+            status,
+            started,
+            error instanceof Error ? error.message : String(error),
+            page ? await saveArtifacts(page, artifactDir, options.outDir).catch(() => undefined) : undefined,
+            { answerMarkdown, references, sourceMentions }
+        );
     }
     finally {
         await session?.release();
@@ -613,7 +636,21 @@ async function extractDknowcAnswer(page) {
     }
     return page.locator(".czkj-robot:not(.chat-load-text) .czkj-msg").evaluateAll((nodes) => {
         const texts = nodes
-            .map((node) => node.innerText?.trim() || "")
+            .map((node) => {
+            if (typeof node.cloneNode !== "function") {
+                return node.innerText?.trim() || "";
+            }
+            const clone = node.cloneNode(true);
+            for (const superscript of Array.from(clone.querySelectorAll("sup"))) {
+                const marker = superscript.textContent?.trim() || "";
+                if (/^\d{1,4}$/.test(marker)) {
+                    superscript.replaceWith(document.createTextNode(`【${marker}】`));
+                }
+            }
+            clone.querySelectorAll(".chat-jb, .chatsse-note-item")
+                .forEach((element) => element.remove());
+            return clone.innerText?.trim() || "";
+        })
             .filter((text) => text
             && !/您好，我是深知晓|很高兴为您服务|您可以试试/.test(text)
             && !/AI正在分析|AI 正在分析|AI 正翻阅|请稍等|正在研究/.test(text));
@@ -1317,12 +1354,21 @@ export async function extractDoubaoReferences(page, baseUrl, question = "") {
         && ["inline", "inline_and_global"].includes(reference.citationScope)
         && !hasSubstantiveReferenceContent(reference));
     if (incompleteInlinePdfs.length > 0) {
-        throw new Error(`豆包有 ${incompleteInlinePdfs.length} 个已绑定 PDF 来源未取得可核验正文；必须继续正文提取、OCR 或由 Computer Use 接管，禁止把采集缺口判成平台幻觉。`);
+        throw captureStatusError(
+            "failed",
+            `豆包有 ${incompleteInlinePdfs.length} 个已绑定 PDF 来源未取得可核验正文；必须继续正文提取、OCR 或由 Computer Use 接管，禁止把采集缺口判成平台幻觉。`,
+            { partialReferences: references }
+        );
     }
-    const capturedGlobalSources = references.filter((reference) => reference.citationScope === "global"
-        || reference.citationScope === "inline_and_global").length;
-    if (searchSources.expectedCount > capturedGlobalSources) {
-        throw new Error(`豆包页面声明参考 ${searchSources.expectedCount} 篇资料，但仅捕获 ${capturedGlobalSources} 篇全局来源；必须重新采集或由 Computer Use 接管。`);
+    const capturedSources = references.filter((reference) => [
+        "inline", "global", "inline_and_global"
+    ].includes(reference.citationScope)).length;
+    if (searchSources.expectedCount > capturedSources) {
+        throw captureStatusError(
+            "failed",
+            `豆包页面声明参考 ${searchSources.expectedCount} 篇资料，但仅捕获 ${capturedSources} 篇可回溯来源；必须重新采集或由 Computer Use 接管。`,
+            { partialReferences: references }
+        );
     }
     return references;
 }
@@ -2359,13 +2405,17 @@ async function pageLooksLikeVerification(page) {
     const markers = [
         "请选择所有符合",
         "拖拽到这里",
+        "拖动下方滑块",
+        "拖动滑块",
+        "完成验证",
         "验证码",
         "滑动验证",
         "人机验证",
         "captcha",
         "verify"
     ];
-    return markers.some((marker) => bodyText.toLowerCase().includes(marker.toLowerCase()));
+    const comparable = bodyText.toLowerCase().replace(/\s+/g, "");
+    return markers.some((marker) => comparable.includes(marker.toLowerCase().replace(/\s+/g, "")));
 }
 async function waitForVerificationClear(page, timeoutMs) {
     const deadline = Date.now() + timeoutMs;
@@ -2374,9 +2424,10 @@ async function waitForVerificationClear(page, timeoutMs) {
     }
     return !(await pageLooksLikeVerification(page));
 }
-function captureStatusError(status, message) {
+function captureStatusError(status, message, details = {}) {
     const error = new Error(message);
     error.captureStatus = status;
+    Object.assign(error, details);
     return error;
 }
 function looksLikeLoadingText(value) {
@@ -2392,14 +2443,15 @@ function looksLikeLoadingText(value) {
     ];
     return markers.some((marker) => value.includes(marker));
 }
-function failure(config, status, started, error, artifacts) {
+function failure(config, status, started, error, artifacts, partial = {}) {
     return {
         platform: config.name,
         label: config.label,
         url: config.url,
         status,
-        answerMarkdown: "",
-        references: [],
+        answerMarkdown: partial.answerMarkdown || "",
+        references: Array.isArray(partial.references) ? partial.references : [],
+        sourceMentions: Array.isArray(partial.sourceMentions) ? partial.sourceMentions : [],
         artifacts,
         durationMs: Date.now() - started,
         error

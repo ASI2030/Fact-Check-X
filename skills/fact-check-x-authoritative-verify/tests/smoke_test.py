@@ -122,6 +122,67 @@ def main() -> int:
         assert k1["verdicts"]["dknowc-chat"]["category"] == "direct_accurate"
         assert k1["verdicts"]["doubao"]["category"] == "misleading"
 
+        deep_trace_request = json.loads(
+            (FIXTURES / "K1-request.json").read_text(encoding="utf-8")
+        )
+        deep_trace_request["claims"]["dknowc-deep-research"] = (
+            deep_trace_request["claims"].pop("dknowc-chat")
+        )
+        deep_trace_request["cloudPayload"]["differingClaims"][0]["platform"] = (
+            "dknowc-deep-research"
+        )
+        deep_trace_request["trustedAnchor"]["platform"] = "dknowc-deep-research"
+        deep_trace_request_path = out / "K1-deep-trace-request.json"
+        deep_trace_request_path.write_text(
+            json.dumps(deep_trace_request, ensure_ascii=False), encoding="utf-8"
+        )
+        deep_trace_evidence_path = out / "K1-deep-trace-evidence.json"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "authority_verify.py"),
+            "search",
+            "--request",
+            str(deep_trace_request_path),
+            "--output",
+            str(deep_trace_evidence_path),
+        ])
+        deep_trace_evidence = json.loads(
+            deep_trace_evidence_path.read_text(encoding="utf-8")
+        )
+        assert deep_trace_evidence["searchMode"] == "dknow_exempt"
+        assert deep_trace_evidence["requestCount"] == 0
+        deep_trace_assessment = json.loads(
+            (FIXTURES / "K1-assessment.json").read_text(encoding="utf-8")
+        )
+        deep_trace_assessment["verdicts"]["dknowc-deep-research"] = (
+            deep_trace_assessment["verdicts"].pop("dknowc-chat")
+        )
+        deep_trace_assessment_path = out / "K1-deep-trace-assessment.json"
+        deep_trace_assessment_path.write_text(
+            json.dumps(deep_trace_assessment, ensure_ascii=False), encoding="utf-8"
+        )
+        deep_trace_result_path = out / "K1-deep-trace-result.json"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "authority_verify.py"),
+            "finalize",
+            "--request",
+            str(deep_trace_request_path),
+            "--evidence",
+            str(deep_trace_evidence_path),
+            "--assessment",
+            str(deep_trace_assessment_path),
+            "--output",
+            str(deep_trace_result_path),
+        ])
+        deep_trace_result = json.loads(
+            deep_trace_result_path.read_text(encoding="utf-8")
+        )
+        assert (
+            deep_trace_result["verdicts"]["dknowc-deep-research"]["category"]
+            == "direct_accurate"
+        )
+
         equivalent_request = json.loads(
             (FIXTURES / "K1-request.json").read_text(encoding="utf-8")
         )
@@ -386,11 +447,43 @@ def main() -> int:
             str(authority_report),
         ])
         authority_html = authority_report.read_text(encoding="utf-8")
-        assert "权威证据核验报告" in authority_html
+        assert f"全知晓“完美答案”（问题：{results['question'].strip()}）" in authority_html
+        assert "完美答案（已核验，可权威溯源）" in authority_html
+        assert "官方材料" in authority_html
         assert "深知晓" in authority_html and "豆包" in authority_html
         assert "data-fcx-authority-binding-sha256" in authority_html
+        assert ".evidence { border: 1px solid #d7dde7; border-radius: 5px; min-width: 0;" in authority_html
+        assert "overflow-wrap: anywhere;" in authority_html
+        assert "word-break: break-word;" in authority_html
         assert k1["authoritativeFinding"] in authority_html
         assert k1["verdicts"]["doubao"]["reason"] in authority_html
+        boundary_verification = json.loads(json.dumps(verification, ensure_ascii=False))
+        boundary_verification["finalAnswer"] = {
+            "status": "insufficient_evidence",
+            "answer": "当前权威证据不足，无法形成确定答案。",
+            "knowledgePointIds": [],
+            "excludedKnowledgePointIds": ["K1"],
+        }
+        boundary_verification["evidenceGaps"] = [{
+            "knowledgePointId": "K1",
+            "reason": "现有证据无法证实也无法证伪",
+        }]
+        boundary_path = out / "boundary-verification.json"
+        boundary_report = out / "boundary-authority-report.html"
+        boundary_path.write_text(
+            json.dumps(boundary_verification, ensure_ascii=False), encoding="utf-8"
+        )
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "render_authority_report.py"),
+            "--verification",
+            str(boundary_path),
+            "--output",
+            str(boundary_report),
+        ])
+        boundary_html = boundary_report.read_text(encoding="utf-8")
+        assert "以下经权威溯源后，无法证实也无法证伪，仅供参考" in boundary_html
+        assert "未纳入上方已核验答案，也不进入准确率分母" in boundary_html
         report = out / "事实核查报告.html"
         run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(verification_path), "--output", str(report)])
         report_html = report.read_text(encoding="utf-8")
@@ -734,6 +827,16 @@ def main() -> int:
             (failed_batch_dir / "batch.json").read_text(encoding="utf-8")
         )
         assert failed_batch_manifest["trustedSearchAttemptCount"] == 11
+    if os.getenv("FACT_CHECK_X_ASSERTIONS_OUTPUT"):
+        Path(os.environ["FACT_CHECK_X_ASSERTIONS_OUTPUT"]).write_text(
+            json.dumps({
+                "schemaVersion": "fact-check-x/test-assertions@1",
+                "actualAssertionIds": [
+                    "authority.deep_trace_exempt_zero_search",
+                ],
+            }),
+            encoding="utf-8",
+        )
     print("PASS 权威证据核验")
     return 0
 

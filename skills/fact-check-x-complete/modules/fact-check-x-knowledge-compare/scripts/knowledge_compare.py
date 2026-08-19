@@ -226,7 +226,7 @@ def marker_occurs(answer: str, marker: str, known_markers: set[str] | None = Non
         # 123. If the whole cluster is a known marker, exact-marker semantics win;
         # otherwise retain the legacy cluster decomposition for one/two-digit refs.
         clusters = re.findall(
-            r"(?<!\d)(\d{1,3})(?=[。！？；，、!?:：;)]|[.,](?!\d)|$)",
+            r"(?<![\d:：])(\d{1,3})(?=[。！？；，、!?;)]|[.,](?!\d)|$)",
             answer,
         )
         known = known_markers or set()
@@ -270,7 +270,7 @@ def declared_cluster_reference_indexes(
     if not 2 <= len(combined) <= 3:
         return set()
     clusters = re.findall(
-        r"(?<![\d\[【〔])(\d{2,3})(?=[。！？；，、!?:：;)]|[.,](?!\d)|$)",
+        r"(?<![\d\[【〔:：])(\d{2,3})(?=[。！？；，、!?;)]|[.,](?!\d)|$)",
         text,
     )
     return set(declared_indexes) if combined in clusters else set()
@@ -407,14 +407,14 @@ def build_task(question: str, platforms: list[dict]) -> dict:
             "回答级语义匹配不是整篇来源自动继承：只有证据原文实际支持当前主张才能判 supported，支持其他补充点的官方来源不得抬高核心点",
             "citationMode=mixed 表示平台同时提供逐句脚标与全局来源列表，不能因存在脚标就丢弃全局来源",
             "sourceMentions 只是页面显示但未暴露 URL 的来源标签，不是可回溯参考文献，不能用于来源忠实性证据",
-            "深知晓与深知晓（深度研究）的可信搜索来源统一按官方来源处理，不以 .gov 域名或外链是否返回作为降级条件；但仍必须与当前主张局部绑定或通过允许的回答级语义匹配绑定",
+            "深知晓与深知晓（深度溯源）的可信搜索来源统一按官方材料处理，不以 .gov 域名或外链是否返回作为降级条件；但仍必须与当前主张局部绑定或通过允许的回答级语义匹配绑定",
             "snippetProvenance=answer_context 表示该摘录来自平台回答区，只用于现场存证，不得当作链接原文或来源忠实性证据",
             "evidence.excerpt 必须是对应 capturedText 的原文子串",
             "comparison.status 只比较平台主张的事实语义；主张语义相同即 consensus，不得因来源忠实性等级不同降为 partial",
             "核心结论、适用对象和关键条件相同，仅有不改变结论的轻微措辞、范围说明或细节差异时使用 mostly_consensus（外显“基本一致”）",
             "存在会改变适用性、风险判断或结论的重要条件缺失或新增时使用 partial；结论互斥时使用 conflict",
             "不以 normalizedUrl 或重新搜索的 URL 替换 originalUrl",
-            "trustedAnchor 只允许用于普通深知晓（dknowc-chat）已使用可信搜索、回答忠实且有官方原文的知识点；深度研究不继承该免查锚点",
+            "trustedAnchor 只允许用于普通深知晓或深知晓（深度溯源）本次回答自身已使用可信搜索、回答忠实且有官方原文的知识点；深度溯源不继承普通深知晓结果，但可凭自身回答所附官方材料独立形成锚点",
             "必须生成 synthesisDraft：它只综合本阶段知识点，不得冒充权威结论，status 固定为 unverified",
         ],
         "outputShape": {
@@ -620,63 +620,99 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
 
 def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: str, analysis_gaps: list[dict]) -> dict:
     item = raw if isinstance(raw, dict) else {}
-    pid = "dknowc-chat"
-    claim = point_claims.get(pid) or {}
-    platform = platform_map.get(pid)
-    valid = pid == "dknowc-chat" and platform is not None
-    valid = valid and claim.get("covered") and claim.get("faithfulness") == "supported"
-    official_answer = clipped(claim.get("claim"), 1000)
-    references = platform.get("references") or [] if platform else []
-    allowed = set(claim.get("citedReferenceIndexes") or [])
-    evidence = [
-        evidence_item
-        for evidence_item in claim.get("evidence") or []
-        if evidence_item.get("referenceIndex") in allowed
-    ]
-    invalid = False
-    evidence_levels = {source_level(references[e["referenceIndex"] - 1], pid) for e in evidence}
-    trusted_provenance = bool(evidence) and all(
-        has_trusted_dknow_provenance(
-            references[evidence_item["referenceIndex"] - 1], pid
+    requested_pid = str(item.get("platform") or "")
+    candidate_pids = []
+    if requested_pid in DKNOW_OFFICIAL_PLATFORMS:
+        candidate_pids.append(requested_pid)
+    candidate_pids.extend(
+        pid
+        for pid in ("dknowc-chat", "dknowc-deep-research")
+        if pid not in candidate_pids
+    )
+    for pid in candidate_pids:
+        claim = point_claims.get(pid) or {}
+        platform = platform_map.get(pid)
+        if (
+            platform is None
+            or not claim.get("covered")
+            or claim.get("faithfulness") != "supported"
+        ):
+            continue
+        official_answer = clipped(claim.get("claim"), 1000)
+        references = platform.get("references") or []
+        allowed = set(claim.get("citedReferenceIndexes") or [])
+        evidence = [
+            evidence_item
+            for evidence_item in claim.get("evidence") or []
+            if evidence_item.get("referenceIndex") in allowed
+        ]
+        evidence_levels = {
+            source_level(references[evidence_item["referenceIndex"] - 1], pid)
+            for evidence_item in evidence
+        }
+        trusted_provenance = bool(evidence) and all(
+            has_trusted_dknow_provenance(
+                references[evidence_item["referenceIndex"] - 1], pid
+            )
+            for evidence_item in evidence
         )
-        for evidence_item in evidence
-    )
-    combined_evidence = "\n".join(evidence_item["excerpt"] for evidence_item in evidence)
-    semantic_support = (
-        text_supports_claim(claim.get("claim"), combined_evidence)
-        and text_supports_claim(claim.get("claim"), official_answer)
-        and text_supports_claim(official_answer, combined_evidence)
-    )
-    valid = valid and bool(official_answer) and bool(evidence) and bool(
-        evidence_levels & {"official", "dknow_trusted_search_official"}
-    ) and trusted_provenance and semantic_support and not invalid
-    if not valid:
-        if item.get("eligible"):
-            analysis_gaps.append({"stage": "comparison", "knowledgePointId": kid, "platform": pid, "reason": "深知晓免查锚点未同时满足可信来源、忠实性与原文定位要求"})
-        return {"eligible": False}
-    anchor_evidence = []
-    for index, evidence_item in enumerate(evidence, 1):
-        reference = references[evidence_item["referenceIndex"] - 1]
-        anchor_evidence.append({
-            "id": f"A{index}",
-            "title": str(reference.get("title") or reference.get("url") or ""),
-            "url": str(reference.get("url") or ""),
-            "excerpt": evidence_item["excerpt"],
-            "referenceIndex": evidence_item["referenceIndex"],
-            "contentAcquisition": str(reference.get("contentAcquisition") or ""),
-            "sameMaterialVerified": reference.get("sameMaterialVerified") is True,
-            "originAttributionStatus": str(reference.get("originAttributionStatus") or ""),
-            "platformUrl": str(
-                reference.get("platformUrl")
-                or reference.get("platform_url")
-                or reference.get("originalUrl")
-                or reference.get("original_url")
-                or ""
-            ),
-            "zone": str(reference.get("zone") or ""),
-            "platformTrustSource": str(reference.get("platformTrustSource") or "dknow_reference_capture"),
+        combined_evidence = "\n".join(
+            evidence_item["excerpt"] for evidence_item in evidence
+        )
+        semantic_support = (
+            text_supports_claim(claim.get("claim"), combined_evidence)
+            and text_supports_claim(claim.get("claim"), official_answer)
+            and text_supports_claim(official_answer, combined_evidence)
+        )
+        valid = (
+            bool(official_answer)
+            and bool(evidence)
+            and bool(evidence_levels & {"official", "dknow_trusted_search_official"})
+            and trusted_provenance
+            and semantic_support
+        )
+        if not valid:
+            continue
+        anchor_evidence = []
+        for index, evidence_item in enumerate(evidence, 1):
+            reference = references[evidence_item["referenceIndex"] - 1]
+            anchor_evidence.append({
+                "id": f"A{index}",
+                "title": str(reference.get("title") or reference.get("url") or ""),
+                "url": str(reference.get("url") or ""),
+                "excerpt": evidence_item["excerpt"],
+                "referenceIndex": evidence_item["referenceIndex"],
+                "contentAcquisition": str(reference.get("contentAcquisition") or ""),
+                "sameMaterialVerified": reference.get("sameMaterialVerified") is True,
+                "originAttributionStatus": str(reference.get("originAttributionStatus") or ""),
+                "platformUrl": str(
+                    reference.get("platformUrl")
+                    or reference.get("platform_url")
+                    or reference.get("originalUrl")
+                    or reference.get("original_url")
+                    or ""
+                ),
+                "zone": str(reference.get("zone") or ""),
+                "platformTrustSource": str(
+                    reference.get("platformTrustSource")
+                    or "dknow_reference_capture"
+                ),
+            })
+        return {
+            "eligible": True,
+            "platform": pid,
+            "trustedSearchUsed": True,
+            "officialAnswer": official_answer,
+            "evidence": anchor_evidence,
+        }
+    if item.get("eligible"):
+        analysis_gaps.append({
+            "stage": "comparison",
+            "knowledgePointId": kid,
+            "platform": requested_pid or "dknowc-chat",
+            "reason": "深知晓官方材料锚点未同时满足可信来源、忠实性与原文定位要求",
         })
-    return {"eligible": True, "platform": pid, "trustedSearchUsed": True, "officialAnswer": official_answer, "evidence": anchor_evidence}
+    return {"eligible": False}
 
 
 def normalize_comparison_status(raw_status: object, summary: str, covered_count: int) -> str:
@@ -818,7 +854,7 @@ def validate_analysis_contract(raw: dict, platforms: list[dict]) -> None:
             errors.append(f"{path}.trustedAnchor 必须是对象")
         elif isinstance(anchor, dict) and anchor.get("eligible"):
             if (
-                anchor.get("platform") != "dknowc-chat"
+                anchor.get("platform") not in DKNOW_OFFICIAL_PLATFORMS
                 or anchor.get("trustedSearchUsed") is not True
                 or not str(anchor.get("officialAnswer") or "").strip()
                 or not isinstance(anchor.get("evidence"), list)

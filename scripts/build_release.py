@@ -9,8 +9,11 @@ import json
 import os
 import re
 import stat
+import sys
 import zipfile
 from pathlib import Path, PurePosixPath
+
+sys.dont_write_bytecode = True
 
 from generate_sbom import generate as generate_sbom
 
