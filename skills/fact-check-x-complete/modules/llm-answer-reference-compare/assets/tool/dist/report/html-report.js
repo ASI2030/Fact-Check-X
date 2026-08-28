@@ -893,9 +893,7 @@ function renderReferenceItem(platform, reference, index) {
     const platformLink = platformUrl && platformUrl !== reference.url
         ? ` <a href="${escapeAttribute(platformUrl)}">深知收录页</a>`
         : "";
-    const attribution = reference.originAttributionStatus === "trusted_search_no_source_url"
-        ? `<span class="badge neutral" title="${escapeAttribute(reference.originAttributionReason || "不影响官方来源口径")}">来源链接待补</span> `
-        : reference.originAttributionStatus === "trusted_search_official_url"
+    const attribution = reference.originAttributionStatus === "trusted_search_official_url"
             ? `<span class="badge neutral">已返回来源链接</span> `
             : "";
     const scope = reference.citationScope === "global"

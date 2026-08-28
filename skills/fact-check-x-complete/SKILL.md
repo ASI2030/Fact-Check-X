@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.5"
+  version: "1.1.6"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.5)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.6)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，证据不足的内容不会写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -167,7 +167,7 @@ python3 scripts/fact_check_x.py prepare-comparison \
 - `capture/report.md`：可迁移文本报告；
 - `capture-gate.json`：全部平台采集成功证明。
 
-必须使用命令返回的 `deliverables[0].path` 发送真正的 Markdown 文件链接，例如 `[打开各方答案汇总](<返回路径>)`；禁止仅用反引号显示路径。该检查点必须在开始知识点对比前对用户可见。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。不得只把路径藏在“运行命令”、折叠执行详情或最终总结中。
+必须原样展示命令返回的 `checkpoint.message`；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 生成真正的 Markdown 文件链接，例如 `[打开各方答案汇总](<返回路径>)`；禁止仅用反引号显示路径。该检查点必须在开始知识点对比前对用户可见。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。不得只把路径藏在“运行命令”、折叠执行详情或最终总结中。
 
 豆包等页面可能只显示来源名称而不暴露原文 URL。采集器会先尝试展开来源标签获取真实链接；仍无链接时写入 `sourceMentions`。此时必须表述为“0 条可回溯参考文献，N 个无 URL 来源标签”，不得说“页面没有来源”，也不得把标签伪造成参考文献。
 
@@ -193,7 +193,7 @@ python3 scripts/fact_check_x.py complete-comparison \
 `complete-comparison`，最多自动修复 2 次。两次后仍失败则明确报告知识点对比
 阻断及缺失字段，禁止进入 `prepare-authority`，也禁止静默结束任务。
 
-命令成功后，必须立刻向用户发送一条独立的 **各方答案聚合完成检查点**，展示知识点数量、分析信息不足数量和“综合草案（未核验）”。必须使用 `deliverables[0].path` 发送 `[打开各方答案聚合（未核验）](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。
+命令成功后，必须立刻向用户发送一条独立的 **各方答案聚合完成检查点**，展示知识点数量、分析信息不足数量和“综合草案（未核验）”。必须原样展示命令返回的 `checkpoint.message`；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 发送 `[打开各方答案聚合（未核验）](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。
 
 ### 第三步：全知晓“完美答案”（可选增强）
 
@@ -250,7 +250,7 @@ python3 scripts/fact_check_x.py finalize-authority --run-dir <run目录>
 
 `finalize-authority` 完成裁决后会独立生成 `verification.json` 和
 `03-authority-report.html`。证据充分的知识点进入 `finalAnswer`；证据不足的知识点进入 `evidenceGaps`，从确定答案和准确率分母中排除，但命令仍返回 `status=completed` 并允许继续生成第四步。必须立即发送 **权威证据核验检查点**，使用
-`deliverables[0].path` 提供 `[打开全知晓“完美答案”](<返回路径>)`；报告顶部展示“完美答案（已核验，可权威溯源）”，无法证实也无法证伪的内容在下方单列供参考，并保留逐知识点证据、证据边界和平台裁决。默认询问用户
+命令返回的 `checkpoint.message` 必须原样展示；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 提供 `[打开全知晓“完美答案”](<返回路径>)`；报告顶部展示“完美答案（已核验，可权威溯源）”，无法证实也无法证伪的内容在下方单列供参考，并保留逐知识点证据、证据边界和平台裁决。默认询问用户
 选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有
 最初请求已明确授权完整自动跑完时才可不等待。
 

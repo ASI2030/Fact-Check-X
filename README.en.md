@@ -5,7 +5,7 @@
 Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.5" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.6" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start

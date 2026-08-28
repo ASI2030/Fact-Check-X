@@ -4,6 +4,14 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-08-28
+
+- Fixed deep-trace citation binding so displayed markers such as `【6】` resolve to their actual source and compound claims can combine locally bound evidence without borrowing unrelated references.
+- Added mandatory user-visible checkpoints after all four stages and a consistent navigation bar across the four standalone HTML reports.
+- Replaced ambiguous stage-four summary labels with explicit direct-official, independently verified nonofficial, and uncited coincidental-agreement wording.
+- Removed the user-facing `来源链接待补` placeholder while retaining missing-origin provenance in structured metadata.
+- Added regression coverage for the reported Shenzhen K5 citation pattern, all-stage delivery, report navigation, and the revised evaluation wording.
+
 ## [1.1.5] - 2026-08-19
 
 - Fixed the authority verifier so 深知晓（深度溯源） can independently use its own qualified official materials as a zero-request trusted anchor, without inheriting another platform's trust state.

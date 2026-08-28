@@ -87,6 +87,11 @@ def main() -> int:
         assert capture_stage["stage"] == "capture_completed"
         assert capture_stage["artifacts"]["answerReferenceReport"] == str((run_dir / "capture" / "report.html").resolve())
         assert capture_stage["deliverables"][0]["path"] == str((run_dir / "01-capture-report.html").resolve())
+        assert capture_stage["checkpoint"]["mustPresentBeforeNextStage"] is True
+        assert capture_stage["checkpoint"]["path"] == str(
+            (run_dir / "01-capture-report.html").resolve()
+        )
+        assert "打开各方答案汇总" in capture_stage["checkpoint"]["message"]
         assert (run_dir / "01-capture-report.html").exists()
         assert len(capture_stage["platforms"]) == 2
         comparison_stage = run(command("complete-comparison", "--results", str(results), "--analysis", str(COMPARE_FIXTURES / "comparison-analysis.json"), "--run-dir", str(run_dir)))
@@ -98,6 +103,11 @@ def main() -> int:
         assert (run_dir / "comparison-analysis.json").is_file()
         assert comparison_stage["artifacts"]["comparisonReport"] == str((run_dir / "comparison.html").resolve())
         assert comparison_stage["deliverables"][0]["path"] == str((run_dir / "02-comparison-report.html").resolve())
+        assert comparison_stage["checkpoint"]["mustPresentBeforeNextStage"] is True
+        assert comparison_stage["checkpoint"]["path"] == str(
+            (run_dir / "02-comparison-report.html").resolve()
+        )
+        assert "打开各方答案聚合（未核验）" in comparison_stage["checkpoint"]["message"]
         assert (run_dir / "02-comparison-report.html").exists()
         prepared = run(command("prepare-authority", "--run-dir", str(run_dir)), keyless_environment)
         assert prepared["taskCount"] == 1
@@ -140,6 +150,11 @@ def main() -> int:
         assert finalized["deliverables"][0]["path"] == str(
             (run_dir / "03-authority-report.html").resolve()
         )
+        assert finalized["checkpoint"]["mustPresentBeforeNextStage"] is True
+        assert finalized["checkpoint"]["path"] == str(
+            (run_dir / "03-authority-report.html").resolve()
+        )
+        assert "打开全知晓“完美答案”" in finalized["checkpoint"]["message"]
         assert (run_dir / "03-authority-report.html").exists()
         assert json.loads((run_dir / "authority-gate.json").read_text(encoding="utf-8"))["status"] == "finalized"
         delivered = run(command("deliver", "--results", str(results), "--run-dir", str(run_dir)))
@@ -156,6 +171,11 @@ def main() -> int:
             str((run_dir / "04-final-report.html").resolve()),
         ]
         assert deliverable_paths[4] == delivered["artifacts"]["reportPackage"]
+        assert delivered["checkpoint"]["mustPresentBeforeNextStage"] is True
+        assert delivered["checkpoint"]["path"] == str(
+            (run_dir / "04-final-report.html").resolve()
+        )
+        assert "打开各方答案测评报告" in delivered["checkpoint"]["message"]
         assert all(Path(item["path"]).exists() for item in delivered["deliverables"])
         manifest = json.loads((run_dir / "pipeline.json").read_text(encoding="utf-8"))
         verification = json.loads((run_dir / "verification.json").read_text(encoding="utf-8"))
@@ -174,6 +194,22 @@ def main() -> int:
         assert "完美答案（已核验，可权威溯源）" in authority_report
         assert "深知晓" in authority_report and "豆包" in authority_report
         assert "data-fcx-authority-binding-sha256" in authority_report
+        report_names = [
+            "01-capture-report.html",
+            "02-comparison-report.html",
+            "03-authority-report.html",
+            "04-final-report.html",
+        ]
+        for report_name in report_names:
+            report_html = (run_dir / report_name).read_text(encoding="utf-8")
+            assert report_html.count('data-fcx-report-nav="1"') == 1
+            assert 'aria-current="page"' in report_html
+            assert "来源链接待补" not in report_html
+            assert all(
+                f'href="{target}"' in report_html
+                for target in report_names
+                if target != report_name
+            )
         assert all(
             f'href="{target}"' in comparison_deliverable
             for target in (

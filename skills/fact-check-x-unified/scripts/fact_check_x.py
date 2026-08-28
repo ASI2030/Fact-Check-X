@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -58,6 +59,37 @@ PORTABLE_REPORT_README = """Fact-Check-X 完整事实核验报告包
 
 请先解压整个压缩包，再用浏览器打开 HTML 文件，以保留截图、页面存证和报告导航。
 """
+
+REPORT_NAV_ITEMS = (
+    ("01-capture-report.html", "各方答案汇总"),
+    ("02-comparison-report.html", "各方答案聚合"),
+    ("03-authority-report.html", "全知晓“完美答案”"),
+    ("04-final-report.html", "各方答案测评报告"),
+)
+REPORT_NAV_STYLE = """
+.fcx-report-nav{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px;padding:10px 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+.fcx-report-nav a,.fcx-report-nav span{display:inline-flex;align-items:center;min-height:32px;padding:5px 10px;border-radius:6px;font-size:13px;text-decoration:none}
+.fcx-report-nav a{border:1px solid #d1d5db;background:#fff;color:#334155}
+.fcx-report-nav a:hover{border-color:#6366f1;color:#4338ca}
+.fcx-report-nav span{border:1px solid #6366f1;background:#eef2ff;color:#3730a3;font-weight:600}
+""".strip()
+
+
+def stage_checkpoint(label: str, path: Path, next_stage: str | None) -> dict:
+    resolved = path.resolve()
+    checkpoint = {
+        "required": True,
+        "mustPresentBeforeNextStage": True,
+        "label": label,
+        "path": str(resolved),
+        "message": f"[打开{label}](<{resolved}>)",
+    }
+    if next_stage:
+        checkpoint.update({
+            "nextStage": next_stage,
+            "choices": ["继续下一步", "修正当前结果", "到此结束并保留产物"],
+        })
+    return checkpoint
 
 
 def skill_candidates() -> list[Path]:
@@ -357,17 +389,42 @@ def portable_file_bytes(path: Path, run_dir: Path) -> bytes:
     return path.read_bytes()
 
 
-def normalize_comparison_navigation(content: bytes) -> bytes:
-    content = content.replace(
-        b'href="capture/report.html"', b'href="01-capture-report.html"'
-    ).replace(b'href="report.html"', b'href="04-final-report.html"')
-    if b'href="03-authority-report.html"' not in content:
-        content = content.replace(
-            b'<a href="04-final-report.html">',
-            b'<a href="03-authority-report.html">\xe5\x85\xa8\xe7\x9f\xa5\xe6\x99\x93\xe2\x80\x9c\xe5\xae\x8c\xe7\xbe\x8e\xe7\xad\x94\xe6\xa1\x88\xe2\x80\x9d</a>'
-            b'<a href="04-final-report.html">',
-        )
-    return content
+def normalize_report_navigation(content: bytes, current_report: str) -> bytes:
+    html = content.decode("utf-8")
+    html = html.replace('href="capture/report.html"', 'href="01-capture-report.html"')
+    html = html.replace('href="report.html"', 'href="04-final-report.html"')
+    html = re.sub(
+        r'<nav\s+class="(?:report-nav|nav|fcx-report-nav)"[^>]*>.*?</nav>',
+        "",
+        html,
+        flags=re.DOTALL,
+    )
+    items = []
+    for filename, label in REPORT_NAV_ITEMS:
+        if filename == current_report:
+            items.append(f'<span aria-current="page">{label}</span>')
+        else:
+            items.append(f'<a href="{filename}">{label}</a>')
+    navigation = (
+        '<nav class="fcx-report-nav" data-fcx-report-nav="1" '
+        'aria-label="事实核验四阶段报告导航">'
+        + "".join(items)
+        + "</nav>"
+    )
+    if REPORT_NAV_STYLE not in html:
+        if "</style>" in html:
+            html = html.replace("</style>", f"\n{REPORT_NAV_STYLE}\n</style>", 1)
+        else:
+            html = html.replace("</head>", f"<style>{REPORT_NAV_STYLE}</style></head>", 1)
+    if "<main" in html:
+        html = re.sub(r"(<main(?:\s[^>]*)?>)", navigation + r"\1", html, count=1)
+    else:
+        html = re.sub(r"(<body(?:\s[^>]*)?>)", r"\1" + navigation, html, count=1)
+    return html.encode("utf-8")
+
+
+def normalize_report_file(path: Path) -> None:
+    path.write_bytes(normalize_report_navigation(path.read_bytes(), path.name))
 
 
 def build_portable_report_package(run_dir: Path) -> dict:
@@ -397,9 +454,7 @@ def build_portable_report_package(run_dir: Path) -> dict:
         for relative, source in reports.items():
             if not source.exists():
                 raise PipelineError(f"缺少对外交付报告：{source.name}")
-            content = source.read_bytes()
-            if relative.name == "02-comparison-report.html":
-                content = normalize_comparison_navigation(content)
+            content = normalize_report_navigation(source.read_bytes(), relative.name)
             archive.writestr(str(PORTABLE_REPORT_ROOT / relative), content)
         artifacts_dir = run_dir / "capture" / "artifacts"
         if artifacts_dir.exists():
@@ -535,6 +590,7 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     sync_capture_evidence(run_dir, results_path, results)
     capture_deliverable = run_dir / "01-capture-report.html"
     shutil.copyfile(capture_report["report"], capture_deliverable)
+    normalize_report_file(capture_deliverable)
     task = run_dir / "comparison-task.json"
     result = run([sys.executable, str(skills["comparison"] / "scripts" / "knowledge_compare.py"), "--input", str(results_path), "--task-output", str(task)])
     result.update({
@@ -564,6 +620,9 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
                 "path": str(capture_deliverable.resolve()),
             }
         ],
+        "checkpoint": stage_checkpoint(
+            "各方答案汇总", capture_deliverable, "comparison"
+        ),
     })
     return result
 
@@ -596,6 +655,7 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
     run([sys.executable, str(skills["comparison"] / "scripts" / "render_comparison.py"), "--results", str(results_path), "--comparison", str(comparison), "--output", str(comparison_report)])
     comparison_deliverable = run_dir / "02-comparison-report.html"
     shutil.copyfile(comparison_report, comparison_deliverable)
+    normalize_report_file(comparison_deliverable)
     comparison_data = load_json(comparison)
     comparison_gate = write_comparison_provenance(run_dir, results_path, analysis, comparison)
     result.update({
@@ -615,6 +675,9 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
                 "path": str(comparison_deliverable.resolve()),
             }
         ],
+        "checkpoint": stage_checkpoint(
+            "各方答案聚合（未核验）", comparison_deliverable, "authority"
+        ),
     })
     return result
 
@@ -868,6 +931,7 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
             "--output",
             str(authority_report),
         ])
+        normalize_report_file(authority_report)
         dump_json(authority_gate_path, {
             **authority_gate,
             "status": "finalized",
@@ -901,6 +965,9 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
                 "path": str(authority_report.resolve()),
             }
         ],
+        "checkpoint": stage_checkpoint(
+            "全知晓“完美答案”", authority_report, "evaluation"
+        ),
     }
 
 
@@ -1090,10 +1157,14 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     ])
     shutil.copyfile(capture_report["report"], capture_deliverable)
     shutil.copyfile(run_dir / "comparison.html", comparison_deliverable)
-    comparison_deliverable.write_bytes(
-        normalize_comparison_navigation(comparison_deliverable.read_bytes())
-    )
     shutil.copyfile(report_path, final_deliverable)
+    for report_file in (
+        capture_deliverable,
+        comparison_deliverable,
+        authority_deliverable,
+        final_deliverable,
+    ):
+        normalize_report_file(report_file)
     manifest = {
         "schemaVersion": "fact-check-x/pipeline@2",
         "createdAt": now_iso(),
@@ -1154,6 +1225,9 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
                 "portable": True,
             },
         ],
+        "checkpoint": stage_checkpoint(
+            "各方答案测评报告", final_deliverable, None
+        ),
         "trustedSearchRequestCount": manifest["trustedSearchRequestCount"],
         "dknowExemptCount": manifest["dknowExemptCount"],
     }

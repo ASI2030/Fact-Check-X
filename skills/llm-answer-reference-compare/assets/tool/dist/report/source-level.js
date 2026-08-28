@@ -70,14 +70,11 @@ function isDknowTrustedReference(reference, platformId) {
 export function sourceDescriptor(reference, platformId = "") {
     const url = String(reference?.url || "");
     if (isDknowTrustedReference(reference, platformId)) {
-        const hasOfficialSourceUrl = reference?.originAttributionStatus === "trusted_search_official_url";
         return {
             key: "dknow_trusted_search_official",
             label: "官方来源",
             officialOriginUrl: officialOrigin(reference, platformId),
-            note: hasOfficialSourceUrl
-                ? "由深知可信搜索提供，统一按官方来源处理；已返回来源链接"
-                : "由深知可信搜索提供，统一按官方来源处理；来源链接待补"
+            note: "由深知可信搜索提供，统一按官方来源处理"
         };
     }
     if (isOfficialUrl(url)) {

@@ -67,9 +67,7 @@ export function renderMarkdownReport(run) {
                     : "";
                 const attribution = reference.originAttributionStatus === "trusted_search_official_url"
                     ? "（已返回来源链接）"
-                    : reference.originAttributionStatus === "trusted_search_no_source_url"
-                        ? "（来源链接待补，不影响官方来源口径）"
-                        : "";
+                    : "";
                 lines.push(`${index + 1}. ${marker}【${source.label}】${attribution}${scope}[${title}](${reference.url})${origin}${platformLink}${snippetKind}${snippet}`);
             });
             lines.push("");

@@ -82,8 +82,6 @@ def render_references(platform: dict) -> str:
         attribution = (
             ' <span class="source-level">已返回来源链接</span>'
             if reference.get("originAttributionStatus") == "trusted_search_official_url"
-            else ' <span class="source-level">来源链接待补·不影响官方来源口径</span>'
-            if reference.get("originAttributionStatus") == "trusted_search_no_source_url"
             else ""
         )
         items.append(f'<li><span class="source-level">{esc(level_label)}</span>{attribution} <a href="{esc(safe_url(primary))}" target="_blank" rel="noreferrer">[{esc(marker)}] {esc(title)}</a>{secondary}<blockquote>{esc(excerpt)}</blockquote></li>')

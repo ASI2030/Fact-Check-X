@@ -253,6 +253,55 @@ def inline_reference_indexes(text: str, references: list[dict]) -> set[int]:
     }
 
 
+def citation_contexts(text: str, marker: str) -> list[str]:
+    marker = marker.strip()
+    if not marker:
+        return []
+    escaped = re.escape(marker)
+    pattern = re.compile(rf"(?:\[{escaped}\]|【{escaped}】|〔{escaped}〕)")
+    contexts = []
+    seen = set()
+    for line in text.splitlines():
+        candidate = line.strip()
+        if candidate and pattern.search(candidate) and candidate not in seen:
+            seen.add(candidate)
+            contexts.append(candidate)
+    if contexts:
+        return contexts
+    for match in re.finditer(r"[^。！？；!?\n]+(?:[。！？；!?]+|(?=\n|$))", text):
+        candidate = match.group(0).strip()
+        if candidate and pattern.search(candidate) and candidate not in seen:
+            seen.add(candidate)
+            contexts.append(candidate)
+    return contexts
+
+
+def claim_fragment_related(claim: str, fragment: str) -> bool:
+    claim_numbers = set(re.findall(r"\d+(?:\.\d+)?", claim.replace(",", "")))
+    fragment_numbers = set(re.findall(r"\d+(?:\.\d+)?", fragment.replace(",", "")))
+    if claim_numbers and not (claim_numbers & fragment_numbers):
+        return False
+    coverage, _, _ = semantic_overlap_score(fragment, claim)
+    return text_supports_claim(fragment, claim) or coverage >= 0.2
+
+
+def locally_supported_claim_evidence(
+    answer: str,
+    reference: dict,
+    claim: str,
+) -> str:
+    marker = str(reference.get("marker") or "").strip()
+    related_contexts = []
+    for context in citation_contexts(answer, marker):
+        plain = re.sub(r"(?:\[\d+\]|【\d+】|〔\d+〕)", "", context).strip()
+        if plain and claim_fragment_related(claim, plain):
+            related_contexts.append(plain)
+    if not related_contexts:
+        return ""
+    local_claim = "\n".join(related_contexts)
+    return supporting_excerpt(reference, local_claim)
+
+
 def declared_cluster_reference_indexes(
     text: str,
     references: list[dict],
@@ -509,6 +558,13 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
             references,
             declared_indexes,
         ) or inline_reference_indexes(answer_excerpt, references)
+    local_evidence_by_index = {}
+    if covered:
+        for index, reference in enumerate(references, 1):
+            excerpt = locally_supported_claim_evidence(answer, reference, claim_text)
+            if excerpt:
+                locally_bound_indexes.add(index)
+                local_evidence_by_index[index] = excerpt
     if locally_bound_indexes:
         candidate_indexes = sorted(locally_bound_indexes)
     else:
@@ -528,9 +584,13 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
             raw_evidence_by_index[index] = excerpt
     recovered_evidence = []
     supported_indexes = []
+    used_partial_local_evidence = False
     if covered:
         for index in candidate_indexes:
             excerpt = supporting_excerpt(references[index - 1], claim_text)
+            if not excerpt:
+                excerpt = local_evidence_by_index.get(index, "")
+                used_partial_local_evidence = used_partial_local_evidence or bool(excerpt)
             if not excerpt:
                 excerpt = raw_evidence_by_index.get(index, "")
             if excerpt:
@@ -544,6 +604,12 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
                 if excerpt:
                     supported_indexes.append(index)
                     recovered_evidence.append({"referenceIndex": index, "excerpt": excerpt})
+        if used_partial_local_evidence and recovered_evidence and not text_supports_claim(
+            claim_text,
+            "\n".join(item["excerpt"] for item in recovered_evidence),
+        ):
+            supported_indexes = []
+            recovered_evidence = []
     raw_faithfulness = item.get("faithfulness")
     if raw_faithfulness == "contradicted":
         allowed = set(candidate_indexes)

@@ -201,6 +201,41 @@ def metrics(points: list[dict], platforms: list[dict]) -> dict:
     return output
 
 
+def platform_verdict_summary(points: list[dict], platform_id: str) -> dict:
+    categories = []
+    for point in points:
+        if point.get("role") != "direct":
+            continue
+        claim = (point.get("claims") or {}).get(platform_id) or {}
+        if not claim.get("covered"):
+            continue
+        verdict = (((point.get("authority") or {}).get("verdicts") or {}).get(platform_id) or {})
+        categories.append(str(verdict.get("category") or "unverified"))
+
+    if not categories:
+        return {"level": "missing", "headline": "未直接回答可核验知识点"}
+    if any(category in {"misleading", "fabricated"} for category in categories):
+        return {"level": "error", "headline": "部分直接答案经官方依据核验有误"}
+    if "unverified" in categories:
+        return {"level": "missing", "headline": "部分直接答案的官方证据仍不足"}
+    if "coincidental" in categories:
+        return {
+            "level": "coincidental",
+            "headline": "无引用依据，但与官方依据巧合一致",
+        }
+    if "indirect_accurate" in categories:
+        return {
+            "level": "indirect_supported",
+            "headline": "部分非官方依据支持，通过全知晓用官方依据的核验",
+        }
+    if all(category == "direct_accurate" for category in categories):
+        return {
+            "level": "direct_supported",
+            "headline": "全部有官方依据支持",
+        }
+    return {"level": "missing", "headline": "当前证据不足以形成总判定"}
+
+
 def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[dict, dict]:
     if results.get("question") != comparison.get("question") or results.get("question") != verification.get("question"):
         raise SkillError("results、comparison、verification 的问题不一致")
@@ -294,16 +329,10 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
         finding = authority.get("authoritativeFinding") or "证据不足"
         findings.append(f"{point.get('id')}：{point.get('description')}。权威结论：{finding}")
     verdict_sides = {}
-    core_point = next((point for point in points if point.get("core")), points[0] if points else None)
-    if core_point:
+    if points:
         for platform in platforms:
             pid = platform["platform"]
-            verdict = (((core_point.get("authority") or {}).get("verdicts") or {}).get(pid) or {})
-            category = verdict.get("category")
-            verdict_sides[pid] = {
-                "level": "supported" if category in ("direct_accurate", "indirect_accurate") else ("error" if category == "misleading" else ("coincidental" if category == "coincidental" else "missing")),
-                "headline": verdict.get("reason") or verdict.get("category") or "证据不足",
-            }
+            verdict_sides[pid] = platform_verdict_summary(points, pid)
     analysis = {
         "query": results.get("question"),
         "ai_info": {platform["platform"]: {"size": "当前承载智能体完成语义分析"} for platform in platforms},

@@ -380,6 +380,89 @@ def main() -> int:
         assert deep_anchor["eligible"] is True
         assert deep_anchor["platform"] == "dknowc-deep-research"
 
+        compound_results = json.loads(json.dumps(deep_research_results, ensure_ascii=False))
+        compound_results["question"] = "在深圳外地人如何买房"
+        compound_platform = compound_results["platforms"][0]
+        compound_platform["answerMarkdown"] = (
+            "单独申请：最高70万元【6】\n"
+            "共同申请：最高130万元【6】\n"
+            "购买首套住房：上浠60%【6】\n"
+            "家庭最高额度可达351万元【5】"
+        )
+        compound_platform["references"] = [
+            {
+                "title": "深圳公积金贷款基础额度政策",
+                "url": "https://www.sz.gov.cn/policy/base",
+                "marker": "6",
+                "snippet": "单独申请最高70万元，共同申请最高130万元，购买首套住房上浠60%。",
+            },
+            {
+                "title": "深圳公积金贷款最高额度政策",
+                "url": "https://www.sz.gov.cn/policy/maximum",
+                "marker": "5",
+                "snippet": "同时符合多种上浮条件时，家庭公积金贷款最高额度可达351万元。",
+            },
+        ]
+        compound_results["platforms"] = [compound_platform]
+        compound_results_path = out / "compound-deep-results.json"
+        compound_results_path.write_text(
+            json.dumps(compound_results, ensure_ascii=False), encoding="utf-8"
+        )
+        compound_analysis = {
+            "schemaVersion": "fact-check-x/comparison-analysis@1",
+            "coreQuestion": compound_results["question"],
+            "knowledgePoints": [{
+                "id": "K1",
+                "description": "公积金贷款额度及上浮政策",
+                "role": "direct",
+                "core": True,
+                "claims": {
+                    "dknowc-deep-research": {
+                        "covered": True,
+                        "claim": "公积金贷款单独申请最高70万元、共同申请最高130万元，首套上浠60%，家庭最高可达351万元",
+                        "answerExcerpt": "单独申请：最高70万元【6】\n共同申请：最高130万元【6】\n购买首套住房：上浠60%【6】",
+                        "citedReferenceIndexes": [],
+                        "answerLevelReferenceIndexes": [],
+                        "faithfulness": "insufficient",
+                        "reason": "",
+                        "evidence": [],
+                    }
+                },
+                "comparison": {"status": "single", "summary": "单平台回答"},
+                "trustedAnchor": {"eligible": False},
+            }],
+            "synthesisDraft": {
+                "status": "unverified",
+                "warning": "尚未经过权威核验",
+                "answer": "待核验",
+                "basisKnowledgePointIds": ["K1"],
+            },
+        }
+        compound_analysis_path = out / "compound-deep-analysis.json"
+        compound_analysis_path.write_text(
+            json.dumps(compound_analysis, ensure_ascii=False), encoding="utf-8"
+        )
+        compound_output = out / "compound-deep-comparison.json"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(compound_results_path),
+            "--analysis",
+            str(compound_analysis_path),
+            "--output",
+            str(compound_output),
+        ])
+        compound_point = json.loads(compound_output.read_text(encoding="utf-8"))[
+            "knowledgePoints"
+        ][0]
+        compound_claim = compound_point["claims"]["dknowc-deep-research"]
+        assert compound_claim["locallyBoundReferenceIndexes"] == [1, 2]
+        assert compound_claim["citedReferenceIndexes"] == [1, 2]
+        assert compound_claim["referenceBinding"] == "local"
+        assert compound_claim["faithfulness"] == "supported"
+        assert compound_point["trustedAnchor"]["eligible"] is True
+
         supplement_only_analysis = json.loads(answer_level_analysis_path.read_text(encoding="utf-8"))
         supplement_only_claim = supplement_only_analysis["knowledgePoints"][0]["claims"]["doubao"]
         supplement_only_claim["faithfulness"] = "insufficient"

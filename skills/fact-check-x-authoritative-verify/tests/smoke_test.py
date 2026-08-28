@@ -14,7 +14,11 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 sys.path.insert(0, str(ROOT / "scripts"))
 from authority_verify import acquire, trusted_search, trusted_search_timeout_seconds
-from render_final_report import attached_provenance, reference_primary_url
+from render_final_report import (
+    attached_provenance,
+    platform_verdict_summary,
+    reference_primary_url,
+)
 
 
 def run(arguments: list[str]) -> None:
@@ -32,6 +36,32 @@ def run_failed(arguments: list[str], environment: dict[str, str] | None = None) 
 
 
 def main() -> int:
+    def verdict_point(category: str) -> dict:
+        return {
+            "role": "direct",
+            "claims": {"sample": {"covered": True}},
+            "authority": {"verdicts": {"sample": {"category": category}}},
+        }
+
+    assert platform_verdict_summary(
+        [verdict_point("direct_accurate")], "sample"
+    ) == {
+        "level": "direct_supported",
+        "headline": "全部有官方依据支持",
+    }
+    assert platform_verdict_summary(
+        [verdict_point("direct_accurate"), verdict_point("indirect_accurate")],
+        "sample",
+    ) == {
+        "level": "indirect_supported",
+        "headline": "部分非官方依据支持，通过全知晓用官方依据的核验",
+    }
+    assert platform_verdict_summary(
+        [verdict_point("coincidental")], "sample"
+    ) == {
+        "level": "coincidental",
+        "headline": "无引用依据，但与官方依据巧合一致",
+    }
     traced_reference = {
         "title": "官方材料",
         "url": "https://yun.dknowc.cn/wlcb/policy/1",
@@ -508,6 +538,8 @@ def main() -> int:
         assert ".kp-scroll{max-width:100%;overflow-x:auto" in report_html
         assert ".kc{width:auto" in report_html
         assert "各平台 AI 的完整原答案" in report_html
+        assert "全部有官方依据支持" in report_html
+        assert "无据碰对" not in report_html
         assert ("claude" + "-opus") not in report_html and ("FACTCHECK" + "_MODEL") not in report_html
 
         long_anchor_verification = json.loads(

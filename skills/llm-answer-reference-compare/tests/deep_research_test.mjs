@@ -60,7 +60,7 @@ const noOrigin = sourceDescriptor({
 }, "dknowc-chat");
 assert.equal(noOrigin.label, "官方来源");
 assert.equal(noOrigin.officialOriginUrl, "");
-assert.match(noOrigin.note, /来源链接待补/);
+assert.doesNotMatch(noOrigin.note, /来源链接待补/);
 
 let clicked = 0;
 const ordinaryPage = {
