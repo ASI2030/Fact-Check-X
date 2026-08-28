@@ -14,9 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 VERSION = "1.1.6"
-PUBLISHED_VERSION = "1.1.5"
-WORKBUDDY_VERSION = "1.1.5"
-OFFICIAL_SHA = "983e0d78e2305b46fcca56e50ba115e732730d80b22904dc121dc80cd7bdec31"
+PUBLISHED_VERSION = "1.1.6"
+WORKBUDDY_VERSION = "1.1.6"
+OFFICIAL_SHA = "2e11dc90bc28705deccd8bbd0793316342f3de8d69e5b6d8057a0e10b1647539"
 
 
 def load_module(name: str, path: Path):
@@ -55,7 +55,10 @@ class PublicReleaseTest(unittest.TestCase):
             manifest["formalArtifact"]["sha256"],
             OFFICIAL_SHA,
         )
-        self.assertEqual(manifest["distribution"]["skillhub"]["status"], "approved")
+        self.assertIn(
+            manifest["distribution"]["skillhub"]["status"],
+            {"submitted_pending_review", "approved"},
+        )
         self.assertEqual(
             manifest["distribution"]["skillhub"]["version"],
             PUBLISHED_VERSION,
