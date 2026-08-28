@@ -71,7 +71,6 @@
       "status": "installed_and_verified",
       "version": "1.1.6",
       "installSource": "GitHub v1.1.6 formal package",
-      "installPath": "/Users/ywwl/.workbuddy/skills/fact-check-x-complete",
       "runtime": "ready",
       "smokeTest": "passed"
     }
