@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.6"
+  version: "1.1.7"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.6)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.7)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，证据不足的内容不会写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -173,9 +173,9 @@ python3 scripts/fact_check_x.py prepare-comparison \
 
 读取 `comparison-task.json`，由当前承载智能体直接写 `comparison-analysis.json`。每个知识点只表达一个可核验事实变量；同一事实的不同数值必须对齐在同一点；只能使用原始答案采集阶段已经保存的来源判断来源忠实性，禁止联网补证。顶层必须填写 `synthesisDraft`，其 `status` 固定为 `unverified`，正文综合所有相关知识点并保留冲突、条件和缺口，`basisKnowledgePointIds` 只能引用当前知识点；它是“综合草案（未核验）”，不得写成权威最终答案。
 
-原子性必须落实到每个平台的 `claim`，不能只把知识点标题写得宽泛。原回答一句话同时包含多个可独立判真的义务、条件、对象、数值或后果时，必须拆成多个知识点；各点的 `claim` 只保留当前事实，`answerExcerpt` 可以复用同一段原文。仅个别平台增加的实质事实也要单独成点，其他平台标为未覆盖，禁止把新增事实并入宽泛知识点后借用深知晓锚点免查。`trustedAnchor` 只能覆盖与深知晓权威结论相同的单一事实变量；超出该变量的主张必须成为无锚点知识点，交给后续一次可信搜索。
+原子性必须落实到每个平台的 `claim`，不能只把知识点标题写得宽泛。原回答一句话同时包含多个可独立判真的义务、条件、对象、数值或后果时，必须拆成多个知识点；各点的 `claim` 只保留当前事实，`answerExcerpt` 可以复用同一段原文。仅个别平台增加的实质事实也要单独成点，其他平台标为未覆盖，禁止把新增事实并入宽泛知识点后借用官方材料锚点免查。`trustedAnchor` 只能覆盖已有官方材料实际支持的单一事实变量；超出该变量的主张必须成为无锚点知识点，交给后续一次可信搜索。
 
-每个 `covered=true` 的 claim 必须填写 `answerExcerpt`：它必须是原始 `answerMarkdown` 的连续子串，并覆盖当前原子主张。载体负责知识点、主张和原回答片段的语义判断；程序负责从已捕获来源中校验脚标、重建可定位证据摘录、归一化引用方式，并自动生成合格的深知晓可信锚点。
+每个 `covered=true` 的 claim 必须填写 `answerExcerpt`：它必须是原始 `answerMarkdown` 的连续子串，并覆盖当前原子主张。载体负责知识点、主张和原回答片段的语义判断；程序负责从已捕获来源中校验脚标、重建可定位证据摘录、归一化引用方式，并自动生成合格的深知晓官方材料锚点或其他平台 `gov.cn` 材料锚点。
 
 - 局部角标优先：脚标实际出现在 `answerExcerpt` 内时列入 `citedReferenceIndexes`；当前主张已有局部脚标后，答案后段或回答级官方来源不得反向抬高它。
 - 没有局部角标时，可把平台为该主张返回的来源索引写入 `citedReferenceIndexes` 或 `answerLevelReferenceIndexes`。程序会在对应 `capturedText` 中定位支持当前主张的原文，并归一化为回答级语义溯源；定位失败时标记为分析信息不足，继续交给权威证据阶段裁决。
@@ -212,11 +212,11 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run目录> --max-wor
 
 > 部分知识点还需要调用可信搜索。首次使用将打开深知智能 MaaS 平台，您只需完成登录；技能会自动获取或创建 Fact-Check-X 专用 Key，验证并保存后继续。本机已有配置时会直接跳过。
 
-配置组件返回 `status=configured` 或 `status=already_configured` 后，自动重新执行 `prepare-authority`；只有返回 `status=prepared` 才能继续搜索。登录期间保持浏览器与命令运行，用户完成登录后自动续接。不得自行决定“直接基于深知晓官方来源裁决”，不得以普通联网搜索代替可信搜索，也不得让用户在对话中发送密钥。
+配置组件返回 `status=configured` 或 `status=already_configured` 后，自动重新执行 `prepare-authority`；只有返回 `status=prepared` 才能继续搜索。登录期间保持浏览器与命令运行，用户完成登录后自动续接。已经通过程序校验的深知晓官方材料或 `gov.cn` 材料应直接复用；除此之外不得自行绕过可信搜索，不得以普通联网搜索代替，也不得让用户在对话中发送密钥。
 
 `comparison-gate.json` 会锁定采集结果、`comparison-analysis.json` 与 `comparison.json` 的摘要；`authority-gate.json` 会继续锁定 request、evidence、assessment 和 result 的精确文件集合及摘要。后续发现文件被修改、ID 不一致、额外/陈旧 result、缺失 assessment（已取得证据的知识点）或手工结果时必须拒绝继续。只有 `search-authority` 正常完成并把门禁更新为 `searched` 后，才能写 assessment、运行 `finalize-authority` 或生成最终报告。禁止手工伪造 evidence、result，禁止通过修改中间 JSON 消除证据不足记录，禁止在缺钥时宣称“核心事实核验已完成”。
 
-逐个读取 `authority/requests` 和 `authority/evidence`，由当前运行载体直接把裁决写入 `authority/assessments/<知识点ID>.json`。已有合格深知晓官方锚点时必须免查；否则每个知识点只调用一次可信搜索。多个知识点独立并发，不上传无关回答全文。
+逐个读取 `authority/requests` 和 `authority/evidence`，由当前运行载体直接把裁决写入 `authority/assessments/<知识点ID>.json`。已有合格深知晓官方材料锚点或其他平台 `gov.cn` 材料锚点时必须免查；否则每个知识点只调用一次可信搜索。多个知识点独立并发，不上传无关回答全文。
 
 免查模式下，`trustedAnchor.officialAnswer` 是当前知识点的权威结论，锚点证据列表用于来源追溯，不要求每条标题或截断摘录逐字复述该结论。平台主张与 `officialAnswer` 语义一致，或可由其直接推出时，必须裁决为 `supported` 并引用当前锚点中的有效证据 ID。只有平台主张增加了 `officialAnswer` 和锚点均不能支持的实质事实，或者事实确实无法判定时，才使用 `insufficient`。不得仅因锚点摘录较短，就把与 `officialAnswer` 同义的主张判为证据不足。
 

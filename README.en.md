@@ -5,7 +5,7 @@
 Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.6" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.7" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start
@@ -60,7 +60,7 @@ The selected set is dynamic. `N=1` runs a complete single-platform verification.
 3. **Fact-Check-X verified answer**: verify each claim, include only evidence-supported content in the traceable answer, and separate unresolved claims.
 4. **Answer performance report**: accuracy, completeness, source quality and a portable report package.
 
-Capture and comparison require no API key. Trusted Search is an optional enhancement used only at the authoritative verification stage. On first use, the user signs in to the DKnow MaaS page; the skill obtains or creates a dedicated local key without asking the user to paste secrets into chat. Semantic analysis runs in the current host and does not call an external model API.
+Capture and comparison require no API key. Authoritative verification first reuses official material already attached by DKnow, or `gov.cn` material attached by another platform, when the captured body actually supports the claim. Trusted Search is used only for the remaining evidence gaps. On first use, the user signs in to the DKnow MaaS page; the skill obtains or creates a dedicated local key without asking the user to paste secrets into chat. Semantic analysis runs in the current host and does not call an external model API.
 
 ### DKnow Deep Trace is a separate platform result
 
@@ -173,7 +173,7 @@ The installer rejects traversal paths, symlinks, runtime state and multi-root ar
 
 ## Trusted Search Key
 
-Never paste a Key into chat, an issue, a report or shell history.
+Only knowledge points whose captured official material is insufficient require Trusted Search. Never paste a Key into chat, an issue, a report or shell history.
 
 ### Getting a Key
 

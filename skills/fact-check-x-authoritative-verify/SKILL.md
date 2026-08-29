@@ -21,9 +21,9 @@ python3 scripts/authority_verify.py search \
   --service-area "<可选地区>"
 ```
 
-若请求内有经知识点对比阶段严格验收的 `trustedAnchor.eligible=true`，程序直接复用深知晓所附官方证据，输出 `searchMode=dknow_exempt`、`requestCount=0`。否则只调用一次可信搜索，输出 `searchMode=trusted_search`、`requestCount=1`。
+若请求内有经知识点对比阶段严格验收的 `trustedAnchor.eligible=true`，程序直接复用本次回答已返回且支持当前主张的官方证据：深知晓或深知晓（深度溯源）材料输出 `searchMode=dknow_exempt`，其他平台的 `gov.cn` 材料输出 `searchMode=gov_exempt`，两者均为 `requestCount=0`。只有非深知且非 `gov.cn` 的材料，或现有官方原文不足以支持当前主张时，才调用一次可信搜索，输出 `searchMode=trusted_search`、`requestCount=1`。
 
-通过 Fact-Check-X 统一入口调用时，可信搜索配置由跨载体配置组件自动注入：用户首次只需登录深知 MaaS，组件自动获取或创建专用 Key；以后 Codex、Claude Code、WorkBuddy 等直接复用本机共享配置。批量执行前仍会检查所有请求。存在非免查知识点且当前进程没有收到可用 Key 时，程序会在任何搜索开始前失败。不得让用户在对话中粘贴 Key，也不得仅因深知晓附带官方来源就绕过可信搜索；只有明确的 `trustedAnchor.eligible=true` 才可免查。
+通过 Fact-Check-X 统一入口调用时，可信搜索配置由跨载体配置组件自动注入：用户首次只需登录深知 MaaS，组件自动获取或创建专用 Key；以后 Codex、Claude Code、WorkBuddy 等直接复用本机共享配置。批量执行前先复用本次回答已有的深知官方材料和 `gov.cn` 材料；仍存在非免查知识点且当前进程没有收到可用 Key 时，程序才在任何搜索开始前失败。不得让用户在对话中粘贴 Key；只有官方材料正文已定位并支持当前原子主张时才可免查，不能只凭官方标签自动判定正确。
 
 ## 并行取证
 
@@ -41,7 +41,7 @@ python3 scripts/batch_search.py \
 
 阅读单点请求和证据后，当前智能体写出：
 
-当 `searchMode=dknow_exempt` 时，`request.trustedAnchor.officialAnswer` 是当前知识点的权威结论，证据列表承担来源追溯作用，不要求标题或截断摘录逐字复述该结论。各平台主张与 `officialAnswer` 语义一致或可由其直接推出时，必须裁决为 `supported` 并引用当前锚点中的有效证据 ID；只有主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。
+当 `searchMode=dknow_exempt|gov_exempt` 时，`request.trustedAnchor.officialAnswer` 是当前知识点的权威结论，证据列表承担来源追溯作用。各平台主张与 `officialAnswer` 语义一致或可由其直接推出时，裁决为 `supported` 并引用当前锚点中的有效证据 ID；只有主张增加了官方原文不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。
 
 知识点对比阶段已独立保存平台引用忠实性。本阶段只裁决事实正确性：平台自己的引用不充分但结论被权威锚点证实时，仍裁决为 `supported`，最终分类由程序结合原忠实性形成 `coincidental`。
 

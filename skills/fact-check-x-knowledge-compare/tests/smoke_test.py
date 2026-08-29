@@ -55,6 +55,124 @@ def main() -> int:
         for retired_term in ("页面模式", "绑定方式", "显式标记", "局部角标绑定", "平台声明全局来源"):
             assert retired_term not in html
 
+        official_results = {
+            "schemaVersion": "1",
+            "question": "广州无合同租房提取住房公积金每月最高多少？",
+            "platforms": [{
+                "platform": "deepseek",
+                "label": "DeepSeek",
+                "status": "success",
+                "answerMarkdown": "每人每月最高提取额度为1400元【1】。",
+                "references": [{
+                    "title": "广州住房公积金规则",
+                    "url": "https://gjj.gz.gov.cn/example",
+                    "marker": "1",
+                    "snippet": "每人每月最高提取额度为1400元。",
+                }],
+            }],
+        }
+        official_analysis = {
+            "schemaVersion": "fact-check-x/comparison-analysis@1",
+            "coreQuestion": official_results["question"],
+            "synthesisDraft": {
+                "status": "unverified",
+                "answer": "待核验",
+                "basisKnowledgePointIds": ["K1"],
+            },
+            "knowledgePoints": [{
+                "id": "K1",
+                "description": "无合同租房月度提取上限",
+                "role": "direct",
+                "core": True,
+                "claims": {"deepseek": {
+                    "covered": True,
+                    "claim": "每人每月最高提取额度为1400元",
+                    "answerExcerpt": "每人每月最高提取额度为1400元【1】。",
+                    "citedReferenceIndexes": [1],
+                    "answerLevelReferenceIndexes": [],
+                    "faithfulness": "supported",
+                    "reason": "",
+                    "evidence": [{
+                        "referenceIndex": 1,
+                        "excerpt": "每人每月最高提取额度为1400元。",
+                    }],
+                }},
+                "comparison": {"status": "single", "summary": "单平台回答"},
+                "trustedAnchor": {"eligible": False},
+            }],
+        }
+        official_results_path = out / "gov-results.json"
+        official_analysis_path = out / "gov-analysis.json"
+        official_output_path = out / "gov-comparison.json"
+        official_results_path.write_text(
+            json.dumps(official_results, ensure_ascii=False), encoding="utf-8"
+        )
+        official_analysis_path.write_text(
+            json.dumps(official_analysis, ensure_ascii=False), encoding="utf-8"
+        )
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(official_results_path),
+            "--analysis",
+            str(official_analysis_path),
+            "--output",
+            str(official_output_path),
+        ])
+        gov_anchor = json.loads(
+            official_output_path.read_text(encoding="utf-8")
+        )["knowledgePoints"][0]["trustedAnchor"]
+        assert gov_anchor["eligible"] is True
+        assert gov_anchor["sourcePolicy"] == "gov_cn_reference"
+        assert gov_anchor["platform"] == "deepseek"
+
+        nonofficial_results = json.loads(json.dumps(official_results, ensure_ascii=False))
+        nonofficial_results["platforms"][0]["references"][0]["url"] = (
+            "https://example.com/policy"
+        )
+        nonofficial_results_path = out / "nonofficial-results.json"
+        nonofficial_output_path = out / "nonofficial-comparison.json"
+        nonofficial_results_path.write_text(
+            json.dumps(nonofficial_results, ensure_ascii=False), encoding="utf-8"
+        )
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(nonofficial_results_path),
+            "--analysis",
+            str(official_analysis_path),
+            "--output",
+            str(nonofficial_output_path),
+        ])
+        assert json.loads(
+            nonofficial_output_path.read_text(encoding="utf-8")
+        )["knowledgePoints"][0]["trustedAnchor"] == {"eligible": False}
+
+        unsupported_results = json.loads(json.dumps(official_results, ensure_ascii=False))
+        unsupported_results["platforms"][0]["references"][0]["snippet"] = (
+            "本材料只说明线上办理流程，不包含提取额度。"
+        )
+        unsupported_results_path = out / "unsupported-gov-results.json"
+        unsupported_output_path = out / "unsupported-gov-comparison.json"
+        unsupported_results_path.write_text(
+            json.dumps(unsupported_results, ensure_ascii=False), encoding="utf-8"
+        )
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(unsupported_results_path),
+            "--analysis",
+            str(official_analysis_path),
+            "--output",
+            str(unsupported_output_path),
+        ])
+        assert json.loads(
+            unsupported_output_path.read_text(encoding="utf-8")
+        )["knowledgePoints"][0]["trustedAnchor"] == {"eligible": False}
+
         omitted_boolean = json.loads(
             (FIXTURES / "comparison-analysis.json").read_text(encoding="utf-8")
         )

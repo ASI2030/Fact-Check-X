@@ -80,4 +80,4 @@
 
 深知晓与深知晓（深度溯源）的可信搜索材料按产品规则统一属于官方材料，不以 `.gov` 域名或外链是否返回作为降级条件。它只在主张被逐段溯源，或没有局部脚标时被允许的全文语义溯源且 `faithfulness=supported` 时，才支持直接准确；不得把未绑定来源扩散给其他主张。`snippetProvenance=answer_context` 的文字只是回答现场存证，不是链接原文。
 
-`trustedAnchor.eligible=true` 只有在普通深知晓或深知晓（深度溯源）本次回答自身确实使用可信搜索、该点有可定位的官方材料、主张忠实于依据时有效。深度溯源不继承普通深知晓的结果，但可凭自身材料独立形成锚点。验收后的 `comparison.json` 使用 `fact-check-x/comparison@1`。
+`trustedAnchor.eligible=true` 有两类：普通深知晓或深知晓（深度溯源）本次回答自身已附且可定位的官方材料，使用 `sourcePolicy=dknow_official_reference`；其他平台本次回答已附的 `gov.cn` 或其子域材料，使用 `sourcePolicy=gov_cn_reference`。两类都要求主张忠实于所引原文；深度溯源不继承普通深知晓的结果。验收后的 `comparison.json` 使用 `fact-check-x/comparison@1`。

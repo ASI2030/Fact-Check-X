@@ -213,6 +213,49 @@ def main() -> int:
             == "direct_accurate"
         )
 
+        gov_request = json.loads(
+            (FIXTURES / "K1-request.json").read_text(encoding="utf-8")
+        )
+        gov_claim = gov_request["claims"].pop("dknowc-chat")
+        gov_request["claims"] = {"deepseek": gov_claim}
+        gov_request["comparisonStatus"] = "single"
+        gov_request["cloudPayload"].pop("differingClaims", None)
+        gov_request["trustedAnchor"] = {
+            "eligible": True,
+            "platform": "deepseek",
+            "sourcePolicy": "gov_cn_reference",
+            "trustedSearchUsed": False,
+            "officialAnswer": "每月最高1400元",
+            "evidence": [{
+                "id": "A1",
+                "title": "广州住房公积金官方规则",
+                "url": "https://gjj.gz.gov.cn/example",
+                "excerpt": "每人每月最高提取额度为1400元。",
+                "body": "每人每月最高提取额度为1400元。",
+                "referenceIndex": 1,
+            }],
+        }
+        gov_evidence = acquire(gov_request)
+        assert gov_evidence["searchMode"] == "gov_exempt"
+        assert gov_evidence["requestCount"] == 0
+        assert gov_evidence["attemptCount"] == 0
+
+        nonofficial_request = json.loads(json.dumps(gov_request, ensure_ascii=False))
+        nonofficial_request["trustedAnchor"]["evidence"][0]["url"] = (
+            "https://example.com/policy"
+        )
+        nonofficial_evidence = acquire(nonofficial_request, fixture=[])
+        assert nonofficial_evidence["searchMode"] == "trusted_search"
+        assert nonofficial_evidence["requestCount"] == 1
+
+        unsupported_gov_request = json.loads(json.dumps(gov_request, ensure_ascii=False))
+        unsupported_gov_request["trustedAnchor"]["evidence"][0]["body"] = (
+            "本材料只说明线上办理流程，不包含提取额度。"
+        )
+        unsupported_gov_evidence = acquire(unsupported_gov_request, fixture=[])
+        assert unsupported_gov_evidence["searchMode"] == "trusted_search"
+        assert unsupported_gov_evidence["requestCount"] == 1
+
         equivalent_request = json.loads(
             (FIXTURES / "K1-request.json").read_text(encoding="utf-8")
         )
@@ -812,7 +855,7 @@ def main() -> int:
         })
         assert keyless["status"] == "failed"
         assert "MaaS 登录自动配置" in keyless["error"]
-        assert "不得改用深知晓来源绕过" in keyless["error"]
+        assert "不得用未通过官方材料锚点校验的来源绕过" in keyless["error"]
         assert not keyless_output.exists()
 
         requests_dir = out / "requests"

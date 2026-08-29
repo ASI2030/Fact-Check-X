@@ -9,7 +9,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from authority_verify import acquire
+from authority_verify import acquire, valid_official_anchor
 from common import SkillError, dump_json, load_json, now_iso
 
 
@@ -33,13 +33,13 @@ def main() -> int:
         requires_trusted_search = [
             request
             for _, request in requests
-            if not (request.get("trustedAnchor") or {}).get("eligible")
+            if not valid_official_anchor(request)
         ]
         if fixtures is None and requires_trusted_search and not os.getenv("TRUSTED_SEARCH_KEY", "").strip():
             raise SkillError(
                 "存在必须调用可信搜索的知识点，但未配置 TRUSTED_SEARCH_KEY。"
                 "请暂停流程并由 Fact-Check-X 统一入口执行 MaaS 登录自动配置，"
-                "配置完成后重新执行；不要让用户把 Key 粘贴到对话中，也不得改用深知晓来源绕过可信搜索。"
+                "配置完成后重新执行；不要让用户把 Key 粘贴到对话中，也不得用未通过官方材料锚点校验的来源绕过可信搜索。"
             )
         output_dir = Path(args.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -79,6 +79,8 @@ def main() -> int:
             "trustedSearchRequestCount": sum(item["requestCount"] for item in ordered),
             "trustedSearchAttemptCount": sum(item["attemptCount"] for item in ordered),
             "dknowExemptCount": sum(item["searchMode"] == "dknow_exempt" for item in ordered),
+            "govExemptCount": sum(item["searchMode"] == "gov_exempt" for item in ordered),
+            "officialExemptCount": sum(item["searchMode"] in {"dknow_exempt", "gov_exempt"} for item in ordered),
             "technicalErrorCount": len(technical_errors),
             "elapsedMs": round((time.monotonic() - started) * 1000),
             "results": ordered,
@@ -94,6 +96,8 @@ def main() -> int:
                 "trustedSearchRequestCount",
                 "trustedSearchAttemptCount",
                 "dknowExemptCount",
+                "govExemptCount",
+                "officialExemptCount",
                 "technicalErrorCount",
                 "elapsedMs",
             )},

@@ -88,7 +88,7 @@ def official_basis(authority: dict, evidence_ids: list[str] | None = None) -> di
         selected = evidence_items[:1]
     else:
         selected = [evidence_by_id[evidence_id] for evidence_id in evidence_ids if evidence_id in evidence_by_id]
-    if authority.get("searchMode") != "dknow_exempt":
+    if authority.get("searchMode") not in {"dknow_exempt", "gov_exempt"}:
         selected = selected[:1]
     evidence = selected[0] if selected else {}
     status = authority.get("searchStatus")

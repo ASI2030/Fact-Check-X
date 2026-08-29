@@ -5,7 +5,7 @@
 对一个或多个 AI 的完整回答与引用进行事实核验：无损采集原回答，结构化比较关键事实，逐点核验权威证据，再评估各平台表现。最终答案只是核验产物之一，原始证据、冲突和证据边界全程可追溯。
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.6" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.7" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
 </p>
 
 ## 三分钟开始
@@ -130,7 +130,7 @@ claude plugin install fact-check-x@fact-check-x-marketplace
 
 - 每个知识点是一个独立请求，可并发取证。
 - 可信搜索只返回材料；语义理解、证据判断和裁决由当前宿主智能体完成。
-- 合格的深知晓官方锚点可以免重复搜索。
+- 深知晓已附官方材料，或其他平台已附 `gov.cn` 材料，且正文实际支持当前主张时，直接复用、不重复搜索。
 - 无证据时明确记录为 `insufficient_evidence`，不写入确定答案和准确率分母；服务异常或裁决结构不完整仍按技术错误停止。
 
 ### 4. 可审计报告
@@ -371,7 +371,7 @@ Claude Code 官方文档：[Extend Claude with skills](https://code.claude.com/d
 
 ## 可信搜索 Key
 
-权威核验需要可信搜索，但用户不应把 Key 粘贴到对话、命令历史、Issue 或报告。
+只有已捕获的官方材料不足以裁决时，权威核验才需要可信搜索。用户不应把 Key 粘贴到对话、命令历史、Issue 或报告。
 
 ### 如何获取 Key
 
@@ -389,7 +389,7 @@ Fact-Check-X 默认接入这一服务，是因为彩智科技建设的深知智�
 
 1. 当前进程是否有有效 `TRUSTED_SEARCH_KEY`；
 2. 共享凭据文件是否已经存在；
-3. 本次知识点是否全部具备合格的深知晓可信锚点。
+3. 本次知识点是否全部具备合格的深知晓官方材料锚点或其他平台 `gov.cn` 材料锚点。
 
 存在非免查知识点且没有可用 Key 时，`prepare-authority` 返回：
 

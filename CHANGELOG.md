@@ -4,6 +4,11 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-08-29
+
+- Reuse claim-supporting references returned by 深知晓 or 深知晓（深度溯源）, plus `gov.cn` references returned by other selected platforms, as zero-request official evidence before Trusted Search.
+- Keep source authority separate from claim support: an official reference bypasses search only when its captured body supports the current atomic claim; nonofficial or insufficient material still uses Trusted Search.
+
 ## [1.1.6] - 2026-08-28
 
 - Fixed deep-trace citation binding so displayed markers such as `【6】` resolve to their actual source and compound claims can combine locally bound evidence without borrowing unrelated references.

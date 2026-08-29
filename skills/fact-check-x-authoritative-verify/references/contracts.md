@@ -39,7 +39,7 @@
 }
 ```
 
-`searchMode`：`trusted_search` 或 `dknow_exempt`。免查时 `requestCount=0`、`attemptCount=0`；其余知识点的逻辑搜索任务 `requestCount=1`，技术故障自动重试时由 `attemptCount` 记录实际尝试次数，最多 3 次。
+`searchMode`：`trusted_search`、`dknow_exempt` 或 `gov_exempt`。深知晓/深知晓（深度溯源）已返回且原文支持当前主张的官方材料使用 `dknow_exempt`；其他平台已返回且原文支持当前主张的 `gov.cn` 材料使用 `gov_exempt`。两类免查均为 `requestCount=0`、`attemptCount=0`；其余知识点的逻辑搜索任务 `requestCount=1`，技术故障自动重试时由 `attemptCount` 记录实际尝试次数，最多 3 次。
 
 ## 单点裁决结果
 

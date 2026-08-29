@@ -247,8 +247,8 @@ def render_platform_rows(point: dict, platforms: list[dict]) -> str:
 def render_point(point: dict, platforms: list[dict]) -> str:
     authority = point.get("authority") or {}
     mode = (
-        "官方材料"
-        if authority.get("searchMode") == "dknow_exempt"
+        "已有官方材料（免查）"
+        if authority.get("searchMode") in {"dknow_exempt", "gov_exempt"}
         else "追加可信搜索，证实为官方材料"
     )
     point_id = escaped(point.get("id"))

@@ -17,6 +17,24 @@ from common import SkillError, clipped, dump_json, load_json, now_iso
 
 
 DKNOW_OFFICIAL_PLATFORMS = {"dknowc-chat", "dknowc-deep-research"}
+OFFICIAL_EXEMPT_MODES = {"dknow_exempt", "gov_exempt"}
+
+
+def is_government_url(url: object) -> bool:
+    host = (urlparse(str(url or "")).hostname or "").lower()
+    return host == "gov.cn" or host.endswith(".gov.cn")
+
+
+def anchor_source_policy(anchor: dict) -> str:
+    explicit = str(anchor.get("sourcePolicy") or "")
+    if explicit:
+        return explicit
+    if (
+        str(anchor.get("platform") or "") in DKNOW_OFFICIAL_PLATFORMS
+        and anchor.get("trustedSearchUsed") is True
+    ):
+        return "dknow_official_reference"
+    return ""
 
 
 def trusted_search_timeout_seconds() -> float:
@@ -153,10 +171,10 @@ def anchor_evidence(anchor: dict) -> list[dict]:
     for index, item in enumerate(anchor.get("evidence") or [], 1):
         output.append({
             "id": str(item.get("id") or f"E{index}"),
-            "title": str(item.get("title") or "深知晓所附官方依据"),
+            "title": str(item.get("title") or "已有官方依据"),
             "url": str(item.get("url") or ""),
             "date": "",
-            "body": str(item.get("excerpt") or ""),
+            "body": str(item.get("body") or item.get("excerpt") or ""),
             "contentAcquisition": str(item.get("contentAcquisition") or ""),
             "sameMaterialVerified": item.get("sameMaterialVerified") is True,
             "originAttributionStatus": str(item.get("originAttributionStatus") or ""),
@@ -165,22 +183,32 @@ def anchor_evidence(anchor: dict) -> list[dict]:
             "platformTrustSource": str(item.get("platformTrustSource") or ""),
         })
     if not output:
-        raise SkillError("eligible=true 的深知晓锚点缺少官方证据")
+        raise SkillError("eligible=true 的官方材料锚点缺少官方证据")
     return output
 
 
-def valid_trusted_anchor(request: dict) -> bool:
+def valid_official_anchor(request: dict) -> bool:
     anchor = request.get("trustedAnchor") or {}
     anchor_platform = str(anchor.get("platform") or "")
+    source_policy = anchor_source_policy(anchor)
     claim = (request.get("claims") or {}).get(anchor_platform) or {}
     if not (
         anchor.get("eligible")
-        and anchor_platform in DKNOW_OFFICIAL_PLATFORMS
-        and anchor.get("trustedSearchUsed")
         and claim.get("covered")
         and claim.get("faithfulness") == "supported"
         and claim.get("sourceLevel") in {"official", "dknow_trusted_search_official"}
     ):
+        return False
+    if source_policy == "dknow_official_reference":
+        if (
+            anchor_platform not in DKNOW_OFFICIAL_PLATFORMS
+            or anchor.get("trustedSearchUsed") is not True
+        ):
+            return False
+    elif source_policy == "gov_cn_reference":
+        if anchor.get("trustedSearchUsed") is not False:
+            return False
+    else:
         return False
     evidence = anchor.get("evidence") or []
     if not evidence:
@@ -193,6 +221,12 @@ def valid_trusted_anchor(request: dict) -> bool:
             return False
         if not str(item.get("excerpt") or "").strip():
             return False
+        if not str(item.get("body") or item.get("excerpt") or "").strip():
+            return False
+        if source_policy == "gov_cn_reference":
+            if not is_government_url(item.get("url")):
+                return False
+            continue
         candidate_urls = [
             str(item.get("url") or ""),
             str(item.get("platformUrl") or ""),
@@ -228,7 +262,7 @@ def valid_trusted_anchor(request: dict) -> bool:
     selected = [
         {
             "id": str(item.get("id") or f"A{index}"),
-            "body": str(item.get("excerpt") or ""),
+            "body": str(item.get("body") or item.get("excerpt") or ""),
         }
         for index, item in enumerate(evidence, 1)
     ]
@@ -242,13 +276,21 @@ def valid_trusted_anchor(request: dict) -> bool:
     return True
 
 
+def valid_trusted_anchor(request: dict) -> bool:
+    return valid_official_anchor(request)
+
+
 def acquire(request: dict, service_area: str = "", limit: int = 6, fixture: object | None = None) -> dict:
     validate_request(request)
     anchor = request.get("trustedAnchor") or {}
     query = build_query(request["cloudPayload"])
-    if valid_trusted_anchor(request):
+    if valid_official_anchor(request):
         result = {"status": "verified", "error": "", "evidence": anchor_evidence(anchor)}
-        mode = "dknow_exempt"
+        mode = (
+            "dknow_exempt"
+            if anchor_source_policy(anchor) == "dknow_official_reference"
+            else "gov_exempt"
+        )
         count = 0
         attempt_count = 0
     else:
@@ -369,14 +411,14 @@ def evidence_supports_claim(claim: dict, evidence_items: list[dict], ids: list[s
 def validate_assessment(request: dict, evidence: dict, assessment: dict) -> None:
     if evidence.get("status") != "verified":
         return
-    anchor_mode = evidence.get("searchMode") == "dknow_exempt"
+    anchor_mode = evidence.get("searchMode") in OFFICIAL_EXEMPT_MODES
     anchor_platform = str((request.get("trustedAnchor") or {}).get("platform") or "")
     if anchor_mode:
         anchor = request.get("trustedAnchor") or {}
-        if not valid_trusted_anchor(request):
-            raise SkillError("dknow_exempt 请求不再满足可信锚点条件")
+        if not valid_official_anchor(request):
+            raise SkillError("官方材料免查请求不再满足锚点条件")
         if evidence.get("evidence") != anchor_evidence(anchor):
-            raise SkillError("dknow_exempt 证据包与可信锚点不一致")
+            raise SkillError("官方材料免查证据包与可信锚点不一致")
     if not isinstance(assessment, dict) or not assessment:
         raise SkillError("已取得权威证据，但缺少裁决文件；必须提供 authoritativeFinding 和 verdicts")
     if "platformAssessment" in assessment or ("verdict" in assessment and "verdicts" not in assessment):
@@ -440,7 +482,7 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
     resolved_count = 0
     anchor_platform = (
         str((request.get("trustedAnchor") or {}).get("platform") or "")
-        if evidence.get("searchMode") == "dknow_exempt"
+        if evidence.get("searchMode") in OFFICIAL_EXEMPT_MODES
         else ""
     )
     for pid, claim in (request.get("claims") or {}).items():

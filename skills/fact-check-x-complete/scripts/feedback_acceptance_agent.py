@@ -29,6 +29,20 @@ def valid_url(value: object) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
+def official_anchor_policy(anchor: dict) -> str:
+    policy = str(anchor.get("sourcePolicy") or "")
+    if (
+        not policy
+        and anchor.get("eligible")
+        and anchor.get("platform") in {"dknowc-chat", "dknowc-deep-research"}
+        and anchor.get("trustedSearchUsed") is True
+    ):
+        return "dknow_official_reference"
+    if policy in {"dknow_official_reference", "gov_cn_reference"}:
+        return policy
+    return ""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="自动验收 Fact-Check-X 用户反馈涉及的产品真值、来源与流程门禁。"
@@ -71,6 +85,8 @@ def main() -> int:
         "coveredClaimCount": 0,
         "supportedClaimCount": 0,
         "dknowAnchorCount": 0,
+        "govAnchorCount": 0,
+        "officialAnchorCount": 0,
         "trustedSearchRequestCount": None,
     }
     if not failures:
@@ -144,17 +160,21 @@ def main() -> int:
                         failures.append(
                             f"{point_id}.{platform_id}:evidence_not_locatable"
                         )
-            dknow_claim = claims.get("dknowc-chat") or {}
             anchor = point.get("trustedAnchor") or {}
-            if dknow_claim.get("covered"):
-                if dknow_claim.get("faithfulness") != "supported":
-                    failures.append(f"{point_id}:dknow_claim_not_supported")
-                if not anchor.get("eligible"):
-                    failures.append(f"{point_id}:dknow_anchor_missing")
             if anchor.get("eligible"):
-                metrics["dknowAnchorCount"] += 1
-                if anchor.get("platform") != "dknowc-chat":
-                    failures.append(f"{point_id}:anchor_platform_invalid")
+                policy = official_anchor_policy(anchor)
+                metrics["officialAnchorCount"] += 1
+                if policy == "dknow_official_reference":
+                    metrics["dknowAnchorCount"] += 1
+                    if anchor.get("platform") not in {
+                        "dknowc-chat",
+                        "dknowc-deep-research",
+                    }:
+                        failures.append(f"{point_id}:anchor_platform_invalid")
+                elif policy == "gov_cn_reference":
+                    metrics["govAnchorCount"] += 1
+                else:
+                    failures.append(f"{point_id}:anchor_policy_invalid")
                 for evidence in anchor.get("evidence") or []:
                     if not valid_url(evidence.get("url")):
                         failures.append(f"{point_id}:anchor_url_invalid")
@@ -193,18 +213,31 @@ def main() -> int:
                 failures.append("pipeline_not_completed")
             if verification.get("dknowExemptCount") != metrics["dknowAnchorCount"]:
                 failures.append("dknow_exempt_count_mismatch")
+            if verification.get("govExemptCount") != metrics["govAnchorCount"]:
+                failures.append("gov_exempt_count_mismatch")
+            if verification.get("officialExemptCount") != metrics["officialAnchorCount"]:
+                failures.append("official_exempt_count_mismatch")
             for point in verification.get("knowledgePoints") or []:
-                if not (point.get("trustedAnchor") or {}).get("eligible"):
+                anchor = point.get("trustedAnchor") or {}
+                policy = official_anchor_policy(anchor)
+                if not policy:
                     continue
                 authority = point.get("authority") or {}
-                verdict = (authority.get("verdicts") or {}).get("dknowc-chat") or {}
+                verdict = (authority.get("verdicts") or {}).get(
+                    str(anchor.get("platform") or "")
+                ) or {}
+                expected_mode = (
+                    "dknow_exempt"
+                    if policy == "dknow_official_reference"
+                    else "gov_exempt"
+                )
                 if (
-                    authority.get("searchMode") != "dknow_exempt"
+                    authority.get("searchMode") != expected_mode
                     or authority.get("requestCount") != 0
                     or verdict.get("category") != "direct_accurate"
                 ):
                     failures.append(
-                        f"{point.get('id')}:dknow_direct_accurate_not_conserved"
+                        f"{point.get('id')}:official_direct_accurate_not_conserved"
                     )
 
     result = {

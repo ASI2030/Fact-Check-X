@@ -694,6 +694,24 @@ def differing_claims(point: dict) -> list[dict]:
     return []
 
 
+def official_exempt_policy(point: dict) -> str:
+    anchor = point.get("trustedAnchor") or {}
+    policy = str(anchor.get("sourcePolicy") or "")
+    if (
+        not policy
+        and anchor.get("eligible")
+        and anchor.get("platform") in {"dknowc-chat", "dknowc-deep-research"}
+        and anchor.get("trustedSearchUsed") is True
+    ):
+        policy = "dknow_official_reference"
+    if anchor.get("eligible") and policy in {
+        "dknow_official_reference",
+        "gov_cn_reference",
+    }:
+        return policy
+    return ""
+
+
 def build_requests(comparison: dict, requests_dir: Path) -> dict:
     if comparison.get("schemaVersion") != "fact-check-x/comparison@1":
         raise PipelineError("comparison.json 版本不正确")
@@ -724,7 +742,15 @@ def build_requests(comparison: dict, requests_dir: Path) -> dict:
         }
         path = requests_dir / f"{point['id']}.json"
         dump_json(path, request)
-        entries.append({"requestId": point["id"], "file": str(path.resolve()), "hasDifferingClaims": bool(differences), "dknowExempt": bool((point.get("trustedAnchor") or {}).get("eligible"))})
+        exempt_policy = official_exempt_policy(point)
+        entries.append({
+            "requestId": point["id"],
+            "file": str(path.resolve()),
+            "hasDifferingClaims": bool(differences),
+            "officialExempt": bool(exempt_policy),
+            "dknowExempt": exempt_policy == "dknow_official_reference",
+            "govExempt": exempt_policy == "gov_cn_reference",
+        })
     manifest = {"schemaVersion": "fact-check-x/authority-requests@1", "createdAt": now_iso(), "question": comparison.get("question"), "taskCount": len(entries), "requests": entries}
     dump_json(requests_dir / "manifest.json", manifest)
     return manifest
@@ -743,7 +769,7 @@ def prepare_authority(args: argparse.Namespace) -> dict:
     request_ids = expected_request_ids(manifest)
     request_names = {f"{request_id}.json" for request_id in request_ids} | {"manifest.json"}
     request_hashes = json_file_manifest(run_dir / "authority" / "requests", request_names)
-    required_count = sum(not entry.get("dknowExempt") for entry in manifest.get("requests") or [])
+    required_count = sum(not entry.get("officialExempt") for entry in manifest.get("requests") or [])
     configured = bool(trusted_search_key())
     result = {
         "status": "configuration_required" if required_count and not configured else "prepared",
@@ -790,7 +816,7 @@ def search_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     if current_request_hashes != authority_gate.get("requestHashes"):
         raise PipelineError("权威核验请求在 prepare-authority 后被修改，禁止搜索")
     require_comparison_provenance(run_dir)
-    required_count = sum(not entry.get("dknowExempt") for entry in requests_manifest.get("requests") or [])
+    required_count = sum(not entry.get("officialExempt") for entry in requests_manifest.get("requests") or [])
     key = trusted_search_key()
     if required_count and not args.fixtures:
         key = validated_authority_key()
@@ -975,7 +1001,8 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
     points = []
     evidence_gaps = []
     request_count = 0
-    exempt_count = 0
+    dknow_exempt_count = 0
+    gov_exempt_count = 0
     authority_verdicts: dict[tuple[str, str], str] = {}
     for point in comparison.get("knowledgePoints") or []:
         path = results_dir / f"{point['id']}.json"
@@ -984,13 +1011,20 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
         authority = load_json(path)
         if authority.get("schemaVersion") != "fact-check-x/authority-result@1" or authority.get("requestId") != point["id"]:
             raise PipelineError(f"{point['id']} 的单点核验结果版本或 ID 不正确")
-        anchored = bool((point.get("trustedAnchor") or {}).get("eligible"))
-        if anchored and (authority.get("searchMode"), authority.get("requestCount")) != ("dknow_exempt", 0):
-            raise PipelineError(f"{point['id']} 应免查但请求计数不为 0")
-        if not anchored and (authority.get("searchMode"), authority.get("requestCount")) != ("trusted_search", 1):
-            raise PipelineError(f"{point['id']} 应恰好进行一次可信搜索")
+        exempt_policy = official_exempt_policy(point)
+        expected_mode = {
+            "dknow_official_reference": "dknow_exempt",
+            "gov_cn_reference": "gov_exempt",
+        }.get(exempt_policy, "trusted_search")
+        expected_count = 0 if exempt_policy else 1
+        if (authority.get("searchMode"), authority.get("requestCount")) != (expected_mode, expected_count):
+            raise PipelineError(
+                f"{point['id']} 权威证据模式应为 {expected_mode}，"
+                f"请求数应为 {expected_count}"
+            )
         request_count += int(authority.get("requestCount") or 0)
-        exempt_count += int(authority.get("searchMode") == "dknow_exempt")
+        dknow_exempt_count += int(authority.get("searchMode") == "dknow_exempt")
+        gov_exempt_count += int(authority.get("searchMode") == "gov_exempt")
         for platform, verdict in (authority.get("verdicts") or {}).items():
             authority_verdicts[(point["id"], platform)] = str(
                 verdict.get("verdict") or ""
@@ -1062,7 +1096,9 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
         "platforms": comparison.get("platforms") or [],
         "knowledgePoints": points,
         "trustedSearchRequestCount": request_count,
-        "dknowExemptCount": exempt_count,
+        "dknowExemptCount": dknow_exempt_count,
+        "govExemptCount": gov_exempt_count,
+        "officialExemptCount": dknow_exempt_count + gov_exempt_count,
         "evidenceGaps": evidence_gaps,
         "evidenceGapCount": len(evidence_gaps),
         "status": "completed",
@@ -1173,6 +1209,8 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
         "knowledgePointCount": len(verification["knowledgePoints"]),
         "trustedSearchRequestCount": verification["trustedSearchRequestCount"],
         "dknowExemptCount": verification["dknowExemptCount"],
+        "govExemptCount": verification["govExemptCount"],
+        "officialExemptCount": verification["officialExemptCount"],
         "artifacts": {
             "sourceResults": str(results_path),
             "captureGate": str((run_dir / "capture-gate.json").resolve()),
@@ -1230,6 +1268,8 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
         ),
         "trustedSearchRequestCount": manifest["trustedSearchRequestCount"],
         "dknowExemptCount": manifest["dknowExemptCount"],
+        "govExemptCount": manifest["govExemptCount"],
+        "officialExemptCount": manifest["officialExemptCount"],
     }
 
 

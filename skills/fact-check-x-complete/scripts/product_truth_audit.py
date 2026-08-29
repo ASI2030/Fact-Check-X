@@ -252,6 +252,20 @@ def valid_url(value: object) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
+def official_anchor_policy(anchor: dict) -> str:
+    policy = str(anchor.get("sourcePolicy") or "")
+    if (
+        not policy
+        and anchor.get("eligible")
+        and anchor.get("platform") in {"dknowc-chat", "dknowc-deep-research"}
+        and anchor.get("trustedSearchUsed") is True
+    ):
+        return "dknow_official_reference"
+    if policy in {"dknow_official_reference", "gov_cn_reference"}:
+        return policy
+    return ""
+
+
 def load_contract(script: Path) -> dict:
     return load(script.parents[1] / "references/product-truth-contract.json")
 
@@ -624,8 +638,15 @@ def main() -> int:
         anchored_ids = {
             point.get("id")
             for point in points
-            if (point.get("trustedAnchor") or {}).get("eligible")
+            if official_anchor_policy(point.get("trustedAnchor") or {})
         }
+        dknow_anchored_ids = {
+            point.get("id")
+            for point in points
+            if official_anchor_policy(point.get("trustedAnchor") or {})
+            == "dknow_official_reference"
+        }
+        gov_anchored_ids = anchored_ids - dknow_anchored_ids
         comparison_cells = bound_elements(
             comparison_html, "data-fcx-claim-sha256"
         )
@@ -723,10 +744,16 @@ def main() -> int:
                 failures.append(f"{point_id}:trusted_anchor_not_conserved")
             if point_id in anchored_ids:
                 authority = (verification_map.get(point_id) or {}).get("authority") or {}
-                verdict = (authority.get("verdicts") or {}).get("dknowc-chat") or {}
+                anchor_platform = str(anchor.get("platform") or "")
+                verdict = (authority.get("verdicts") or {}).get(anchor_platform) or {}
+                expected_mode = (
+                    "dknow_exempt"
+                    if point_id in dknow_anchored_ids
+                    else "gov_exempt"
+                )
                 if verdict.get("category") != "direct_accurate":
                     failures.append(f"{point_id}:trusted_anchor_not_direct_accurate")
-                if authority.get("searchMode") != "dknow_exempt":
+                if authority.get("searchMode") != expected_mode:
                     failures.append(f"{point_id}:trusted_anchor_wrong_search_mode")
                 if authority.get("requestCount") != 0:
                     failures.append(f"{point_id}:trusted_anchor_researched_again")
@@ -779,8 +806,12 @@ def main() -> int:
                         failures.append(
                             f"{point_id}:authority_evidence_{field}_not_in_authority_report"
                         )
-        if verification.get("dknowExemptCount") != len(anchored_ids):
+        if verification.get("dknowExemptCount") != len(dknow_anchored_ids):
             failures.append("dknow_exempt_count_mismatch")
+        if verification.get("govExemptCount") != len(gov_anchored_ids):
+            failures.append("gov_exempt_count_mismatch")
+        if verification.get("officialExemptCount") != len(anchored_ids):
+            failures.append("official_exempt_count_mismatch")
         expected_searches = len(points) - len(anchored_ids)
         if verification.get("trustedSearchRequestCount") != expected_searches:
             failures.append("trusted_search_request_count_mismatch")
@@ -793,6 +824,8 @@ def main() -> int:
             or pipeline.get("knowledgePointCount") != len(points)
             or pipeline.get("trustedSearchRequestCount") != verification.get("trustedSearchRequestCount")
             or pipeline.get("dknowExemptCount") != verification.get("dknowExemptCount")
+            or pipeline.get("govExemptCount") != verification.get("govExemptCount")
+            or pipeline.get("officialExemptCount") != verification.get("officialExemptCount")
         ):
             failures.append("pipeline_metrics_not_conserved")
         package_artifact = (pipeline.get("artifacts") or {}).get("reportPackageSha256")

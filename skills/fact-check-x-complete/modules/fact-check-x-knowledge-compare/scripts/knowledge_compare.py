@@ -26,9 +26,14 @@ OFFICIAL_ORIGIN_KEYS = (
 
 def is_official_url(url: object) -> bool:
     host = (urlparse(str(url or "")).hostname or "").lower()
-    if host == "gov.cn" or host.endswith(".gov.cn") or any(host == domain or host.endswith("." + domain) for domain in OFFICIAL_MEDIA):
+    if is_government_url(url) or any(host == domain or host.endswith("." + domain) for domain in OFFICIAL_MEDIA):
         return True
     return False
+
+
+def is_government_url(url: object) -> bool:
+    host = (urlparse(str(url or "")).hostname or "").lower()
+    return host == "gov.cn" or host.endswith(".gov.cn")
 
 
 def valid_http_url(value: object) -> bool:
@@ -144,6 +149,14 @@ def source_level(reference: dict, platform_id: str = "") -> str:
     if is_official_url(url):
         return "official"
     return "nonofficial" if host else "none"
+
+
+def official_anchor_policy(reference: dict, platform_id: str) -> str:
+    if is_dknow_trusted_reference(reference, platform_id):
+        return "dknow_official_reference"
+    if is_government_url(reference.get("url")):
+        return "gov_cn_reference"
+    return ""
 
 
 def reference_text(reference: dict) -> str:
@@ -463,7 +476,7 @@ def build_task(question: str, platforms: list[dict]) -> dict:
             "核心结论、适用对象和关键条件相同，仅有不改变结论的轻微措辞、范围说明或细节差异时使用 mostly_consensus（外显“基本一致”）",
             "存在会改变适用性、风险判断或结论的重要条件缺失或新增时使用 partial；结论互斥时使用 conflict",
             "不以 normalizedUrl 或重新搜索的 URL 替换 originalUrl",
-            "trustedAnchor 只允许用于普通深知晓或深知晓（深度溯源）本次回答自身已使用可信搜索、回答忠实且有官方原文的知识点；深度溯源不继承普通深知晓结果，但可凭自身回答所附官方材料独立形成锚点",
+            "trustedAnchor 用于本次回答已经携带且原文支持当前主张的官方材料：深知晓与深知晓（深度溯源）返回的引用、以及其他平台的 gov.cn 引用均可免于重复可信搜索；深度溯源可凭自身回答所附官方材料独立形成锚点；来源官方不等于内容自动支持，仍须逐主张定位原文",
             "必须生成 synthesisDraft：它只综合本阶段知识点，不得冒充权威结论，status 固定为 unverified",
         ],
         "outputShape": {
@@ -480,7 +493,7 @@ def build_task(question: str, platforms: list[dict]) -> dict:
                     "core": True,
                     "claims": {"platform-id": {"covered": True, "claim": "...", "answerExcerpt": "包含当前主张及相连脚标的原回答子串", "citedReferenceIndexes": [1], "answerLevelReferenceIndexes": [], "faithfulness": "supported", "reason": "...", "evidence": [{"referenceIndex": 1, "excerpt": "原文"}]}},
                     "comparison": {"status": "consensus", "summary": "精确说明主张属于一致、基本一致、部分一致还是冲突"},
-                    "trustedAnchor": {"eligible": True, "platform": "dknowc-chat", "trustedSearchUsed": True, "officialAnswer": "...", "evidence": [{"referenceIndex": 1, "excerpt": "官方原文"}]},
+                    "trustedAnchor": {"eligible": True, "platform": "dknowc-chat", "sourcePolicy": "dknow_official_reference", "officialAnswer": "...", "evidence": [{"referenceIndex": 1, "excerpt": "官方原文", "body": "官方材料正文"}]},
                 }
             ],
         },
@@ -688,12 +701,15 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
     item = raw if isinstance(raw, dict) else {}
     requested_pid = str(item.get("platform") or "")
     candidate_pids = []
-    if requested_pid in DKNOW_OFFICIAL_PLATFORMS:
+    if requested_pid in platform_map:
         candidate_pids.append(requested_pid)
     candidate_pids.extend(
         pid
         for pid in ("dknowc-chat", "dknowc-deep-research")
-        if pid not in candidate_pids
+        if pid in platform_map and pid not in candidate_pids
+    )
+    candidate_pids.extend(
+        pid for pid in platform_map if pid not in candidate_pids
     )
     for pid in candidate_pids:
         claim = point_claims.get(pid) or {}
@@ -701,29 +717,39 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
         if (
             platform is None
             or not claim.get("covered")
-            or claim.get("faithfulness") != "supported"
         ):
             continue
         official_answer = clipped(claim.get("claim"), 1000)
         references = platform.get("references") or []
-        allowed = set(claim.get("citedReferenceIndexes") or [])
-        evidence = [
-            evidence_item
-            for evidence_item in claim.get("evidence") or []
-            if evidence_item.get("referenceIndex") in allowed
-        ]
-        evidence_levels = {
-            source_level(references[evidence_item["referenceIndex"] - 1], pid)
-            for evidence_item in evidence
+        evidence = []
+        policies = set()
+        claim_evidence = {
+            entry.get("referenceIndex"): str(entry.get("excerpt") or "").strip()
+            for entry in claim.get("evidence") or []
+            if isinstance(entry, dict)
+            and isinstance(entry.get("referenceIndex"), int)
+            and str(entry.get("excerpt") or "").strip()
         }
-        trusted_provenance = bool(evidence) and all(
-            has_trusted_dknow_provenance(
-                references[evidence_item["referenceIndex"] - 1], pid
+        for reference_index, reference in enumerate(references, 1):
+            policy = official_anchor_policy(reference, pid)
+            if not policy:
+                continue
+            excerpt = claim_evidence.get(reference_index) or supporting_excerpt(
+                reference, official_answer
             )
-            for evidence_item in evidence
-        )
+            body = reference_text(reference)
+            if not excerpt or not body:
+                continue
+            policies.add(policy)
+            evidence.append({
+                "referenceIndex": reference_index,
+                "excerpt": excerpt,
+                "body": clipped(body, 6000),
+            })
+        if not evidence or len(policies) != 1:
+            continue
         combined_evidence = "\n".join(
-            evidence_item["excerpt"] for evidence_item in evidence
+            evidence_item["body"] for evidence_item in evidence
         )
         semantic_support = (
             text_supports_claim(claim.get("claim"), combined_evidence)
@@ -733,12 +759,43 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
         valid = (
             bool(official_answer)
             and bool(evidence)
-            and bool(evidence_levels & {"official", "dknow_trusted_search_official"})
-            and trusted_provenance
             and semantic_support
         )
         if not valid:
             continue
+        source_policy = next(iter(policies))
+        if claim.get("faithfulness") != "supported":
+            evidence_indexes = [entry["referenceIndex"] for entry in evidence]
+            existing_indexes = list(claim.get("citedReferenceIndexes") or [])
+            claim["citedReferenceIndexes"] = list(dict.fromkeys(existing_indexes + evidence_indexes))
+            locally_bound = set(claim.get("locallyBoundReferenceIndexes") or [])
+            existing_answer_level = list(claim.get("answerLevelReferenceIndexes") or [])
+            claim["answerLevelReferenceIndexes"] = list(dict.fromkeys(
+                existing_answer_level
+                + [index for index in evidence_indexes if index not in locally_bound]
+            ))
+            claim["referenceBinding"] = (
+                claim.get("referenceBinding")
+                if claim.get("referenceBinding") not in (None, "", "none")
+                else "answer_level_semantic"
+            )
+            claim["sourceLevel"] = (
+                "dknow_trusted_search_official"
+                if source_policy == "dknow_official_reference"
+                else "official"
+            )
+            claim["faithfulness"] = "supported"
+            claim["reason"] = "官方材料全文语义溯源；来源原文支持当前主张"
+            existing_evidence = list(claim.get("evidence") or [])
+            existing_pairs = {
+                (entry.get("referenceIndex"), entry.get("excerpt"))
+                for entry in existing_evidence if isinstance(entry, dict)
+            }
+            claim["evidence"] = existing_evidence + [
+                {"referenceIndex": entry["referenceIndex"], "excerpt": entry["excerpt"]}
+                for entry in evidence
+                if (entry["referenceIndex"], entry["excerpt"]) not in existing_pairs
+            ]
         anchor_evidence = []
         for index, evidence_item in enumerate(evidence, 1):
             reference = references[evidence_item["referenceIndex"] - 1]
@@ -747,6 +804,7 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
                 "title": str(reference.get("title") or reference.get("url") or ""),
                 "url": str(reference.get("url") or ""),
                 "excerpt": evidence_item["excerpt"],
+                "body": evidence_item["body"],
                 "referenceIndex": evidence_item["referenceIndex"],
                 "contentAcquisition": str(reference.get("contentAcquisition") or ""),
                 "sameMaterialVerified": reference.get("sameMaterialVerified") is True,
@@ -761,13 +819,18 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
                 "zone": str(reference.get("zone") or ""),
                 "platformTrustSource": str(
                     reference.get("platformTrustSource")
-                    or "dknow_reference_capture"
+                    or (
+                        "dknow_reference_capture"
+                        if source_policy == "dknow_official_reference"
+                        else ""
+                    )
                 ),
             })
         return {
             "eligible": True,
             "platform": pid,
-            "trustedSearchUsed": True,
+            "sourcePolicy": source_policy,
+            "trustedSearchUsed": source_policy == "dknow_official_reference",
             "officialAnswer": official_answer,
             "evidence": anchor_evidence,
         }
@@ -776,7 +839,7 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
             "stage": "comparison",
             "knowledgePointId": kid,
             "platform": requested_pid or "dknowc-chat",
-            "reason": "深知晓官方材料锚点未同时满足可信来源、忠实性与原文定位要求",
+            "reason": "本次回答已有官方材料未能定位到支持当前知识点的原文",
         })
     return {"eligible": False}
 
@@ -920,8 +983,7 @@ def validate_analysis_contract(raw: dict, platforms: list[dict]) -> None:
             errors.append(f"{path}.trustedAnchor 必须是对象")
         elif isinstance(anchor, dict) and anchor.get("eligible"):
             if (
-                anchor.get("platform") not in DKNOW_OFFICIAL_PLATFORMS
-                or anchor.get("trustedSearchUsed") is not True
+                anchor.get("platform") not in platform_map
                 or not str(anchor.get("officialAnswer") or "").strip()
                 or not isinstance(anchor.get("evidence"), list)
                 or not anchor.get("evidence")
