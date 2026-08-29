@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.6",
-  "tag": "v1.1.6",
-  "sourceCommitSha": "ad9317a2e5a8cc588f8b10719e11e2787744de23",
-  "publishedAt": "2026-08-28T15:55:12+08:00",
+  "version": "1.1.7",
+  "tag": "v1.1.7",
+  "sourceCommitSha": "d553046d64aa6cfa5738cc13dd63a39191352f2d",
+  "publishedAt": "2026-08-29T21:21:10+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度溯源）",
@@ -20,50 +20,50 @@
   ],
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 295514,
+    "bytes": 298389,
     "files": 94,
-    "sha256": "2e11dc90bc28705deccd8bbd0793316342f3de8d69e5b6d8057a0e10b1647539",
-    "skillSourceTreeSha256": "465068fbafff65246b10ffe547798d995442d33de2dfbb5141165506685a1bea"
+    "sha256": "134983e349b975ffbfc8ad41af4e1b2bc27e079f2773168f5dd5eeaa59fd3833",
+    "skillSourceTreeSha256": "2b8a606227b1bb728497c17dc62b7f6ce80e85f3e490cfeb7a648997faca36de"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.6.zip",
+      "file": "llm-answer-reference-compare-v1.1.7.zip",
       "sha256": "43b4b64091e47d09efb87c5965d55c01b57ace837941961a9b2210249425ca14"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.6.zip",
-      "sha256": "b818ff67804213b4ec19995e554509ed466b4707b435882bec8208332ee92701"
+      "file": "fact-check-x-knowledge-compare-v1.1.7.zip",
+      "sha256": "9aeeeb2ab710c6254f15a6023dd46f0626b616a1e841cf83f5ae5d6708bbc7a8"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.6.zip",
-      "sha256": "8ffc36539061bb3017ae7fd7f4dd7900a721015c3183544d770e4bf7335e2175"
+      "file": "fact-check-x-authoritative-verify-v1.1.7.zip",
+      "sha256": "4f985ed216211b2f40a98d549f12254771398c21e07e64b7000b44d94a844316"
     },
     {
-      "file": "fact-check-x-unified-v1.1.6.zip",
-      "sha256": "dcf572f2f35fad6c776f1f4e85576dea6c990b4f53b6a6b28143993ba1dcff59"
+      "file": "fact-check-x-unified-v1.1.7.zip",
+      "sha256": "05175a2c37d87a8d8d48cac3175db44bab79e1d6a1c64aea0453890e491fbb72"
     },
     {
-      "file": "fact-check-x-suite-v1.1.6.zip",
-      "sha256": "dd85c7236709c056a8242b706ff73a472c740d3897ed45c2e38c542dd2f6f1f0"
+      "file": "fact-check-x-suite-v1.1.7.zip",
+      "sha256": "a89204044f0eeaa33bac6dc761ec8094219c41e603847a4aa750893711fec396"
     },
     {
-      "file": "fact-check-x-complete-v1.1.6.zip",
-      "sha256": "c7b323c8d7a8bf05c4be627118a24cc4b5adb763010dc601d545a36a6856b4ce"
+      "file": "fact-check-x-complete-v1.1.7.zip",
+      "sha256": "5ef9023eb1a0c2176fb44e8a9f8298fa46637343baaf8f2ab9ce26dbf62bc2ed"
     }
   ],
   "distribution": {
     "github": {
       "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.6",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.7",
       "assetCount": 11
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.6",
-      "versionId": 274365,
-      "submittedPackageSha256": "e0fa938afb3eafc0ad26a4c48303528cf9372135e2d7d18a1f007ac3b1320621",
-      "contentFingerprint": "dd5d5d80eeb5b97c1a0047e17ea8602adc45439f4894fe9589e20da7151402c1",
+      "version": "1.1.7",
+      "versionId": 275776,
+      "submittedPackageSha256": "afa78aa6bfc63dda7fbf53d8bfb38fdaa08365f0d419232f95a4f96586e04a8d",
+      "contentFingerprint": "6931642057113b7bb333e8ad4210f81dea4bf3a29544b1a45847530608ac4044",
       "platformSignature": "pending",
       "publisherRealNameVerified": true
     },
@@ -87,28 +87,28 @@
     "workbuddyInstalled": "verified",
     "marketplaceSignature": "pending",
     "liveFivePlatformBaseline": {
-      "status": "not_rerun_for_v1.1.6",
-      "basis": "This release changes workflow semantics and reporting; the prior five-platform baseline remains historical evidence, not a new v1.1.6 claim."
+      "status": "focused_shenzhen_replay_passed",
+      "basis": "A focused five-platform Shenzhen evidence replay passed: all five official materials were reused, with zero Trusted Search requests and attempts. This is not a new broad ranking benchmark."
     }
   },
   "supplyChain": {
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "b956f1deba03094c63f138bf9cb616d188d7cd124b7a4ce193b6e390666dc339"
+      "sha256": "64c46ad3e3ee91eb96512c9243caae016630208fafa67d034174f77bdf5eb1fd"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "f98f7717c80dfa1028361f9eaeec78204ee99493f94a5c91b395b3af9ecea333"
+      "sha256": "e04f1a3e2dbbd5bb87e1027286b9b5141524ecc6969a0e4b30da4adeade888bb"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "a83dda4b0bd4be099477153bf89bc59f7458178d99c13fae7ea325dfbb0efdfb"
+      "sha256": "74b2fa82c896af600a1271f93b05915383329ed9cd95494e5d8a58fa91d44568"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.6 is published to GitHub and submitted to SkillHub; subsequent changes require a new version."
+    "blockingReason": "v1.1.7 is published to GitHub and submitted to SkillHub; subsequent changes require a new version."
   }
 }
