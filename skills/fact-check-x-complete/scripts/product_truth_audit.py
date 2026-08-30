@@ -152,7 +152,7 @@ def expected_portable_files(run_dir: Path) -> dict[str, bytes]:
             "建议按以下顺序打开：\n"
             "1. 01-capture-report.html：各方答案汇总\n"
             "2. 02-comparison-report.html：各方答案聚合（未核验）\n"
-            "3. 03-authority-report.html：全知晓“完美答案”\n"
+            "3. 03-authority-report.html：权威核验后的最终答案\n"
             "4. 04-final-report.html：各方答案测评报告\n\n"
             "请先解压整个压缩包，再用浏览器打开 HTML 文件，以保留截图、页面存证和报告导航。\n"
         ).encode("utf-8")
@@ -189,6 +189,7 @@ def expected_portable_files(run_dir: Path) -> dict[str, bytes]:
         "comparison.json",
         "comparison-gate.json",
         "authority-gate.json",
+        "stage-checkpoints.json",
         "verification.json",
         "pipeline.json",
     )
@@ -436,6 +437,8 @@ def main() -> int:
         final_answer = verification.get("finalAnswer")
         included_ids = list((final_answer or {}).get("knowledgePointIds") or [])
         excluded_ids = list((final_answer or {}).get("excludedKnowledgePointIds") or [])
+        final_items = list((final_answer or {}).get("items") or [])
+        final_item_ids = [str(item.get("knowledgePointId") or "") for item in final_items]
         if (
             not isinstance(final_answer, dict)
             or final_answer.get("status")
@@ -445,8 +448,13 @@ def main() -> int:
             or len(excluded_ids) != len(set(excluded_ids))
             or set(included_ids) & set(excluded_ids)
             or set(included_ids + excluded_ids) != set(comparison_ids)
-            or re.sub(r"\s+", "", str(final_answer.get("answer") or ""))
-            not in authority_text
+            or final_item_ids != included_ids
+            or any(
+                not str(item.get("answer") or "").strip()
+                or re.sub(r"\s+", "", str(item.get("answer") or ""))
+                not in authority_text
+                for item in final_items
+            )
         ):
             failures.append("final_answer_not_conserved")
         comparison_map = {point.get("id"): point for point in points}
@@ -653,9 +661,8 @@ def main() -> int:
         final_cells = bound_elements(
             final_html, "data-fcx-binding-sha256"
         )
-        authority_cells = bound_elements(
-            authority_html, "data-fcx-authority-binding-sha256"
-        )
+        if "data-fcx-authority-binding-sha256" in authority_html:
+            failures.append("authority_report_contains_platform_verdict_cells")
         for point in points:
             point_id = point.get("id")
             for platform, claim in (point.get("claims") or {}).items():
@@ -692,26 +699,6 @@ def main() -> int:
                 expected_final_sha = final_binding_sha256(
                     str(point_id), str(platform), claim, verdict
                 )
-                authority_cell = authority_cells.get(cell_key)
-                if (
-                    not authority_cell
-                    or authority_cell.get("duplicate")
-                    or authority_cell.get("sha256") != expected_final_sha
-                ):
-                    failures.append(
-                        f"{point_id}.{platform}:authority_report_cell_not_bound"
-                    )
-                else:
-                    authority_cell_text = authority_cell.get("text") or ""
-                    for label, value in (
-                        ("claim", claim.get("claim")),
-                        ("answer_excerpt", claim.get("answerExcerpt")),
-                    ):
-                        compact = re.sub(r"\s+", "", str(value or "").strip())
-                        if compact and compact not in authority_cell_text:
-                            failures.append(
-                                f"{point_id}.{platform}:{label}_not_in_authority_report"
-                            )
                 if (
                     not final_cell
                     or final_cell.get("duplicate")
@@ -729,15 +716,9 @@ def main() -> int:
                             failures.append(
                                 f"{point_id}.{platform}:{label}_not_in_final_cell"
                             )
-                for field in ("claim", "answerExcerpt"):
-                    value = str(claim.get(field) or "").strip()
-                    if value and value not in final_html:
-                        failures.append(f"{point_id}.{platform}:{field}_not_in_final_report")
             anchor = point.get("trustedAnchor") or {}
             for item in anchor.get("evidence") or []:
                 excerpt = str(item.get("excerpt") or "").strip()
-                if excerpt and re.sub(r"\s+", "", excerpt) not in final_text:
-                    failures.append(f"{point_id}:anchor_evidence_not_in_final_report")
                 if not valid_url(item.get("url")):
                     failures.append(f"{point_id}:anchor_evidence_url_invalid")
             if anchor != (verification_map.get(point_id) or {}).get("trustedAnchor"):
@@ -782,10 +763,6 @@ def main() -> int:
                 if not set(verdict.get("evidenceIds") or []).issubset(evidence_ids):
                     failures.append(f"{point_id}.{platform}:verdict_evidence_id_invalid")
                 reason = str(verdict.get("reason") or "").strip()
-                if reason and re.sub(r"\s+", "", reason) not in authority_text:
-                    failures.append(
-                        f"{point_id}.{platform}:verdict_reason_not_in_authority_report"
-                    )
                 if reason and re.sub(r"\s+", "", reason) not in final_text:
                     failures.append(f"{point_id}.{platform}:verdict_reason_not_in_final_report")
             finding = str(authority.get("authoritativeFinding") or "").strip()
@@ -793,8 +770,8 @@ def main() -> int:
                 failures.append(
                     f"{point_id}:authoritative_finding_not_in_authority_report"
                 )
-            if finding and re.sub(r"\s+", "", finding) not in final_text:
-                failures.append(f"{point_id}:authoritative_finding_not_in_final_report")
+            if f'href="03-authority-report.html#{point_id}"' not in final_html:
+                failures.append(f"{point_id}:final_report_authority_link_missing")
             for evidence in authority.get("evidence") or []:
                 for field in ("title", "body"):
                     value = str(evidence.get(field) or "").strip()

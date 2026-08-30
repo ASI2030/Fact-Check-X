@@ -9,6 +9,7 @@
     "comparison.json",
     "comparison-gate.json",
     "authority-gate.json",
+    "stage-checkpoints.json",
     "authority/requests/manifest.json",
     "authority/evidence/batch.json",
     "verification.json",

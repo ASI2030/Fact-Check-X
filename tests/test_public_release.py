@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-VERSION = "1.1.7"
+VERSION = "1.1.8"
 PUBLISHED_VERSION = "1.1.7"
 WORKBUDDY_VERSION = "1.1.6"
 OFFICIAL_SHA = "134983e349b975ffbfc8ad41af4e1b2bc27e079f2773168f5dd5eeaa59fd3833"
@@ -41,7 +41,7 @@ class PublicReleaseTest(unittest.TestCase):
         self.assertTrue(overview.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
         for readme in ("README.md", "README.en.md"):
             self.assertIn(
-                "assets/fact-check-x-overview.png?v=1.1.7",
+                "assets/fact-check-x-overview.png?v=1.1.8",
                 (ROOT / readme).read_text(encoding="utf-8"),
             )
 
@@ -199,7 +199,7 @@ class PublicReleaseTest(unittest.TestCase):
                 self.assertNotIn("](references/", skill)
                 self.assertNotIn("V8", skill)
                 self.assertIn(
-                    "https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.7",
+                    "https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.8",
                     skill,
                 )
                 for platform in (

@@ -520,16 +520,16 @@ def main() -> int:
             str(authority_report),
         ])
         authority_html = authority_report.read_text(encoding="utf-8")
-        assert f"全知晓“完美答案”（问题：{results['question'].strip()}）" in authority_html
-        assert "完美答案（已核验，可权威溯源）" in authority_html
+        assert f"权威核验报告（问题：{results['question'].strip()}）" in authority_html
+        assert "权威核验后的最终答案" in authority_html
         assert "官方材料" in authority_html
-        assert "深知晓" in authority_html and "豆包" in authority_html
-        assert "data-fcx-authority-binding-sha256" in authority_html
+        assert "各平台裁决" not in authority_html
+        assert "data-fcx-authority-binding-sha256" not in authority_html
         assert ".evidence { border: 1px solid #d7dde7; border-radius: 5px; min-width: 0;" in authority_html
         assert "overflow-wrap: anywhere;" in authority_html
         assert "word-break: break-word;" in authority_html
         assert k1["authoritativeFinding"] in authority_html
-        assert k1["verdicts"]["doubao"]["reason"] in authority_html
+        assert k1["verdicts"]["doubao"]["reason"] not in authority_html
         boundary_verification = json.loads(json.dumps(verification, ensure_ascii=False))
         boundary_verification["finalAnswer"] = {
             "status": "insufficient_evidence",
@@ -561,8 +561,10 @@ def main() -> int:
         run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(verification_path), "--output", str(report)])
         report_html = report.read_text(encoding="utf-8")
         baseline_html = (ROOT / "references" / "final-report-baseline.html").read_text(encoding="utf-8")
-        for heading in ("① 参考性", "② 直接答案逐条判定", "②-补 补充参考分析", "③ 关键发现", "④ 原始答案与参考文献（存证）", "⑤ 指标口径速查", "⑥ 评测元信息"):
+        for heading in ("① 参考性", "② 直接答案逐条判定", "②-补 补充参考分析", "③ 原始答案与参考文献（存证）", "④ 指标口径速查", "⑤ 评测元信息"):
             assert heading in baseline_html and heading in report_html
+        assert "③ 关键发现" not in report_html
+        assert "03-authority-report.html#K1" in report_html
         assert "https://gjj.gz.gov.cn/example" in report_html
         assert "官方原站" in report_html
         assert "官方来源" in report_html
@@ -648,7 +650,8 @@ def main() -> int:
             str(long_anchor_report),
         ])
         long_anchor_html = long_anchor_report.read_text(encoding="utf-8")
-        assert long_anchor_body in long_anchor_html
+        assert long_anchor_body not in long_anchor_html
+        assert "03-authority-report.html#K1" in long_anchor_html
         assert "该平台未覆盖此知识点。" in long_anchor_html
 
         reference_anchor_verification = json.loads(
@@ -675,8 +678,8 @@ def main() -> int:
             str(reference_anchor_report),
         ])
         reference_anchor_html = reference_anchor_report.read_text(encoding="utf-8")
-        assert "官方依据原文" in reference_anchor_html
-        assert long_anchor_body in reference_anchor_html
+        assert "查看第三步权威证据" in reference_anchor_html
+        assert long_anchor_body not in reference_anchor_html
 
         fabricated_verification = json.loads(json.dumps(verification, ensure_ascii=False))
         fabricated_authority = fabricated_verification["knowledgePoints"][0]["authority"]
@@ -708,7 +711,7 @@ def main() -> int:
         run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(evidence_mapping_path), "--output", str(evidence_mapping_report)])
         evidence_mapping_html = evidence_mapping_report.read_text(encoding="utf-8")
         assert "https://example.gov.cn/matched" in evidence_mapping_html
-        assert "支持当前知识点的正文" in evidence_mapping_html
+        assert "支持当前知识点的正文" not in evidence_mapping_html
         assert "https://example.gov.cn/unrelated" not in evidence_mapping_html
 
         k2_evidence = out / "K2-evidence.json"

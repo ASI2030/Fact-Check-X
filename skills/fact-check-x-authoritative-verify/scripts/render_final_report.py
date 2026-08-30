@@ -74,6 +74,9 @@ def attached_provenance(claim: dict, platform: dict) -> list[dict]:
                 "platform_url": platform_url,
                 "origin_attribution_status": str(reference.get("originAttributionStatus") or ""),
                 "origin_attribution_reason": str(reference.get("originAttributionReason") or ""),
+                "source_acquisition_status": str(reference.get("sourceAcquisitionStatus") or ""),
+                "source_acquisition_error": str(reference.get("sourceAcquisitionError") or ""),
+                "source_resolved_url": str(reference.get("sourceResolvedUrl") or ""),
                 "excerpt": str(evidence.get(index) or fallback_excerpt),
             }
         )
@@ -377,6 +380,9 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
                         "originalUrl",
                         "original_url",
                         "contentAcquisition",
+                        "sourceAcquisitionStatus",
+                        "sourceAcquisitionError",
+                        "sourceResolvedUrl",
                         "originAttributionStatus",
                         "originAttributionReason",
                         "sameMaterialVerified",

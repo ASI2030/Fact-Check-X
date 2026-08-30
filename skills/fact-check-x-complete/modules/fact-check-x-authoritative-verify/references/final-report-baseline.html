@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>各方答案测评报告</title><style>
 body{font-family:-apple-system,"PingFang SC",sans-serif;max-width:1240px;margin:24px auto;padding:0 24px;color:#1f2937;line-height:1.6}
 h1{color:#1e3a8a;border-bottom:3px solid #e5e7eb;padding-bottom:10px}
@@ -174,10 +174,7 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
       <div class="muted small" style="padding:4px 0">无</div>
     </div>
 
-<h2>③ 关键发现</h2>
-<ol class="f"><li>K1：广州无租赁合同或合同未备案时每人每月住房公积金最高提取额度。权威结论：广州无合同租房提取每人每月最高1400元。</li></ol>
-
-<h2>④ 原始答案与参考文献（存证）</h2>
+<h2>③ 原始答案与参考文献（存证）</h2>
 <p class="muted small">评测的原始凭证：两家 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对——包括拆解是否遗漏、该家说法（claim）是否忠实于原文。引用旁标注来源类型，并使用当前版本统一口径。</p>
 
   <details class="rawd">
@@ -193,7 +190,7 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
     <ol class="reflist"><li><span class="bcom">非官方来源</span> <a href="https://example.com/article" target="_blank">租房提取介绍</a></li></ol>
   </details>
 
-<h2 id="metricdoc">⑤ 指标口径速查</h2>
+<h2 id="metricdoc">④ 指标口径速查</h2>
 <table class="doc">
   <thead><tr><th style="width:120px">指标</th><th style="width:110px">分母</th><th>定义</th><th style="width:30%">怎么读</th></tr></thead>
   <tbody><tr><td><b>覆盖率</b></td><td>合法直接答案知识点 N</td><td>答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少</td><td class="muted">只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖</td></tr><tr><td><b>遗漏率</b></td><td>合法直接答案知识点 N</td><td>该家没答到的合法直接答案知识点占比</td><td class="muted">与覆盖率互补，相加=100%</td></tr><tr><td><b>准确率</b></td><td>该家直接答案覆盖数</td><td>覆盖的直接答案里「有据且正确」的比例 = 直接准确 + 间接准确</td><td class="muted">衡量说出口的话靠不靠谱；无据碰对不计入</td></tr><tr><td><b>直接准确率</b></td><td>该家直接答案覆盖数</td><td>声明与其所附官方依据（官方原站或官方来源）一致；含算术级显然推导（如正文&#x27;2000上增加40%&#x27;→答案&#x27;2800&#x27;）</td><td class="muted">最高可信级：答案自带官方出处，可直接自验</td></tr><tr><td><b>间接准确率</b></td><td>该家直接答案覆盖数</td><td>声明忠实于所附非官方材料，且事后经官方源独立验证正确</td><td class="muted">仅当 AI 用了非官方材料；内容正确但出处不硬</td></tr><tr><td><b>幻觉率</b></td><td>该家直接答案覆盖数</td><td>覆盖的直接答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）</td><td class="muted">与准确率互补</td></tr><tr><td><b>巧合式幻觉率</b></td><td>该家直接答案覆盖数</td><td>声明无依据或与所附材料不符，但经官方源验证结果碰巧正确</td><td class="muted">结果对但行为不可靠（运气），故不计入准确率</td></tr><tr><td><b>误导式幻觉率</b></td><td>该家直接答案覆盖数</td><td>经官方源验证，声明的结果是错误的</td><td class="muted">最危险的一类：用户照做会被误导</td></tr></tbody>
@@ -206,7 +203,7 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
 
 
 
-<h2>⑥ 评测元信息（可复现性）</h2>
+<h2>⑤ 评测元信息（可复现性）</h2>
 <table class="meta"><tbody>
   <tr><td>评测报告生成时间</td><td>2026-07-22 23:43</td></tr>
   <tr><td>原始答案抓取数据</td><td>legacy-result.json（文件时间 2026-07-22 23:43）· 答案与参考文献已在 ④ 全文存证</td></tr>

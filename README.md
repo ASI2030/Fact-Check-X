@@ -5,7 +5,7 @@
 对一个或多个 AI 的完整回答与引用进行事实核验：无损采集原回答，结构化比较关键事实，逐点核验权威证据，再评估各平台表现。最终答案只是核验产物之一，原始证据、冲突和证据边界全程可追溯。
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.7" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.8" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
 </p>
 
 ## 三分钟开始
@@ -24,7 +24,7 @@ npx skills add ASI2030/Fact-Check-X --skill fact-check-x-complete
 
 这条命令适用于 Codex、Claude Code、Cursor、Cline 等兼容 Agent Skills 的载体。公开详情页见 [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete)。
 
-完整技能也已收录于 [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) 和 [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete)。两个目录都指向本仓库的 `fact-check-x-complete` 源码目录；发布前已验证从公开地址安装得到的 94 个文件与正式技能树一致。
+完整技能也已收录于 [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) 和 [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete)。两个目录都指向本仓库的 `fact-check-x-complete` 源码目录；正式发布前会核对公开安装树与发布源码的一致性。
 
 ### 作为 Claude Code 插件安装
 
@@ -51,8 +51,8 @@ claude plugin install fact-check-x@fact-check-x-marketplace
 | 深知晓 | `dknowc-chat` | 标准回答、引用和官方来源 |
 | 深知晓（深度溯源） | `dknowc-deep-research` | 普通回答完成后启动深度研究，作为独立平台结果 |
 | 豆包 | `doubao` | 完整回答、引用和页面存证 |
-| 腾讯元宝 | `yuanbao` | 完整回答、引用和页面存证 |
-| DeepSeek | `deepseek` | 完整回答、引用和页面存证 |
+| 腾讯元宝 | `yuanbao` | 完整回答、引用、逐条来源正文和页面存证 |
+| DeepSeek | `deepseek` | 完整回答、引用、逐条来源正文和页面存证 |
 | 通义千问 | `qianwen` | 完整回答、引用和页面存证 |
 
 平台集合完全按用户输入动态选择：
@@ -69,10 +69,10 @@ claude plugin install fact-check-x@fact-check-x-marketplace
 
 1. **各方答案汇总**：完整回答、参考文献、引用关系、截图和 HTML 存证。
 2. **各方答案聚合（未核验）**：原子事实、各家主张、共识、冲突与引用忠实性。
-3. **全知晓“完美答案”**：逐知识点核验权威证据，只把证据支持的内容写入“完美答案（已核验，可权威溯源）”；无法证实也无法证伪的内容单列供参考。
-4. **各方答案测评报告**：准确性、完整性、来源质量、关键发现和完整报告包。
+3. **权威核验后的最终答案**：逐知识点展示证据支持的结论、权威来源和证据边界，不在本阶段计算平台评分。
+4. **各方答案测评报告**：只读取第三步锁定结果，展示准确性、完整性、来源质量和平台差异，不重新计算权威结论。
 
-默认每一步都让用户选择继续、修正或结束。用户一开始明确要求完整跑完时可以连续执行，但四份产物仍会逐步交付。
+默认每一步都让用户选择继续、修正或结束。程序用一次性令牌和产物摘要执行硬门禁，未确认或产物被修改时不能进入下一步。用户一开始明确要求完整跑完时可以连续执行，但四份产物和检查点仍会按顺序产生。
 
 ## API 与费用
 
@@ -146,8 +146,8 @@ claude plugin install fact-check-x@fact-check-x-marketplace
 flowchart LR
     A["各方答案汇总<br/>回答、来源、截图、页面存证"]
     B["各方答案聚合<br/>原子主张、差异、引用忠实性"]
-    C["全知晓完美答案<br/>逐点搜索、证据绑定、平台裁决"]
-    D["各方答案测评报告<br/>四份报告与完整报告包"]
+    C["权威核验后的最终答案<br/>权威结论、证据与边界"]
+    D["各方答案测评报告<br/>锁定结论上的平台表现"]
     A -->|"capture-gate"| B
     B -->|"comparison-gate"| C
     C -->|"authority-gate"| D
@@ -181,7 +181,7 @@ flowchart LR
 
 本阶段结论仍是“未经过外部权威核验的结构化对比”，不得被描述成最终事实结论。
 
-### 第三步：全知晓“完美答案”
+### 第三步：权威核验后的最终答案
 
 每个知识点独立生成：
 
@@ -197,6 +197,8 @@ flowchart LR
 - `verification.json`
 - `03-authority-report.html`
 
+第三步只负责最终答案、权威证据和证据边界。完成后会锁定 `verification.json` 与报告摘要；第四步只能读取这份锁定结果。
+
 ### 第四步：各方答案测评报告
 
 只有权威核验状态为 `completed` 才生成最终报告：
@@ -205,7 +207,9 @@ flowchart LR
 - `pipeline.json`
 - `05-complete-report-package.zip`
 
-默认交互模式下，每一步完成后先交付本阶段产物，再让用户选择继续、修正或停止。用户一开始明确要求连续完成时可以自动推进，但登录、验证码、程序门禁和技术故障仍不能跳过；证据不足作为明确边界继续进入第四步。
+第四步只负责平台裁决、指标和表现比较，不重写第三步报告或权威结论。
+
+默认交互模式下，每一步完成后先交付本阶段产物，再让用户选择继续、修正或停止；确认记录保存在 `stage-checkpoints.json`。用户一开始明确要求连续完成时可以用 `--execution-mode full-auto` 自动推进，但四个检查点仍会写入，登录、验证码、程序门禁和技术故障仍不能跳过；证据不足作为明确边界继续进入第四步。
 
 ## 动态平台数量 N ≥ 1
 
@@ -544,6 +548,18 @@ python3 scripts/fact_check_x.py prepare-comparison \
   --run-dir "$FCX_RUN_DIR"
 ```
 
+默认交互模式会返回本阶段的一次性确认令牌。展示并检查 `01-capture-report.html` 后，用户确认继续时执行：
+
+```bash
+python3 scripts/fact_check_x.py acknowledge-stage \
+  --run-dir "$FCX_RUN_DIR" \
+  --stage capture \
+  --token "<本阶段返回的令牌>" \
+  --decision continue
+```
+
+后续 `comparison` 与 `authority` 阶段同样确认。只有用户最初已明确要求完整连续执行时，才给 `prepare-comparison` 增加 `--execution-mode full-auto`。
+
 当前宿主智能体读取 `comparison-task.json`，完成原子知识点分析并写出 `comparison-analysis.json`，然后：
 
 ```bash
@@ -648,6 +664,7 @@ fact-check-x-run/
 │   ├── results/
 │   └── batch.json
 ├── authority-gate.json
+├── stage-checkpoints.json
 ├── verification.json
 ├── pipeline.json
 ├── 01-capture-report.html

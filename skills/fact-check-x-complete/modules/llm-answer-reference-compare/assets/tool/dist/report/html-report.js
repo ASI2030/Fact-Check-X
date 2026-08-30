@@ -901,10 +901,23 @@ function renderReferenceItem(platform, reference, index) {
         : reference.citationScope === "inline_and_global"
             ? `<span class="badge neutral">间接查找</span> `
             : "";
+    const acquisition = reference.sourceAcquisitionStatus === "captured"
+        ? `<span class="badge neutral">已打开并存证正文</span> `
+        : reference.sourceAcquisitionStatus === "blocked"
+            ? `<span class="badge warning">来源访问受阻</span> `
+            : reference.sourceAcquisitionStatus === "failed"
+                ? `<span class="badge warning">来源正文未取得</span> `
+                : "";
     const snippet = reference.snippet
         ? `<details class="ref-snippet"><summary>${reference.snippetProvenance === "answer_context" ? "查看回答上下文（非来源原文）" : "查看摘录"}</summary><p>${escapeHtml(reference.snippet)}</p></details>`
         : "";
-    return `<li id="${referenceId(platform.platform, reference)}">${marker}${sourceBadge}${attribution}${scope}<a href="${escapeAttribute(reference.url)}">${escapeHtml(title)}</a>${originLink}${platformLink}${snippet}</li>`;
+    const answerContext = reference.answerContext
+        ? `<details class="ref-snippet"><summary>查看回答上下文（非来源原文）</summary><p>${escapeHtml(reference.answerContext)}</p></details>`
+        : "";
+    const acquisitionError = reference.sourceAcquisitionError
+        ? `<p class="empty-state">取证状态：${escapeHtml(reference.sourceAcquisitionError)}</p>`
+        : "";
+    return `<li id="${referenceId(platform.platform, reference)}">${marker}${sourceBadge}${attribution}${scope}${acquisition}<a href="${escapeAttribute(reference.url)}">${escapeHtml(title)}</a>${originLink}${platformLink}${snippet}${answerContext}${acquisitionError}</li>`;
 }
 function answerHasInlineCitations(platform) {
     const markers = new Set(platform.references

@@ -5,6 +5,7 @@ export const ReferenceSchema = z.object({
     normalizedUrl: z.string().min(1),
     marker: z.string().optional(),
     text: z.string().optional(),
+    answerContext: z.string().optional(),
     snippet: z.string().optional(),
     snippetProvenance: z.enum([
         "source_surface",
@@ -39,6 +40,13 @@ export const ReferenceSchema = z.object({
         "direct_pdf_extraction",
         "direct_page_extraction"
     ]).optional(),
+    sourceResolvedUrl: z.string().optional(),
+    sourceAcquisitionStatus: z.enum([
+        "captured",
+        "blocked",
+        "failed"
+    ]).optional(),
+    sourceAcquisitionError: z.string().optional(),
     citationScope: z.enum(["inline", "global", "inline_and_global"]).optional()
 });
 export const SourceMentionSchema = z.object({

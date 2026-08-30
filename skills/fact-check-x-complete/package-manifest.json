@@ -1,6 +1,6 @@
 {
   "schemaVersion": "fact-check-x/public-workbuddy-package@1",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "entrySkill": "fact-check-x-complete",
   "bundledModules": [
     "llm-answer-reference-compare",

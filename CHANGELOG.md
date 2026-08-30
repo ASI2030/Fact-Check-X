@@ -4,6 +4,15 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.8] - 2026-08-31
+
+- Open DeepSeek and Tencent Yuanbao citation targets and capture source bodies before treating them as textual evidence; answer-page context and failed or blocked acquisition remain distinct non-evidence states.
+- Wait through Tencent Yuanbao's interim search state, dismiss its first-run guide safely, and keep numbered list items or later-paragraph citations from being rebound as evidence for an earlier claim.
+- Add executable stage checkpoints with one-time acknowledgement tokens and artifact hashes for interactive runs, while retaining ordered checkpoints in explicitly requested full-auto runs.
+- Make stage three the sole owner of the authoritative final answer, evidence and gaps; stage four consumes the locked result for platform evaluation without recomputation or report rewriting.
+- Unify four-report navigation and information hierarchy, visually separate direct answers from supplemental material, and fix the stage-four mobile viewport.
+- Add frozen feedback replay, real-browser source capture, immutable-delivery, checkpoint and clean-package regression coverage.
+
 ## [1.1.7] - 2026-08-29
 
 - Reuse claim-supporting references returned by 深知晓 or 深知晓（深度溯源）, plus `gov.cn` references returned by other selected platforms, as zero-request official evidence before Trusted Search.

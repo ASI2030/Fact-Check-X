@@ -68,7 +68,20 @@ export function renderMarkdownReport(run) {
                 const attribution = reference.originAttributionStatus === "trusted_search_official_url"
                     ? "（已返回来源链接）"
                     : "";
-                lines.push(`${index + 1}. ${marker}【${source.label}】${attribution}${scope}[${title}](${reference.url})${origin}${platformLink}${snippetKind}${snippet}`);
+                const acquisition = reference.sourceAcquisitionStatus === "captured"
+                    ? "（已打开并存证正文）"
+                    : reference.sourceAcquisitionStatus === "blocked"
+                        ? "（来源访问受阻）"
+                        : reference.sourceAcquisitionStatus === "failed"
+                            ? "（来源正文未取得）"
+                            : "";
+                const answerContext = reference.answerContext
+                    ? ` — 回答上下文（非来源原文）：${reference.answerContext}`
+                    : "";
+                const acquisitionError = reference.sourceAcquisitionError
+                    ? ` — 取证状态：${reference.sourceAcquisitionError}`
+                    : "";
+                lines.push(`${index + 1}. ${marker}【${source.label}】${attribution}${scope}${acquisition}[${title}](${reference.url})${origin}${platformLink}${snippetKind}${snippet}${answerContext}${acquisitionError}`);
             });
             lines.push("");
         }

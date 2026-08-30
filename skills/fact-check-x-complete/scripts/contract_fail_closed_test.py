@@ -19,7 +19,10 @@ if not FIXTURE.is_dir():
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([sys.executable, str(PIPELINE), *args], text=True, capture_output=True, check=False)
+    values = list(args)
+    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
+        values.extend(["--execution-mode", "full-auto"])
+    return subprocess.run([sys.executable, str(PIPELINE), *values], text=True, capture_output=True, check=False)
 
 
 def main() -> int:

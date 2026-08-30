@@ -46,6 +46,8 @@ def main() -> int:
         assert "官方来源" in html
         assert "可信搜索官方原站" not in html
         assert "非官方来源" in html
+        assert "role-direct" in html and "role-reference" in html
+        assert "role-badge" in html
         assert "trusted_repository" not in html
         assert 'href="01-capture-report.html"' in html
         assert 'href="03-authority-report.html"' in html
@@ -395,6 +397,68 @@ def main() -> int:
         assert semantic_claim["faithfulness"] == "supported"
         assert semantic_claim["reason"] == "全文语义溯源；来源原文支持当前主张"
 
+        no_backfill_source = json.loads(
+            (FIXTURES / "results.json").read_text(encoding="utf-8")
+        )
+        no_backfill_source["platforms"][1]["answerMarkdown"] = (
+            "2.深圳夫妻投靠目前仍执行双2年标准。\n"
+            "补充：征求意见稿曾拟将夫妻投靠由2年调整为5年。【2】"
+        )
+        no_backfill_source["platforms"][1]["references"] = [
+            {
+                "title": "深圳公安现行办理条件",
+                "url": "https://ga.sz.gov.cn/current",
+                "marker": "1",
+                "content": "被投靠人登记为本市常住户口时间及夫妻结婚登记时间均满2年。",
+                "citationScope": "inline",
+            },
+            {
+                "title": "户籍迁入规定征求意见稿",
+                "url": "https://example.com/draft",
+                "marker": "2",
+                "content": "征求意见稿拟将夫妻投靠由2年调整为5年。",
+                "citationScope": "inline",
+            },
+        ]
+        no_backfill_source_path = out / "no-backfill-results.json"
+        no_backfill_source_path.write_text(
+            json.dumps(no_backfill_source, ensure_ascii=False), encoding="utf-8"
+        )
+        no_backfill_analysis = json.loads(
+            (FIXTURES / "comparison-analysis.json").read_text(encoding="utf-8")
+        )
+        no_backfill_claim = no_backfill_analysis["knowledgePoints"][0]["claims"]["doubao"]
+        no_backfill_claim["claim"] = "深圳夫妻投靠目前仍执行双2年标准"
+        no_backfill_claim["answerExcerpt"] = "2.深圳夫妻投靠目前仍执行双2年标准。"
+        no_backfill_claim["citedReferenceIndexes"] = []
+        no_backfill_claim["answerLevelReferenceIndexes"] = [1]
+        no_backfill_claim["evidence"] = [
+            {
+                "referenceIndex": 1,
+                "excerpt": "被投靠人登记为本市常住户口时间及夫妻结婚登记时间均满2年",
+            }
+        ]
+        no_backfill_analysis_path = out / "no-backfill-analysis.json"
+        no_backfill_analysis_path.write_text(
+            json.dumps(no_backfill_analysis, ensure_ascii=False), encoding="utf-8"
+        )
+        no_backfill_result = out / "no-backfill-comparison.json"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(no_backfill_source_path),
+            "--analysis",
+            str(no_backfill_analysis_path),
+            "--output",
+            str(no_backfill_result),
+        ])
+        no_backfill_data = json.loads(no_backfill_result.read_text(encoding="utf-8"))
+        bounded_claim = no_backfill_data["knowledgePoints"][0]["claims"]["doubao"]
+        assert bounded_claim["locallyBoundReferenceIndexes"] == []
+        assert bounded_claim["citedReferenceIndexes"] == [1]
+        assert bounded_claim["answerLevelReferenceIndexes"] == [1]
+
         answer_context_source = json.loads(
             answer_level_source_path.read_text(encoding="utf-8")
         )
@@ -538,7 +602,7 @@ def main() -> int:
                     "dknowc-deep-research": {
                         "covered": True,
                         "claim": "公积金贷款单独申请最高70万元、共同申请最高130万元，首套上浠60%，家庭最高可达351万元",
-                        "answerExcerpt": "单独申请：最高70万元【6】\n共同申请：最高130万元【6】\n购买首套住房：上浠60%【6】",
+                        "answerExcerpt": "单独申请：最高70万元【6】\n共同申请：最高130万元【6】\n购买首套住房：上浠60%【6】\n家庭最高额度可达351万元【5】",
                         "citedReferenceIndexes": [],
                         "answerLevelReferenceIndexes": [],
                         "faithfulness": "insufficient",

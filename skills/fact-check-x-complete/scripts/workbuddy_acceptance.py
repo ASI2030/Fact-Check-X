@@ -28,8 +28,11 @@ if not RESULTS_FIXTURE.exists():
 
 
 def run(*arguments: str, environment: dict[str, str] | None = None) -> dict:
+    values = list(arguments)
+    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
+        values.extend(["--execution-mode", "full-auto"])
     process = subprocess.run(
-        [sys.executable, str(PIPELINE), *arguments],
+        [sys.executable, str(PIPELINE), *values],
         text=True,
         capture_output=True,
         check=False,
@@ -42,8 +45,11 @@ def run(*arguments: str, environment: dict[str, str] | None = None) -> dict:
 
 
 def run_blocked(*arguments: str, environment: dict[str, str] | None = None) -> dict:
+    values = list(arguments)
+    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
+        values.extend(["--execution-mode", "full-auto"])
     process = subprocess.run(
-        [sys.executable, str(PIPELINE), *arguments],
+        [sys.executable, str(PIPELINE), *values],
         text=True,
         capture_output=True,
         check=False,
@@ -187,6 +193,7 @@ def main() -> int:
             "fact-check-x-report/03-authority-report.html",
             "fact-check-x-report/04-final-report.html",
             "fact-check-x-report/data/pipeline.json",
+            "fact-check-x-report/data/stage-checkpoints.json",
         }.issubset(package_names),
         "portablePackageNavigation": b'href="01-capture-report.html"' in packaged_comparison
         and b'href="03-authority-report.html"' in packaged_comparison
@@ -213,6 +220,11 @@ def main() -> int:
         and delivered.get("artifacts", {}).get("report") == str((run_dir / "report.html").resolve()),
         "pipelineCompleted": pipeline.get("status") == "completed" and delivered.get("status") == "completed",
         "authorityGateFinalized": load(run_dir / "authority-gate.json").get("status") == "finalized",
+        "stageCheckpointsRecorded": all(
+            (load(run_dir / "stage-checkpoints.json").get("stages") or {}).get(stage, {}).get("status")
+            in {"auto_acknowledged", "acknowledged", "completed"}
+            for stage in ("capture", "comparison", "authority", "evaluation")
+        ),
         "trustedSearchConfigurationPrompt": configuration_gate.get("status") == "configuration_required"
         and configuration_gate.get("action") == "configure_trusted_search"
         and "您只需完成登录" in configuration_gate.get("userPrompt", "")

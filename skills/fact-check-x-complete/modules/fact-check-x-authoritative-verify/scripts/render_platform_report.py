@@ -358,16 +358,25 @@ def prov_html(e, shared_exc=""):
         elif ex:
             body = f'<blockquote>{escape(ex[:200])}</blockquote>'
         else:
-            body = '<span class="muted small"> （正文未取到，仅标题判定）</span>'
+            acquisition = pv.get("source_acquisition_status", "")
+            if acquisition == "blocked":
+                body = '<span class="muted small"> （来源访问受阻，未取得正文）</span>'
+            elif acquisition == "failed":
+                body = '<span class="muted small"> （来源正文采集失败，未作为正文证据）</span>'
+            else:
+                body = '<span class="muted small"> （来源正文未取得，未作为正文证据）</span>'
         parts.append(f'<div class="prov"><span class="ptag">所附依据 · {escape(binding)}</span>{link}{govlink}{platform_link}{body}</div>')
     return "".join(parts) or '<span class="muted small">该家未附依据</span>'
 
 
 def official_basis_html(k):
-    """答案知识点列：该知识点的【共享官方依据】——全家共用一份真值证据，展示一次。
-    含：官方验证(通过/发现错误/官方源未见明文) + 权威核验页，或『官方无明文·阴性证据』。"""
+    """第四步只引用第三步已锁定的权威依据，不再复制整段原文。"""
     ob = k.get("official_basis") or {}
     parts = []
+    authority_ref = (
+        f'<a class="govlink" href="03-authority-report.html#{escape(str(k.get("id") or ""))}">'
+        '[查看第三步权威证据]</a>'
+    )
     res = str(ob.get("verify_result", "") or "")
     gov = ob.get("gov_url", "")
     ex = ob.get("excerpt", "") or ""
@@ -387,8 +396,7 @@ def official_basis_html(k):
         govlink = f' <a class="govlink" href="{_safe_href(gov)}" target="_blank">[权威核验页]</a>' if gov else ''
         srcid = f'（{escape(sid)}）' if sid not in ("—", "", "None") else ''
         parts.append(f'<div class="prov obasis"><span class="ptag vtag">{tag}</span>'
-                     f'<span class="muted small">{vtxt}</span>{srcid}{govlink}'
-                     + (f'<blockquote>{escape(ex)}</blockquote>' if ex else '') + '</div>')
+                     f'<span class="muted small">{vtxt}</span>{srcid}{govlink}{authority_ref}</div>')
     # 官方无明文/待核验：阴性证据（划定边界的原文 + 主文件回链）
     tsk = ob.get("truth_state_K")
     ne = ob.get("null_evidence") or {}
@@ -403,9 +411,7 @@ def official_basis_html(k):
         chtxt = f'检索通道 {ch} · ' if ch else ''
         label = "官方无明文·阴性证据" if tsk == "官方无明文" else "待核验·检索声明"
         parts.append(f'<div class="prov obasis"><span class="ptag ntag">{label}</span>{confbadge} '
-                     f'<span class="muted small">{chtxt}</span>{govlinks}'
-                     + (f'<blockquote>{escape(exn[:200])}</blockquote>' if exn else
-                        '<span class="muted small"> （主文件已命中，结构性沉默/明文未提及该情形）</span>') + '</div>')
+                     f'<span class="muted small">{chtxt}</span>{govlinks}{authority_ref}</div>')
     return "".join(parts)
 
 def tier_pill(k):
@@ -518,13 +524,13 @@ def reference_analysis_html():
             ob = (k.get("official_basis") or {})
             gov = ob.get("gov_url", "")
             govlink = f' <a class="govlink" href="{_safe_href(gov)}" target="_blank">[权威核验页]</a>' if gov else ''
-            basis_excerpt = str(ob.get("excerpt") or "").strip()
             basis_html = ""
-            if basis_excerpt and kid not in rendered_basis:
+            if kid not in rendered_basis:
                 rendered_basis.add(kid)
                 basis_html = (
-                    '<div class="prov obasis"><span class="ptag vtag">官方依据原文</span>'
-                    f'<blockquote>{escape(basis_excerpt)}</blockquote></div>'
+                    '<div class="prov obasis"><span class="ptag vtag">权威依据</span>'
+                    f'<a class="govlink" href="03-authority-report.html#{escape(str(kid))}">'
+                    '[查看第三步权威证据]</a></div>'
                 )
             rows.append(
                 f'<div class="refitem"{attrs}><b style="color:{scolor}">{escape(sname)}</b>'
@@ -618,7 +624,7 @@ appeal_block = ('''
   <p class="small">如掌握相关官方一手依据，可通过申诉通道提交，平台将复核、更正并留痕（参照征信业异议流程）。</p>
 </div>''' if _appeal_needed else '')
 
-html = f'''<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+html = f'''<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>各方答案测评报告（问题：{escape(query)}）</title><style>
 *{{box-sizing:border-box}}
 body{{font-family:-apple-system,"PingFang SC",sans-serif;max-width:1440px;width:100%;margin:24px auto;padding:0 24px;color:#1f2937;line-height:1.6}}
@@ -771,14 +777,11 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
 <p class="muted small">下列内容<b>不计入覆盖率/准确率</b>——只回答三个问题：① 覆盖外是否还提供了有价值的正确参考；② 是否有幻觉式的参考提醒；③ <b>无论直接答案还是补充参考，是否有任何官方材料都查不到的凭空编造</b>（直接区不再显示编造点，全部在此列出）。</p>
 {reference_analysis_html()}
 
-<h2>③ 关键发现</h2>
-<ol class="f">{"".join(f"<li>{escape(x)}</li>" for x in findings)}</ol>
-
-<h2>④ 原始答案与参考文献（存证）</h2>
+<h2>③ 原始答案与参考文献（存证）</h2>
 <p class="muted small">评测的原始凭证：各平台 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对——包括拆解是否遗漏、该家说法（claim）是否忠实于原文。引用旁标注来源类型，并使用当前版本统一口径。</p>
 {"".join(raw_block(sk, sn, col) for sk, sn, col in SIDE)}
 
-<h2 id="metricdoc">⑤ 指标口径速查</h2>
+<h2 id="metricdoc">④ 指标口径速查</h2>
 <table class="doc">
   <thead><tr><th style="width:120px">指标</th><th style="width:110px">分母</th><th>定义</th><th style="width:30%">怎么读</th></tr></thead>
   <tbody>{metric_doc_rows()}</tbody>
@@ -789,7 +792,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   <tbody>{cat_doc_rows()}</tbody>
 </table>
 
-{("<h2>⑦ 申诉记录（复核更正留痕）</h2>" +
+{("<h2>⑤-补 申诉记录（复核更正留痕）</h2>" +
   "<p class='muted small'>下列结论经申诉复核更正，对应知识点带「⚖ 经申诉更正」标记。更正可双向（推翻错罚或错奖），全程留痕。</p>" +
   "<table class='ap'><thead><tr><th>申诉号</th><th>对象</th><th>更正</th><th>提交方</th><th>复核</th><th>依据/理由</th></tr></thead><tbody>" +
   "".join(
@@ -802,7 +805,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
     for x in APPEALS) +
   "</tbody></table>") if APPEALS else ""}
 
-<h2>⑥ 评测元信息（可复现性）</h2>
+<h2>⑤ 评测元信息（可复现性）</h2>
 <table class="meta"><tbody>{meta_rows}</tbody></table>
 {appeal_block}
 

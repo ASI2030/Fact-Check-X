@@ -91,6 +91,7 @@ def validate(verification: dict) -> None:
     point_ids = [str(point.get("id") or "") for point in points]
     included_ids = list((final_answer or {}).get("knowledgePointIds") or [])
     excluded_ids = list((final_answer or {}).get("excludedKnowledgePointIds") or [])
+    answer_items = list((final_answer or {}).get("items") or [])
     if (
         not isinstance(final_answer, dict)
         or final_answer.get("status") not in {"verified", "partially_verified", "insufficient_evidence"}
@@ -99,6 +100,15 @@ def validate(verification: dict) -> None:
         or len(excluded_ids) != len(set(excluded_ids))
         or set(included_ids) & set(excluded_ids)
         or set(included_ids + excluded_ids) != set(point_ids)
+        or (
+            answer_items
+            and [str(item.get("knowledgePointId") or "") for item in answer_items]
+            != included_ids
+        )
+        or any(
+            not compact(item.get("title")) or not compact(item.get("answer"))
+            for item in answer_items
+        )
     ):
         raise ValueError("权威报告最终答案与已纳入、证据不足知识点的绑定不完整")
     for point in points:
@@ -244,7 +254,7 @@ def render_platform_rows(point: dict, platforms: list[dict]) -> str:
     return "".join(rows)
 
 
-def render_point(point: dict, platforms: list[dict]) -> str:
+def render_point(point: dict) -> str:
     authority = point.get("authority") or {}
     mode = (
         "已有官方材料（免查）"
@@ -265,14 +275,22 @@ def render_point(point: dict, platforms: list[dict]) -> str:
         "</div>"
         '<h3>权威证据</h3>'
         f'<div class="evidence-grid">{render_evidence(authority)}</div>'
-        '<h3>各平台裁决</h3>'
-        '<div class="table-wrap"><table>'
-        "<thead><tr><th>平台</th><th>平台主张与原文</th><th>结论</th>"
-        "<th>裁决理由</th><th>权威证据</th></tr></thead>"
-        f"<tbody>{render_platform_rows(point, platforms)}</tbody>"
-        "</table></div>"
         "</section>"
     )
+
+
+def render_final_answer(final_answer: dict) -> str:
+    items = []
+    for item in final_answer.get("items") or []:
+        items.append(
+            '<li class="final-answer-item">'
+            f'<h3>{escaped(item.get("title"))}</h3>'
+            f'<p>{escaped(item.get("answer"))}</p>'
+            '</li>'
+        )
+    if items:
+        return f'<ol class="final-answer-list">{"".join(items)}</ol>'
+    return f'<p class="final-answer-body">{escaped(final_answer.get("answer"))}</p>'
 
 
 def render_unverified_boundary(points: list[dict], final_answer: dict) -> str:
@@ -310,26 +328,22 @@ def render(verification: dict) -> str:
     validate(verification)
     platforms = verification.get("platforms") or []
     points = verification.get("knowledgePoints") or []
-    verdicts = [
-        verdict
-        for point in points
-        for verdict in ((point.get("authority") or {}).get("verdicts") or {}).values()
-    ]
-    direct_count = sum(
-        1 for verdict in verdicts if verdict.get("category") == "direct_accurate"
-    )
     evidence_gap_count = len(verification.get("evidenceGaps") or [])
+    evidence_count = sum(
+        len((point.get("authority") or {}).get("evidence") or [])
+        for point in points
+    )
     verification_sha = canonical_sha256(verification)
-    point_sections = "".join(render_point(point, platforms) for point in points)
+    point_sections = "".join(render_point(point) for point in points)
     final_answer = verification.get("finalAnswer") or {}
     final_status = {
         "verified": "权威核验完成",
         "partially_verified": "已形成有据结论，证据不足项已排除",
         "insufficient_evidence": "证据不足，未形成确定答案",
     }.get(final_answer.get("status"), "权威核验完成")
-    final_answer_title = "完美答案（已核验，可权威溯源）"
+    final_answer_title = "权威核验后的最终答案"
     question = str(verification.get("question") or "").strip()
-    report_title = f"全知晓“完美答案”（问题：{question}）"
+    report_title = f"权威核验报告（问题：{question}）"
     unverified_boundary = render_unverified_boundary(points, final_answer)
     final_report_nav = '<a href="04-final-report.html">各方答案测评报告</a>'
     return f"""<!doctype html>
@@ -363,6 +377,10 @@ def render(verification: dict) -> str:
     .final-kicker {{ color: #17624f; font-size: 12px; font-weight: 800; margin: 0 0 6px; }}
     .final-status {{ background: #e7f5f1; border: 1px solid #a8d8ca; border-radius: 4px; color: #17624f; font-size: 12px; font-weight: 750; padding: 4px 7px; }}
     .final-answer-body {{ font-size: 17px; font-weight: 650; line-height: 1.75; margin: 14px 0 0; white-space: pre-wrap; }}
+    .final-answer-list {{ display: grid; gap: 10px; list-style: none; margin: 16px 0 0; padding: 0; }}
+    .final-answer-item {{ border-top: 1px solid #d7e7e1; padding: 12px 0 0; }}
+    .final-answer-item h3 {{ color: #17624f; font-size: 14px; margin: 0 0 5px; }}
+    .final-answer-item p {{ font-size: 16px; font-weight: 650; line-height: 1.7; margin: 0; }}
     .point {{ background: #fff; border: 1px solid #d7dde7; border-radius: 6px; margin-bottom: 20px; padding: 22px; }}
     .point-head {{ align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }}
     .point-head h2 {{ display: inline; font-size: 19px; line-height: 1.45; margin: 0 0 0 8px; }}
@@ -372,7 +390,7 @@ def render(verification: dict) -> str:
     .finding-label {{ color: #17624f; font-size: 12px; font-weight: 750; }}
     .finding p {{ font-size: 17px; font-weight: 650; line-height: 1.6; margin: 5px 0 0; }}
     h3 {{ font-size: 15px; margin: 22px 0 10px; }}
-    .evidence-grid {{ display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+    .evidence-grid {{ display: grid; gap: 10px; grid-template-columns: 1fr; }}
     .evidence {{ border: 1px solid #d7dde7; border-radius: 5px; min-width: 0; padding: 14px; }}
     .evidence-id {{ color: #637083; font-size: 12px; font-weight: 750; }}
     .evidence h4 {{ font-size: 14px; line-height: 1.45; margin: 5px 0 8px; }}
@@ -415,7 +433,6 @@ def render(verification: dict) -> str:
       .point {{ padding: 16px 12px; }}
       .point-head {{ display: block; }}
       .mode {{ margin-top: 10px; }}
-      .evidence-grid {{ grid-template-columns: 1fr; }}
     }}
   </style>
 </head>
@@ -435,26 +452,26 @@ def render(verification: dict) -> str:
         <div><p class="final-kicker">权威证据逐点核验完成</p><h2>{escaped(final_answer_title)}</h2></div>
         <span class="final-status">{escaped(final_status)}</span>
       </div>
-      <p class="final-answer-body">{escaped(final_answer.get("answer"))}</p>
+      {render_final_answer(final_answer)}
     </section>
     {unverified_boundary}
     <section class="metrics" aria-label="权威核验摘要">
       <div class="metric"><b>{len(points)}</b><span>核验知识点</span></div>
-      <div class="metric"><b>{len(platforms)}</b><span>参与平台</span></div>
-      <div class="metric"><b>{direct_count}</b><span>直接准确裁决</span></div>
+      <div class="metric"><b>{len(final_answer.get("knowledgePointIds") or [])}</b><span>已纳入最终答案</span></div>
+      <div class="metric"><b>{evidence_count}</b><span>权威证据</span></div>
       <div class="metric"><b>{verification.get("trustedSearchRequestCount", 0)}</b><span>可信搜索请求</span></div>
       <div class="metric"><b>{evidence_gap_count}</b><span>证据不足项</span></div>
     </section>
     {point_sections}
   </main>
-  <footer>报告由已锁定的知识点聚合、权威证据、裁决与结果数据生成；不得脱离原始存证单独解释。</footer>
+  <footer>本阶段只回答事实问题、展示权威证据与证据边界；各平台表现只在第四阶段评估。</footer>
 </body>
 </html>
 """
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="生成独立的全知晓完美答案报告。")
+    parser = argparse.ArgumentParser(description="生成独立的权威核验答案报告。")
     parser.add_argument("--verification", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()

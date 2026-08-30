@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -54,7 +55,7 @@ PORTABLE_REPORT_README = """Fact-Check-X 完整事实核验报告包
 建议按以下顺序打开：
 1. 01-capture-report.html：各方答案汇总
 2. 02-comparison-report.html：各方答案聚合（未核验）
-3. 03-authority-report.html：全知晓“完美答案”
+3. 03-authority-report.html：权威核验后的最终答案
 4. 04-final-report.html：各方答案测评报告
 
 请先解压整个压缩包，再用浏览器打开 HTML 文件，以保留截图、页面存证和报告导航。
@@ -63,33 +64,153 @@ PORTABLE_REPORT_README = """Fact-Check-X 完整事实核验报告包
 REPORT_NAV_ITEMS = (
     ("01-capture-report.html", "各方答案汇总"),
     ("02-comparison-report.html", "各方答案聚合"),
-    ("03-authority-report.html", "全知晓“完美答案”"),
+    ("03-authority-report.html", "权威核验答案"),
     ("04-final-report.html", "各方答案测评报告"),
 )
 REPORT_NAV_STYLE = """
-.fcx-report-nav{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px;padding:10px 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+.fcx-report-nav{display:flex;flex-wrap:wrap;gap:8px;margin:14px auto 18px;max-width:1440px;padding:10px 24px;border-top:1px solid #d7dde7;border-bottom:1px solid #d7dde7;background:#fff}
 .fcx-report-nav a,.fcx-report-nav span{display:inline-flex;align-items:center;min-height:32px;padding:5px 10px;border-radius:6px;font-size:13px;text-decoration:none}
-.fcx-report-nav a{border:1px solid #d1d5db;background:#fff;color:#334155}
-.fcx-report-nav a:hover{border-color:#6366f1;color:#4338ca}
-.fcx-report-nav span{border:1px solid #6366f1;background:#eef2ff;color:#3730a3;font-weight:600}
+.fcx-report-nav a{border:1px solid #c8d1dc;background:#fff;color:#285a9f}
+.fcx-report-nav a:hover{border-color:#285a9f;color:#173f74}
+.fcx-report-nav span{border:1px solid #187454;background:#e8f5f0;color:#125b42;font-weight:700}
+@media(max-width:760px){.fcx-report-nav{padding:9px 12px;overflow-x:auto;flex-wrap:nowrap}.fcx-report-nav a,.fcx-report-nav span{white-space:nowrap}}
 """.strip()
+INTERACTION_GATE_FILE = "stage-checkpoints.json"
+INTERACTION_STAGE_ORDER = ("capture", "comparison", "authority", "evaluation")
 
 
-def stage_checkpoint(label: str, path: Path, next_stage: str | None) -> dict:
+def interaction_gate_path(run_dir: Path) -> Path:
+    return run_dir / INTERACTION_GATE_FILE
+
+
+def initialize_interaction_gate(run_dir: Path, execution_mode: str) -> None:
+    dump_json(interaction_gate_path(run_dir), {
+        "schemaVersion": "fact-check-x/stage-checkpoints@1",
+        "executionMode": execution_mode,
+        "createdAt": now_iso(),
+        "stages": {},
+    })
+
+
+def load_interaction_gate(run_dir: Path) -> dict:
+    path = interaction_gate_path(run_dir)
+    if not path.exists():
+        raise PipelineError(
+            "缺少阶段交付门禁；请从 prepare-comparison 重新开始"
+        )
+    gate = load_json(path)
+    if gate.get("schemaVersion") != "fact-check-x/stage-checkpoints@1":
+        raise PipelineError("阶段交付门禁版本不正确")
+    return gate
+
+
+def record_stage_checkpoint(
+    run_dir: Path,
+    stage: str,
+    label: str,
+    path: Path,
+    next_stage: str | None,
+) -> dict:
+    if stage not in INTERACTION_STAGE_ORDER:
+        raise PipelineError(f"未知阶段：{stage}")
+    gate = load_interaction_gate(run_dir)
     resolved = path.resolve()
+    if not resolved.is_file():
+        raise PipelineError(f"阶段产物不存在：{resolved}")
+    execution_mode = gate.get("executionMode")
+    status = (
+        "completed"
+        if not next_stage
+        else "auto_acknowledged"
+        if execution_mode == "full-auto"
+        else "awaiting_user"
+    )
+    token = secrets.token_urlsafe(18) if status == "awaiting_user" else None
+    entry = {
+        "stage": stage,
+        "label": label,
+        "path": str(resolved),
+        "sha256": capture_digest(resolved),
+        "status": status,
+        "nextStage": next_stage,
+        "token": token,
+        "createdAt": now_iso(),
+    }
+    if status == "auto_acknowledged":
+        entry.update({"decision": "continue", "acknowledgedAt": now_iso()})
+    gate.setdefault("stages", {})[stage] = entry
+    dump_json(interaction_gate_path(run_dir), gate)
     checkpoint = {
         "required": True,
         "mustPresentBeforeNextStage": True,
+        "stage": stage,
+        "status": status,
         "label": label,
         "path": str(resolved),
         "message": f"[打开{label}](<{resolved}>)",
+        "gate": str(interaction_gate_path(run_dir).resolve()),
     }
     if next_stage:
         checkpoint.update({
             "nextStage": next_stage,
             "choices": ["继续下一步", "修正当前结果", "到此结束并保留产物"],
         })
+        if token:
+            checkpoint["acknowledgement"] = {
+                "required": True,
+                "token": token,
+                "command": (
+                    "acknowledge-stage --run-dir "
+                    f"{resolved.parent} --stage {stage} --token {token} --decision continue"
+                ),
+            }
     return checkpoint
+
+
+def require_stage_acknowledged(run_dir: Path, stage: str) -> dict:
+    gate = load_interaction_gate(run_dir)
+    entry = (gate.get("stages") or {}).get(stage)
+    if not entry:
+        raise PipelineError(f"缺少 {stage} 阶段产物交付记录，禁止继续")
+    path = Path(str(entry.get("path") or ""))
+    if not path.is_file() or capture_digest(path) != entry.get("sha256"):
+        raise PipelineError(f"{stage} 阶段产物已缺失或被修改，禁止继续")
+    if entry.get("status") not in {"acknowledged", "auto_acknowledged"}:
+        raise PipelineError(
+            f"{stage} 阶段产物尚未得到‘继续下一步’确认，禁止进入后续流程"
+        )
+    return entry
+
+
+def acknowledge_stage(args: argparse.Namespace) -> dict:
+    run_dir = require_run(args.run_dir)
+    gate = load_interaction_gate(run_dir)
+    entry = (gate.get("stages") or {}).get(args.stage)
+    if not entry:
+        raise PipelineError(f"未找到可确认的 {args.stage} 阶段")
+    if gate.get("executionMode") != "interactive":
+        raise PipelineError("当前运行是 full-auto 模式，不需要人工确认")
+    if entry.get("status") != "awaiting_user" or not secrets.compare_digest(
+        str(entry.get("token") or ""), str(args.token or "")
+    ):
+        raise PipelineError("阶段确认令牌无效或已使用")
+    path = Path(str(entry.get("path") or ""))
+    if not path.is_file() or capture_digest(path) != entry.get("sha256"):
+        raise PipelineError("待确认的阶段产物已缺失或被修改")
+    entry.update({
+        "status": "acknowledged" if args.decision == "continue" else args.decision,
+        "decision": args.decision,
+        "acknowledgedAt": now_iso(),
+        "token": None,
+    })
+    dump_json(interaction_gate_path(run_dir), gate)
+    return {
+        "status": "completed",
+        "stage": args.stage,
+        "decision": args.decision,
+        "nextStageAllowed": args.decision == "continue",
+        "artifact": str(path.resolve()),
+    }
 
 
 def skill_candidates() -> list[Path]:
@@ -446,6 +567,7 @@ def build_portable_report_package(run_dir: Path) -> dict:
         Path("comparison.json"),
         Path("comparison-gate.json"),
         Path("authority-gate.json"),
+        Path(INTERACTION_GATE_FILE),
         Path("verification.json"),
         Path("pipeline.json"),
     ]
@@ -593,6 +715,7 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     normalize_report_file(capture_deliverable)
     task = run_dir / "comparison-task.json"
     result = run([sys.executable, str(skills["comparison"] / "scripts" / "knowledge_compare.py"), "--input", str(results_path), "--task-output", str(task)])
+    initialize_interaction_gate(run_dir, args.execution_mode)
     result.update({
         "stage": "capture_completed",
         "platforms": [
@@ -620,8 +743,8 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
                 "path": str(capture_deliverable.resolve()),
             }
         ],
-        "checkpoint": stage_checkpoint(
-            "各方答案汇总", capture_deliverable, "comparison"
+        "checkpoint": record_stage_checkpoint(
+            run_dir, "capture", "各方答案汇总", capture_deliverable, "comparison"
         ),
     })
     return result
@@ -629,6 +752,7 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
 
 def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     run_dir = require_run(args.run_dir)
+    require_stage_acknowledged(run_dir, "capture")
     results_path = Path(args.results).resolve()
     results = validate_and_gate_capture(run_dir, results_path)
     sync_capture_evidence(run_dir, results_path, results)
@@ -675,8 +799,12 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
                 "path": str(comparison_deliverable.resolve()),
             }
         ],
-        "checkpoint": stage_checkpoint(
-            "各方答案聚合（未核验）", comparison_deliverable, "authority"
+        "checkpoint": record_stage_checkpoint(
+            run_dir,
+            "comparison",
+            "各方答案聚合（未核验）",
+            comparison_deliverable,
+            "authority",
         ),
     })
     return result
@@ -758,6 +886,7 @@ def build_requests(comparison: dict, requests_dir: Path) -> dict:
 
 def prepare_authority(args: argparse.Namespace) -> dict:
     run_dir = require_run(args.run_dir)
+    require_stage_acknowledged(run_dir, "comparison")
     require_capture_gate(run_dir)
     comparison_provenance = require_comparison_provenance(run_dir)
     comparison_path = Path(args.comparison).resolve() if args.comparison else run_dir / "comparison.json"
@@ -966,6 +1095,8 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
             "results": str(results_dir.resolve()),
             "assessmentHashes": assessment_hashes,
             "resultHashes": result_hashes,
+            "verificationSha256": capture_digest(verification_path),
+            "authorityReportSha256": capture_digest(authority_report),
         })
     except Exception:
         for result_path in results_dir.glob("*.json"):
@@ -987,12 +1118,16 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
         },
         "deliverables": [
             {
-                "label": "全知晓“完美答案”",
+                "label": "权威核验后的最终答案",
                 "path": str(authority_report.resolve()),
             }
         ],
-        "checkpoint": stage_checkpoint(
-            "全知晓“完美答案”", authority_report, "evaluation"
+        "checkpoint": record_stage_checkpoint(
+            run_dir,
+            "authority",
+            "权威核验后的最终答案",
+            authority_report,
+            "evaluation",
         ),
     }
 
@@ -1052,6 +1187,7 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             or "当前分析信息不足，且权威证据未能完成裁决",
         })
     final_answer_lines = []
+    final_answer_items = []
     final_answer_point_ids = []
     excluded_point_ids = []
     for point in points:
@@ -1070,10 +1206,20 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
         finding = str(
             (authority.get("authoritativeFinding") or "")
         ).strip()
+        title = str(point.get("description") or point.get("id") or "").strip()
+        answer = re.sub(
+            rf"^{re.escape(title)}\s*[：:，,。\-]?\s*",
+            "",
+            finding,
+            count=1,
+        ).strip() or finding
         final_answer_point_ids.append(point_id)
-        final_answer_lines.append(
-            f"{point.get('description') or point.get('id')}：{finding}"
-        )
+        final_answer_lines.append(answer)
+        final_answer_items.append({
+            "knowledgePointId": point_id,
+            "title": title,
+            "answer": answer,
+        })
     final_answer_status = (
         "verified"
         if final_answer_point_ids and not excluded_point_ids
@@ -1089,6 +1235,7 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             "status": final_answer_status,
             "answer": "\n".join(final_answer_lines)
             or "当前没有足够权威证据形成确定答案；各项证据边界已在报告中列明。",
+            "items": final_answer_items,
             "knowledgePointIds": final_answer_point_ids,
             "excludedKnowledgePointIds": excluded_point_ids,
         },
@@ -1107,6 +1254,9 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
 
 def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     run_dir = require_run(args.run_dir)
+    require_stage_acknowledged(run_dir, "capture")
+    require_stage_acknowledged(run_dir, "comparison")
+    require_stage_acknowledged(run_dir, "authority")
     results_path = Path(args.results).resolve()
     require_capture_gate(run_dir, results_path)
     results = validate_capture_results(results_path)
@@ -1144,8 +1294,6 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     assessments_dir = run_dir / "authority" / "assessments"
     if json_file_manifest(assessments_dir, set((authority_gate.get("assessmentHashes") or {}).keys())) != authority_gate.get("assessmentHashes"):
         raise PipelineError("assessment 文件被修改、缺失或混入额外文件，禁止交付")
-    comparison = load_json(comparison_path)
-    verification = merge_verification(comparison, run_dir / "authority" / "results")
     verification_path = run_dir / "verification.json"
     report_path = run_dir / "report.html"
     capture_deliverable = run_dir / "01-capture-report.html"
@@ -1153,30 +1301,37 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
     authority_deliverable = run_dir / "03-authority-report.html"
     final_deliverable = run_dir / "04-final-report.html"
     report_package = run_dir / PORTABLE_REPORT_PACKAGE
+    if not verification_path.is_file():
+        raise PipelineError("缺少第三步已锁定的 verification.json，禁止重算或交付")
+    if capture_digest(verification_path) != authority_gate.get("verificationSha256"):
+        raise PipelineError("第三步权威核验结果已被修改，禁止第四步重算或交付")
+    if (
+        not authority_deliverable.is_file()
+        or capture_digest(authority_deliverable)
+        != authority_gate.get("authorityReportSha256")
+    ):
+        raise PipelineError("第三步报告已缺失或被修改，禁止第四步继续")
+    verification = load_json(verification_path)
     for stale in (
         run_dir / "03-final-report.html",
         run_dir / "04-complete-report-package.zip",
     ):
         stale.unlink(missing_ok=True)
-    capture_dir = run_dir / "capture"
-    capture_report = run([
-        "node",
-        str(skills["collector"] / "assets" / "tool" / "dist" / "report-cli.js"),
-        "--input",
-        str(results_path),
-        "--out",
-        str(capture_dir),
-    ])
-    sync_capture_evidence(run_dir, results_path, results)
-    dump_json(verification_path, verification)
-    run([
-        sys.executable,
-        str(skills["authority"] / "scripts" / "render_authority_report.py"),
-        "--verification",
-        str(verification_path),
-        "--output",
-        str(authority_deliverable),
-    ])
+    capture_report = {
+        "results": str((run_dir / "capture" / "results.json").resolve()),
+        "report": str((run_dir / "capture" / "report.html").resolve()),
+        "markdown": str((run_dir / "capture" / "report.md").resolve()),
+    }
+    for required in (
+        capture_deliverable,
+        comparison_deliverable,
+        authority_deliverable,
+        Path(capture_report["results"]),
+        Path(capture_report["report"]),
+        Path(capture_report["markdown"]),
+    ):
+        if not required.is_file():
+            raise PipelineError(f"缺少已完成阶段的锁定产物：{required.name}")
     run([
         sys.executable,
         str(skills["authority"] / "scripts" / "render_final_report.py"),
@@ -1191,16 +1346,15 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
         "--intermediate-dir",
         str(run_dir / "report-input"),
     ])
-    shutil.copyfile(capture_report["report"], capture_deliverable)
-    shutil.copyfile(run_dir / "comparison.html", comparison_deliverable)
     shutil.copyfile(report_path, final_deliverable)
-    for report_file in (
-        capture_deliverable,
-        comparison_deliverable,
-        authority_deliverable,
+    normalize_report_file(final_deliverable)
+    checkpoint = record_stage_checkpoint(
+        run_dir,
+        "evaluation",
+        "各方答案测评报告",
         final_deliverable,
-    ):
-        normalize_report_file(report_file)
+        None,
+    )
     manifest = {
         "schemaVersion": "fact-check-x/pipeline@2",
         "createdAt": now_iso(),
@@ -1227,6 +1381,7 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
             "comparisonDeliverable": str(comparison_deliverable.resolve()),
             "comparisonGate": str((run_dir / "comparison-gate.json").resolve()),
             "authorityGate": str((run_dir / "authority-gate.json").resolve()),
+            "stageCheckpoints": str((run_dir / INTERACTION_GATE_FILE).resolve()),
             "authorityDirectory": str((run_dir / "authority").resolve()),
             "verification": str(verification_path.resolve()),
             "authorityReport": str(authority_deliverable.resolve()),
@@ -1254,7 +1409,7 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
         "deliverables": [
             {"label": "各方答案汇总", "path": str(capture_deliverable.resolve())},
             {"label": "各方答案聚合（未核验）", "path": str(comparison_deliverable.resolve())},
-            {"label": "全知晓“完美答案”", "path": str(authority_deliverable.resolve())},
+            {"label": "权威核验后的最终答案", "path": str(authority_deliverable.resolve())},
             {"label": "各方答案测评报告", "path": str(final_deliverable.resolve())},
             {
                 "label": "完整可分发报告包",
@@ -1263,9 +1418,7 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
                 "portable": True,
             },
         ],
-        "checkpoint": stage_checkpoint(
-            "各方答案测评报告", final_deliverable, None
-        ),
+        "checkpoint": checkpoint,
         "trustedSearchRequestCount": manifest["trustedSearchRequestCount"],
         "dknowExemptCount": manifest["dknowExemptCount"],
         "govExemptCount": manifest["govExemptCount"],
@@ -1281,6 +1434,24 @@ def parser() -> argparse.ArgumentParser:
     prepare = commands.add_parser("prepare-comparison")
     prepare.add_argument("--results", required=True)
     prepare.add_argument("--run-dir", required=True)
+    prepare.add_argument(
+        "--execution-mode",
+        choices=("interactive", "full-auto"),
+        default="interactive",
+    )
+    acknowledge = commands.add_parser("acknowledge-stage")
+    acknowledge.add_argument("--run-dir", required=True)
+    acknowledge.add_argument(
+        "--stage",
+        required=True,
+        choices=("capture", "comparison", "authority"),
+    )
+    acknowledge.add_argument("--token", required=True)
+    acknowledge.add_argument(
+        "--decision",
+        required=True,
+        choices=("continue", "revise", "stop"),
+    )
     complete = commands.add_parser("complete-comparison")
     complete.add_argument("--results", required=True)
     complete.add_argument("--run-dir", required=True)
@@ -1313,6 +1484,8 @@ def main() -> int:
             result = prepare_runtime(skills)
         elif args.command == "prepare-comparison":
             result = prepare_comparison(args, skills)
+        elif args.command == "acknowledge-stage":
+            result = acknowledge_stage(args)
         elif args.command == "complete-comparison":
             result = complete_comparison(args, skills)
         elif args.command == "prepare-authority":

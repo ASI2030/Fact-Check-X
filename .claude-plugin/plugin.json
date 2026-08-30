@@ -1,6 +1,6 @@
 {
   "name": "fact-check-x",
-  "version": "1.1.0",
+  "version": "1.1.8",
   "description": "Evidence-first multi-platform fact-checking with complete answer capture, citation preservation, structured comparison, and authoritative verification.",
   "author": {
     "name": "ASI2030"

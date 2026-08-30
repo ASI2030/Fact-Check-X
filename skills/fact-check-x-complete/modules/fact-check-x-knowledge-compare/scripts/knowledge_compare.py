@@ -238,10 +238,16 @@ def marker_occurs(answer: str, marker: str, known_markers: set[str] | None = Non
         # flatten adjacent one/two-digit markers into a trailing cluster such as
         # 123. If the whole cluster is a known marker, exact-marker semantics win;
         # otherwise retain the legacy cluster decomposition for one/two-digit refs.
-        clusters = re.findall(
+        cluster_matches = re.finditer(
             r"(?<![\d:：])(\d{1,3})(?=[。！？；，、!?;)]|[.,](?!\d)|$)",
             answer,
         )
+        clusters = []
+        for match in cluster_matches:
+            line_start = answer.rfind("\n", 0, match.start(1)) + 1
+            if not answer[line_start:match.start(1)].strip():
+                continue
+            clusters.append(match.group(1))
         known = known_markers or set()
         for cluster in clusters:
             if cluster in known:
@@ -394,8 +400,14 @@ def task_platform(platform: dict) -> dict:
             "contentAcquisition",
             "originAttributionStatus",
             "snippetProvenance",
+            "sourceAcquisitionStatus",
+            "sourceResolvedUrl",
             "zone",
         ):
+            value = str(reference.get(field) or "").strip()
+            if value:
+                normalized_reference[field] = value
+        for field in ("answerContext", "sourceAcquisitionError"):
             value = str(reference.get(field) or "").strip()
             if value:
                 normalized_reference[field] = value
@@ -574,7 +586,7 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
     local_evidence_by_index = {}
     if covered:
         for index, reference in enumerate(references, 1):
-            excerpt = locally_supported_claim_evidence(answer, reference, claim_text)
+            excerpt = locally_supported_claim_evidence(answer_excerpt, reference, claim_text)
             if excerpt:
                 locally_bound_indexes.add(index)
                 local_evidence_by_index[index] = excerpt

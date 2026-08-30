@@ -10,6 +10,7 @@ import {
     isPdfReference,
     looksLikeLoginOnlyText,
     looksLikeNonAnswerPrompt,
+    looksLikeYuanbaoInterimAnswer,
     waitForAnswer
 } from "../assets/tool/dist/capture/generic-chat.js";
 import { builtInPlatforms } from "../assets/tool/dist/capture/platform-registry.js";
@@ -117,6 +118,8 @@ assert.equal(
     looksLikeNonAnswerPrompt("北京高考报名分为网上申请、填报缴费和现场确认三个阶段。".repeat(8) + " 页面底部：为您智能匹配到当前所在区域为“北京市”，如想咨询其他区域可点击修改"),
     false
 );
+assert.equal(looksLikeYuanbaoInterimAnswer("我来查一下深圳夫妻投靠入户的最新政策要求。"), true);
+assert.equal(looksLikeYuanbaoInterimAnswer("我来查一下。经核验，以下是完整政策条件。".repeat(12)), false);
 assert.equal(
     looksLikeLoginOnlyText("完整政策回答中要求考生登录北京教育考试院网站填报信息。".repeat(8)),
     false

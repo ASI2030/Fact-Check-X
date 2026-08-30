@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -34,7 +35,10 @@ def run_failed(arguments: list[str], environment: dict[str, str] | None = None) 
 
 
 def command(*arguments: str) -> list[str]:
-    return [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), *arguments]
+    values = list(arguments)
+    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
+        values.extend(["--execution-mode", "full-auto"])
+    return [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), *values]
 
 
 def main() -> int:
@@ -154,9 +158,17 @@ def main() -> int:
         assert finalized["checkpoint"]["path"] == str(
             (run_dir / "03-authority-report.html").resolve()
         )
-        assert "打开全知晓“完美答案”" in finalized["checkpoint"]["message"]
+        assert "打开权威核验后的最终答案" in finalized["checkpoint"]["message"]
         assert (run_dir / "03-authority-report.html").exists()
         assert json.loads((run_dir / "authority-gate.json").read_text(encoding="utf-8"))["status"] == "finalized"
+        locked_verification = (run_dir / "verification.json").read_bytes()
+        locked_authority_report = (run_dir / "03-authority-report.html").read_bytes()
+        (run_dir / "verification.json").write_bytes(locked_verification + b"\n")
+        immutable_rejection = run_failed(command(
+            "deliver", "--results", str(results), "--run-dir", str(run_dir)
+        ))
+        assert "第三步权威核验结果已被修改" in immutable_rejection["error"]
+        (run_dir / "verification.json").write_bytes(locked_verification)
         delivered = run(command("deliver", "--results", str(results), "--run-dir", str(run_dir)))
         assert delivered["status"] == "completed"
         assert delivered["trustedSearchRequestCount"] == 0 and delivered["dknowExemptCount"] == 1
@@ -171,11 +183,23 @@ def main() -> int:
             str((run_dir / "04-final-report.html").resolve()),
         ]
         assert deliverable_paths[4] == delivered["artifacts"]["reportPackage"]
+        with zipfile.ZipFile(deliverable_paths[4]) as report_archive:
+            packaged_checkpoints = json.loads(
+                report_archive.read(
+                    "fact-check-x-report/data/stage-checkpoints.json"
+                ).decode("utf-8")
+            )
+        assert list(packaged_checkpoints["stages"]) == [
+            "capture", "comparison", "authority", "evaluation"
+        ]
+        assert packaged_checkpoints["stages"]["evaluation"]["status"] == "completed"
         assert delivered["checkpoint"]["mustPresentBeforeNextStage"] is True
         assert delivered["checkpoint"]["path"] == str(
             (run_dir / "04-final-report.html").resolve()
         )
         assert "打开各方答案测评报告" in delivered["checkpoint"]["message"]
+        assert (run_dir / "verification.json").read_bytes() == locked_verification
+        assert (run_dir / "03-authority-report.html").read_bytes() == locked_authority_report
         assert all(Path(item["path"]).exists() for item in delivered["deliverables"])
         manifest = json.loads((run_dir / "pipeline.json").read_text(encoding="utf-8"))
         verification = json.loads((run_dir / "verification.json").read_text(encoding="utf-8"))
@@ -190,10 +214,10 @@ def main() -> int:
         assert verification["finalAnswer"]["status"] == "verified"
         assert verification["finalAnswer"]["knowledgePointIds"] == ["K1"]
         assert verification["knowledgePoints"][0]["authority"]["verdicts"]["doubao"]["category"] == "misleading"
-        assert "全知晓“完美答案”（问题：" in authority_report
-        assert "完美答案（已核验，可权威溯源）" in authority_report
-        assert "深知晓" in authority_report and "豆包" in authority_report
-        assert "data-fcx-authority-binding-sha256" in authority_report
+        assert "权威核验报告（问题：" in authority_report
+        assert "权威核验后的最终答案" in authority_report
+        assert "各平台裁决" not in authority_report
+        assert "data-fcx-authority-binding-sha256" not in authority_report
         report_names = [
             "01-capture-report.html",
             "02-comparison-report.html",
@@ -218,7 +242,7 @@ def main() -> int:
                 "04-final-report.html",
             )
         )
-        assert "① 参考性" in report and "④ 原始答案与参考文献（存证）" in report
+        assert "① 参考性" in report and "③ 原始答案与参考文献（存证）" in report
         assert (run_dir / "comparison.html").exists()
         capture_report = (run_dir / "capture" / "report.html").read_text(encoding="utf-8")
         assert "各方答案汇总（问题：" in capture_report
@@ -364,7 +388,7 @@ def main() -> int:
             str(configuration_run),
         ), keyless_environment)
         assert bypass_delivery["status"] == "failed"
-        assert "禁止生成最终报告" in bypass_delivery["error"]
+        assert "缺少 authority 阶段产物交付记录" in bypass_delivery["error"]
 
         tamper_run = Path(temp) / "tamper-run"
         run(command("prepare-comparison", "--results", str(results), "--run-dir", str(tamper_run)))

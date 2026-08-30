@@ -157,6 +157,9 @@ export async function captureGenericChat(config, options) {
         const doubaoConversationIdsBefore = config.name === "doubao"
             ? await collectDoubaoConversationIds(page)
             : [];
+        if (config.name === "yuanbao") {
+            await dismissYuanbaoGuides(page);
+        }
         const previousAnswer = await extractAnswer(config, page);
         await input.click();
         await fillPrompt(input, options.question);
@@ -219,7 +222,9 @@ export async function captureGenericChat(config, options) {
             : [];
         capturedSourceMentions = sourceMentions;
         const artifacts = await saveArtifacts(page, artifactDir, options.outDir);
-        if (looksLikeLoginOnlyText(answerMarkdown) || looksLikeNonAnswerPrompt(answerMarkdown)) {
+        if (looksLikeLoginOnlyText(answerMarkdown)
+            || looksLikeNonAnswerPrompt(answerMarkdown)
+            || (config.name === "yuanbao" && looksLikeYuanbaoInterimAnswer(answerMarkdown))) {
             return {
                 ...failure(config, "login_required", started, "捕获内容仍是登录、地区选择或初始化提示，不是完整回答。", artifacts),
                 artifacts
@@ -772,6 +777,10 @@ export async function waitForAnswer(config, page, timeoutMs, previousAnswer = ""
             await page.waitForTimeout(1500);
             continue;
         }
+        if (config.name === "yuanbao" && looksLikeYuanbaoInterimAnswer(text)) {
+            await page.waitForTimeout(1500);
+            continue;
+        }
         if (text && text !== lastText) {
             lastText = text;
             stableSince = Date.now();
@@ -798,6 +807,14 @@ async function isGenerationInProgress(config, page) {
         "[class*='stop-generating']",
         "button:has-text('停止生成')"
     ];
+    if (config.name === "yuanbao") {
+        selectors.unshift(
+            "#yuanbao-send-btn[aria-label='停止回答']",
+            "[data-new-input-control='send'] [aria-label='停止回答']",
+            ".agent-process-timeline_stepTitleRunning__xgNIa",
+            ".hyc-content-loading__text__flash"
+        );
+    }
     for (const selector of selectors) {
         const locator = page.locator(selector).last();
         if ((await locator.count().catch(() => 0)) > 0 && await locator.isVisible().catch(() => false)) {
@@ -895,6 +912,9 @@ async function extractReferences(config, page, question = "") {
                 text: anchor.text || undefined
             });
         }
+    }
+    if (["deepseek", "yuanbao"].includes(config.name)) {
+        await hydrateDirectSourceReferences(page, references, config.url);
     }
     return references;
 }
@@ -1633,7 +1653,7 @@ async function hydrateDoubaoReferenceContent(page, references, question = "") {
                     timeout: 12000
                 });
                 await sourcePage.waitForTimeout(500);
-                const extracted = await extractDoubaoSourcePageContent(sourcePage);
+                const extracted = await extractSourcePageContent(sourcePage);
                 if (!extracted.content) {
                     continue;
                 }
@@ -1644,6 +1664,87 @@ async function hydrateDoubaoReferenceContent(page, references, question = "") {
             }
             catch {
                 // The original URL remains valid evidence when the source blocks automated reading.
+            }
+            finally {
+                await sourcePage.close().catch(() => undefined);
+            }
+        }
+    });
+    await Promise.all(workers);
+}
+
+async function hydrateDirectSourceReferences(page, references, platformUrl) {
+    const queue = references.filter((reference) => /^https?:\/\//i.test(reference.url || ""));
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+        while (cursor < queue.length) {
+            const reference = queue[cursor];
+            cursor += 1;
+            if (normalizeUrl(reference.url, platformUrl) === normalizeUrl(platformUrl)) {
+                reference.sourceAcquisitionStatus = "failed";
+                reference.sourceAcquisitionError = "引用卡未暴露可访问的外部来源 URL";
+                continue;
+            }
+            if (isPdfReference(reference.url)) {
+                const pdfContent = await extractPdfReferenceContent(page, reference.url);
+                if (pdfContent) {
+                    reference.snippet = pdfContent.slice(0, 2000);
+                    reference.snippetProvenance = "source_document";
+                    reference.content = pdfContent;
+                    reference.contentAcquisition = "direct_pdf_extraction";
+                    reference.sourceAcquisitionStatus = "captured";
+                }
+                else {
+                    reference.sourceAcquisitionStatus = "failed";
+                    reference.sourceAcquisitionError = "PDF 正文提取未完成";
+                }
+                continue;
+            }
+            const sourcePage = await page.context().newPage().catch(() => undefined);
+            if (!sourcePage) {
+                reference.sourceAcquisitionStatus = "failed";
+                reference.sourceAcquisitionError = "无法创建来源页面";
+                continue;
+            }
+            try {
+                sourcePage.setDefaultTimeout(15000);
+                sourcePage.setDefaultNavigationTimeout(15000);
+                const response = await sourcePage.goto(reference.url, {
+                    waitUntil: "domcontentloaded",
+                    timeout: 15000
+                });
+                await sourcePage.waitForTimeout(500);
+                reference.sourceResolvedUrl = sourcePage.url();
+                const status = response?.status() || 0;
+                if ([401, 403, 429].includes(status)) {
+                    reference.sourceAcquisitionStatus = "blocked";
+                    reference.sourceAcquisitionError = `来源页面返回 HTTP ${status}`;
+                    continue;
+                }
+                const extracted = await extractSourcePageContent(sourcePage);
+                if (extracted.blocked) {
+                    reference.sourceAcquisitionStatus = "blocked";
+                    reference.sourceAcquisitionError = extracted.reason || "来源页面要求人机验证或拒绝访问";
+                    continue;
+                }
+                if (!extracted.content) {
+                    reference.sourceAcquisitionStatus = "failed";
+                    reference.sourceAcquisitionError = "来源页面未提取到可核验正文";
+                    continue;
+                }
+                reference.title = longerText(reference.title, extracted.title);
+                reference.snippet = extracted.content.slice(0, 2000);
+                reference.snippetProvenance = "source_document";
+                reference.content = extracted.content;
+                reference.contentAcquisition = "direct_page_extraction";
+                reference.sourceAcquisitionStatus = "captured";
+                delete reference.sourceAcquisitionError;
+            }
+            catch (error) {
+                reference.sourceAcquisitionStatus = "failed";
+                reference.sourceAcquisitionError = error instanceof Error
+                    ? error.message.slice(0, 300)
+                    : String(error).slice(0, 300);
             }
             finally {
                 await sourcePage.close().catch(() => undefined);
@@ -2005,7 +2106,7 @@ function shouldHydrateDoubaoReference(reference) {
     ]);
     return snippet.length < 120 || labels.has(snippet);
 }
-async function extractDoubaoSourcePageContent(sourcePage) {
+async function extractSourcePageContent(sourcePage) {
     return sourcePage.evaluate(() => {
         const clean = (value) => String(value || "").trim().replace(/\s+/g, " ");
         const selectors = [
@@ -2036,9 +2137,11 @@ async function extractDoubaoSourcePageContent(sourcePage) {
         const blocked = /(?:访问过于频繁|安全验证|人机验证|请输入验证码|access denied|forbidden)/i.test(content);
         return {
             title: clean(document.title),
-            content: blocked ? "" : content.slice(0, 6000)
+            content: blocked ? "" : content.slice(0, 12000),
+            blocked,
+            reason: blocked ? "来源页面要求人机验证或拒绝访问" : ""
         };
-    }).catch(() => ({ title: "", content: "" }));
+    }).catch(() => ({ title: "", content: "", blocked: false, reason: "" }));
 }
 async function clickDoubaoSourceCard(page, card) {
     const beforeUrl = page.url();
@@ -2142,8 +2245,7 @@ async function extractDeepSeekReferences(page, baseUrl) {
                 normalizedUrl,
                 marker,
                 text: marker ? `[${marker}]` : undefined,
-                snippet: containerText ? containerText.slice(0, 500) : undefined,
-                snippetProvenance: "answer_context"
+                answerContext: containerText ? containerText.slice(0, 500) : undefined
             });
         }
         return items;
@@ -2208,7 +2310,8 @@ async function extractYuanbaoReferences(page, baseUrl) {
                 normalizedUrl,
                 marker,
                 text: source || title,
-                snippet: snippet && snippet !== title ? snippet.slice(0, 500) : undefined
+                snippet: snippet && snippet !== title ? snippet.slice(0, 500) : undefined,
+                snippetProvenance: snippet && snippet !== title ? "source_surface" : undefined
             });
         }
         return items;
@@ -2367,6 +2470,37 @@ export function looksLikeNonAnswerPrompt(value) {
     }
     const markerLength = matchingMarkers.reduce((total, marker) => total + marker.replace(/\s+/g, "").length, 0);
     return text.length <= Math.max(240, markerLength + 120);
+}
+export function looksLikeYuanbaoInterimAnswer(value) {
+    const text = String(value || "").replace(/\s+/g, "");
+    if (!text || text.length > 180) {
+        return false;
+    }
+    return [
+        "我来查一下",
+        "我来搜索一下",
+        "正在阅读资料",
+        "正在为你查找",
+        "正在检索"
+    ].some((marker) => text.includes(marker));
+}
+export async function dismissYuanbaoGuides(page) {
+    const selectors = [
+        ".t-dialog__position .auto-search-guide-popup__button:has-text('我知道了')",
+        ".yb-guide-popup__button:has-text('我知道了')",
+        ".t-dialog__position button:has-text('我知道了')"
+    ];
+    for (const selector of selectors) {
+        const candidates = page.locator(selector);
+        const count = await candidates.count().catch(() => 0);
+        for (let index = 0; index < count; index += 1) {
+            const candidate = candidates.nth(index);
+            if (await candidate.isVisible().catch(() => false)) {
+                await candidate.click({ timeout: 2000 }).catch(() => undefined);
+                await page.waitForTimeout(150);
+            }
+        }
+    }
 }
 export function looksLikeLoginOnlyText(value) {
     const text = String(value || "").replace(/\s+/g, "");

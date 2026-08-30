@@ -17,7 +17,7 @@ def main() -> int:
     assert "第一句话、过程更新、命令说明、阶段检查点、错误说明和最终答复全部只使用简体中文" in instructions
     assert "不得输出英文句子" in instructions
     assert "第一条回复直接使用“我会核验这个问题" in instructions
-    assert "各方答案汇总、各方答案聚合（未核验）、全知晓“完美答案”、各方答案测评报告" in instructions
+    assert "各方答案汇总、各方答案聚合（未核验）、权威核验后的最终答案、各方答案测评报告" in instructions
     assert "深知晓、深知晓（深度溯源）、豆包、DeepSeek、通义千问、腾讯元宝" in instructions
     assert "不存在固定“五平台模式”或固定上限" in instructions
     assert "平台组合完全按用户输入决定" in instructions
@@ -27,7 +27,7 @@ def main() -> int:
     assert "完整跑完、无需逐步确认" in instructions
     assert "逐阶段发送可打开产物和状态" in instructions
     assert "综合草案（未核验）" in instructions
-    assert "完美答案（已核验，可权威溯源）" in instructions
+    assert "权威核验后的最终答案" in instructions
     assert "`dknowc-deep-research`" in instructions
     assert "用户只完成登录，技能自动获取或创建专用 Key" in instructions
     assert "Codex、Claude Code、WorkBuddy 等载体共同复用" in instructions

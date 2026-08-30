@@ -18,7 +18,10 @@ AUTHORITY = SKILLS / "fact-check-x-authoritative-verify" / "tests" / "fixtures"
 
 
 def command(*arguments: str) -> list[str]:
-    return [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), *arguments]
+    values = list(arguments)
+    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
+        values.extend(["--execution-mode", "full-auto"])
+    return [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), *values]
 
 
 def run(arguments: list[str], environment: dict[str, str] | None = None) -> dict:
@@ -233,14 +236,15 @@ def main() -> int:
         assert set(
             single_verification["knowledgePoints"][0]["authority"]["verdicts"]
         ) == {"dknowc-chat"}
-        for report_name in (
-            "02-comparison-report.html",
-            "03-authority-report.html",
-            "04-final-report.html",
-        ):
+        for report_name in ("02-comparison-report.html", "04-final-report.html"):
             report = (single_run / report_name).read_text(encoding="utf-8")
             assert "深知晓" in report
             assert "豆包" not in report
+        authority_report = (single_run / "03-authority-report.html").read_text(
+            encoding="utf-8"
+        )
+        assert "权威核验后的最终答案" in authority_report
+        assert "深知晓" not in authority_report and "豆包" not in authority_report
         single_comparison_html = (
             single_run / "02-comparison-report.html"
         ).read_text(encoding="utf-8")
@@ -312,7 +316,8 @@ def main() -> int:
             encoding="utf-8"
         )
         assert "DeepSeek" in final_html
-        assert "DeepSeek" in authority_html
+        assert "权威核验后的最终答案" in authority_html
+        assert "DeepSeek" not in authority_html
         assert (
             'class="shell platform-layout-compact platform-count-3" '
             'style="--platform-count:3"'

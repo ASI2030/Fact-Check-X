@@ -5,7 +5,7 @@
 Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.7" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.8" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start
@@ -22,7 +22,7 @@ npx skills add ASI2030/Fact-Check-X --skill fact-check-x-complete
 
 The public listing is available on [skills.sh](https://www.skills.sh/asi2030/fact-check-x/fact-check-x-complete).
 
-The complete skill is also indexed by [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) and [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete). Both directories install from this repository's `fact-check-x-complete` source tree; a clean 94-file installation was verified against the release source before publication.
+The complete skill is also indexed by [Awesome Skills](https://www.awesomeskills.dev/en/skill/fact-check-x-fact-check-x-complete) and [Agent-Skills.md](https://agent-skills.md/skills/ASI2030/Fact-Check-X/fact-check-x-complete). Both directories install from this repository's `fact-check-x-complete` source tree; each release verifies the public installation tree against the release source.
 
 Claude Code users can install the repository as a versioned plugin marketplace:
 
@@ -47,8 +47,8 @@ Platforms: DeepSeek, Qwen and Doubao.
 | `dknowc-chat` | DKnow Chat / 深知晓 | Standard answer, citations and official sources |
 | `dknowc-deep-research` | DKnow Deep Trace | Runs after the normal answer, opens the Deep Research report, and is saved as a separate platform result |
 | `doubao` | Doubao | Complete answer, citations and page evidence |
-| `yuanbao` | Tencent Yuanbao | Complete answer, citations and page evidence |
-| `deepseek` | DeepSeek | Complete answer, citations and page evidence |
+| `yuanbao` | Tencent Yuanbao | Complete answer, citations, opened source bodies and page evidence |
+| `deepseek` | DeepSeek | Complete answer, citations, opened source bodies and page evidence |
 | `qianwen` | Qwen | Complete answer, citations and page evidence |
 
 The selected set is dynamic. `N=1` runs a complete single-platform verification. `N≥2` adds agreement, conflict and citation comparison. Platforms not listed here are not part of the current support commitment.
@@ -57,8 +57,10 @@ The selected set is dynamic. `N=1` runs a complete single-platform verification.
 
 1. **Answer collection**: complete answers, references, screenshots and HTML evidence.
 2. **Answer aggregation (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness.
-3. **Fact-Check-X verified answer**: verify each claim, include only evidence-supported content in the traceable answer, and separate unresolved claims.
-4. **Answer performance report**: accuracy, completeness, source quality and a portable report package.
+3. **Authoritatively verified final answer**: evidence-supported conclusions, authoritative sources and evidence boundaries, without platform scoring.
+4. **Answer performance report**: reads the locked stage-three result to show accuracy, completeness, source quality and platform differences without recomputing the authoritative answer.
+
+Interactive runs use machine-enforced acknowledgement tokens and artifact hashes between stages. A caller may select `--execution-mode full-auto` only when the user requested an uninterrupted run; all four reports and checkpoints are still emitted in order.
 
 Capture and comparison require no API key. Authoritative verification first reuses official material already attached by DKnow, or `gov.cn` material attached by another platform, when the captured body actually supports the claim. Trusted Search is used only for the remaining evidence gaps. On first use, the user signs in to the DKnow MaaS page; the skill obtains or creates a dedicated local key without asking the user to paste secrets into chat. Semantic analysis runs in the current host and does not call an external model API.
 
@@ -244,6 +246,13 @@ python3 scripts/fact_check_x.py prepare-comparison \
   --results "$FCX_RUN_DIR/capture/results.json" \
   --run-dir "$FCX_RUN_DIR"
 
+# Interactive mode returns a one-time token. After the user reviews stage one:
+python3 scripts/fact_check_x.py acknowledge-stage \
+  --run-dir "$FCX_RUN_DIR" \
+  --stage capture \
+  --token "<token returned for this stage>" \
+  --decision continue
+
 # The current host agent writes comparison-analysis.json.
 
 python3 scripts/fact_check_x.py complete-comparison \
@@ -288,6 +297,7 @@ authority/evidence/
 authority/assessments/
 authority/results/
 authority-gate.json
+stage-checkpoints.json
 verification.json
 pipeline.json
 01-capture-report.html

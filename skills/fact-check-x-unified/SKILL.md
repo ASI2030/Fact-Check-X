@@ -1,6 +1,6 @@
 ---
 name: fact-check-x-unified
-description: Fact-Check-X 流程编排能力，依次组织各方答案汇总、各方答案聚合（未核验）、全知晓“完美答案”和各方答案测评，生成可打开、可审计、可迁移的阶段产物与完整报告包。
+description: Fact-Check-X 流程编排能力，依次组织各方答案汇总、各方答案聚合（未核验）、权威核验后的最终答案和各方答案测评，生成可打开、可审计、可迁移的阶段产物与完整报告包。
 license: Apache-2.0
 ---
 
@@ -40,7 +40,15 @@ python3 scripts/fact_check_x.py prepare-comparison \
 
 命令会同步生成“各方答案汇总”，在运行目录顶层生成 `01-capture-report.html`，并通过 `deliverables` 返回用户可见路径。调用方必须先用该路径发送真正的 Markdown 文件链接，再继续知识点对比；禁止只显示反引号路径。
 
-默认交互模式下，调用方发送本阶段产物后必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，收到继续指令后才能进入下一阶段。只有用户在最初请求中明确要求完整自动跑完时才可连续执行，但各阶段产物仍须逐步展示。
+默认交互模式下，程序会把阶段状态写入 `stage-checkpoints.json`。调用方发送本阶段产物并收到用户“继续下一步”后，必须使用 `checkpoint.acknowledgement.token` 执行：
+
+```bash
+python3 scripts/fact_check_x.py acknowledge-stage \
+  --run-dir <run> --stage <checkpoint.stage> \
+  --token <checkpoint.acknowledgement.token> --decision continue
+```
+
+未确认时，下一阶段命令会直接失败。用户在最初请求中明确要求完整自动跑完时，在 `prepare-comparison` 增加 `--execution-mode full-auto`；程序仍会按顺序记录四个检查点。
 
 当前智能体读取 `<run>/comparison-task.json`，写入 `<run>/comparison-analysis.json`，再执行：
 
@@ -92,7 +100,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 python3 scripts/fact_check_x.py finalize-authority --run-dir <run>
 ```
 
-`finalize-authority` 生成“完美答案（已核验，可权威溯源）”，将证据充分的知识点纳入确定答案，将证据不足的知识点写入 `evidenceGaps`，并在“以下经权威溯源后，无法证实也无法证伪，仅供参考”中单列；只要技术链路成功，命令返回 `status=completed`，调用方继续生成第四步。只有技术命令返回非零状态时才停止并重试当前阶段。
+`finalize-authority` 生成“权威核验后的最终答案”，将证据充分的知识点纳入确定答案，将证据不足的知识点写入 `evidenceGaps`。第三步只展示最终答案、权威证据和证据边界；平台裁决与评分只在第四步展示。
 
 `finalize-authority` 完成裁决后会独立生成 `03-authority-report.html`，并通过
 `deliverables` 返回路径。调用方必须先展示这份权威报告；默认交互模式下，
@@ -108,8 +116,10 @@ python3 scripts/fact_check_x.py deliver --results <results.json> --run-dir <run>
 
 - `01-capture-report.html`：各方答案汇总；
 - `02-comparison-report.html`：各方答案聚合（未核验）；
-- `03-authority-report.html`：全知晓“完美答案”、官方证据和各平台裁决；
+- `03-authority-report.html`：权威核验后的最终答案、权威证据和证据边界；
 - `04-final-report.html`：各方答案测评报告。
+
+`deliver` 只能读取第三步已锁定的 `verification.json` 和 `03-authority-report.html`；任一文件摘要变化都必须拒绝，不得重算或重写第三步。
 
 缺少任一报告都不得生成或交付 `05-complete-report-package.zip`。
 
