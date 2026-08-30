@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.7",
-  "tag": "v1.1.7",
-  "sourceCommitSha": "d553046d64aa6cfa5738cc13dd63a39191352f2d",
-  "publishedAt": "2026-08-29T21:21:10+08:00",
+  "version": "1.1.8",
+  "tag": "v1.1.8",
+  "sourceCommitSha": "49f2e6fdcbaa39996839fa49f1448fcc9b33f260",
+  "publishedAt": "2026-08-31T02:38:23+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度溯源）",
@@ -20,57 +20,57 @@
   ],
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 298389,
-    "files": 94,
-    "sha256": "134983e349b975ffbfc8ad41af4e1b2bc27e079f2773168f5dd5eeaa59fd3833",
-    "skillSourceTreeSha256": "2b8a606227b1bb728497c17dc62b7f6ce80e85f3e490cfeb7a648997faca36de"
+    "bytes": 308406,
+    "files": 97,
+    "sha256": "b8b3075c22437847179970ee232fee7ee426c7454ec462a21a1f5bed36c402ac",
+    "skillSourceTreeSha256": "4df6960fb775f375b4b4f0685f3d29a75775e4a0e49fb117a6a1a9ab7b007d37"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.7.zip",
-      "sha256": "43b4b64091e47d09efb87c5965d55c01b57ace837941961a9b2210249425ca14"
+      "file": "llm-answer-reference-compare-v1.1.8.zip",
+      "sha256": "05082c6ad7afaaf675690a29900ee9afd7ae58397d75bb123cd62fbbcf8d664a"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.7.zip",
-      "sha256": "9aeeeb2ab710c6254f15a6023dd46f0626b616a1e841cf83f5ae5d6708bbc7a8"
+      "file": "fact-check-x-knowledge-compare-v1.1.8.zip",
+      "sha256": "d302a1489dc277ad515abc8c1b97615ffb2885fa9d0493129e3d0dc1c1695271"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.7.zip",
-      "sha256": "4f985ed216211b2f40a98d549f12254771398c21e07e64b7000b44d94a844316"
+      "file": "fact-check-x-authoritative-verify-v1.1.8.zip",
+      "sha256": "6e8d22692371e1146de1f16cfea6f39f88a23364db3d48b1303dde69bd0c75c7"
     },
     {
-      "file": "fact-check-x-unified-v1.1.7.zip",
-      "sha256": "05175a2c37d87a8d8d48cac3175db44bab79e1d6a1c64aea0453890e491fbb72"
+      "file": "fact-check-x-unified-v1.1.8.zip",
+      "sha256": "f1459b410f5bba44aa059486c72c8d0eb19e227161e2dd3b758fb78613dfa312"
     },
     {
-      "file": "fact-check-x-suite-v1.1.7.zip",
-      "sha256": "a89204044f0eeaa33bac6dc761ec8094219c41e603847a4aa750893711fec396"
+      "file": "fact-check-x-suite-v1.1.8.zip",
+      "sha256": "d82cab70f8ab8f04fb6de392aa7f266a7691538d26241ee804705f93bec3e129"
     },
     {
-      "file": "fact-check-x-complete-v1.1.7.zip",
-      "sha256": "5ef9023eb1a0c2176fb44e8a9f8298fa46637343baaf8f2ab9ce26dbf62bc2ed"
+      "file": "fact-check-x-complete-v1.1.8.zip",
+      "sha256": "50b2ff8bfbe26f6cb167e47a49c90d2df72c104ea0df1af5b9934f7d6d19ae22"
     }
   ],
   "distribution": {
     "github": {
       "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.7",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.8",
       "assetCount": 11
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.7",
-      "versionId": 275776,
-      "submittedPackageSha256": "afa78aa6bfc63dda7fbf53d8bfb38fdaa08365f0d419232f95a4f96586e04a8d",
-      "contentFingerprint": "6931642057113b7bb333e8ad4210f81dea4bf3a29544b1a45847530608ac4044",
+      "version": "1.1.8",
+      "versionId": 277196,
+      "submittedPackageSha256": "817a7b751e2aaeeef41197c8ee9f5f2e199b51d68437674f96ba39064fdff33e",
+      "contentFingerprint": "b40d6ac75a46d7f436160a2a930ddbdcb68125361fcd8e74754d950b3d11820f",
       "platformSignature": "pending",
       "publisherRealNameVerified": true
     },
     "workbuddy": {
       "status": "installed_and_verified",
-      "version": "1.1.6",
-      "installSource": "GitHub v1.1.6 formal package",
+      "version": "1.1.8",
+      "installSource": "GitHub v1.1.8 formal package",
       "runtime": "ready",
       "smokeTest": "passed"
     }
@@ -86,29 +86,30 @@
     "packageFunctionalTests": "passed",
     "workbuddyInstalled": "verified",
     "marketplaceSignature": "pending",
-    "liveFivePlatformBaseline": {
-      "status": "focused_shenzhen_replay_passed",
-      "basis": "A focused five-platform Shenzhen evidence replay passed: all five official materials were reused, with zero Trusted Search requests and attempts. This is not a new broad ranking benchmark."
+    "liveTwoPlatformEndToEnd": {
+      "status": "passed",
+      "basis": "A real Shenzhen policy question completed all four stages with DeepSeek and Tencent Yuanbao. DeepSeek captured 7/7 reference bodies and Yuanbao captured 42/42 reference bodies; six atomic knowledge points were verified against six government anchors, with zero Trusted Search requests because the captured official evidence was sufficient.",
+      "reportPackageSha256": "0d154c8303e449b769e7c9697908c502f29d3a3111249fb772cabe7e2e9576ef"
     }
   },
   "supplyChain": {
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "64c46ad3e3ee91eb96512c9243caae016630208fafa67d034174f77bdf5eb1fd"
+      "sha256": "8d00d1517409cc92adead64a50ca3b8a964c2c5de57184309db277d73d31bc72"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "e04f1a3e2dbbd5bb87e1027286b9b5141524ecc6969a0e4b30da4adeade888bb"
+      "sha256": "0fd2433684894d3caaac9e3e70f42ed194d3d2417dfbfeae6afc16805fd48189"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "74b2fa82c896af600a1271f93b05915383329ed9cd95494e5d8a58fa91d44568"
+      "sha256": "a52e41659fa3c08d0536f1ec3e304ecee25d4a01ada4326900deba0ab5632e44"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.7 is published to GitHub and submitted to SkillHub; subsequent changes require a new version."
+    "blockingReason": "v1.1.8 is published to GitHub and submitted to SkillHub; subsequent changes require a new version."
   }
 }
