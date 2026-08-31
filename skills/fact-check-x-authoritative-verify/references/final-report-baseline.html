@@ -1,27 +1,41 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>各方答案测评报告</title><style>
-body{font-family:-apple-system,"PingFang SC",sans-serif;max-width:1240px;margin:24px auto;padding:0 24px;color:#1f2937;line-height:1.6}
+<title>各方答案测评报告（问题：深圳夫妻投靠入户，申请人和被投靠人分别需要满足哪些条件？请给出当前有效政策及引用来源。）</title><style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC",sans-serif;width:100%;margin:0;padding:0;color:#1f2937;background:#eef1f5;line-height:1.6;letter-spacing:0}
+.top{background:#172033;color:#fff;padding:28px max(24px,calc((100vw - 1440px)/2 + 24px))}
+.top .eyebrow{color:#9bd4ca;font-size:13px;font-weight:700;margin:0 0 8px}
+.top h1{color:#fff;border:0;font-size:30px;line-height:1.25;margin:0;padding:0}
+.top .muted{color:#d8e0ec}
+.top .toolbar{margin-top:14px}
+.top .btn{background:#fff;border-color:#fff;color:#173f74}
+.report-main{background:#fff;max-width:1440px;margin:0 auto;padding:24px}
 h1{color:#1e3a8a;border-bottom:3px solid #e5e7eb;padding-bottom:10px}
 h2{color:#1e40af;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6px}
 .muted{color:#6b7280} .small{font-size:12px}
 .tt{cursor:help;border-bottom:1px dotted #9ca3af}
-.hero{background:linear-gradient(135deg,#eef2ff,#f0fdfa);padding:20px;border-radius:14px;margin:16px 0}
-.mwrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:14px 0}
-.mcard{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.hero{background:#f6f8fb;border:1px solid #d8dee9;border-left:5px solid #0f766e;padding:20px;border-radius:6px;margin:16px 0}
+.mwrap{display:grid;grid-template-columns:repeat(var(--platform-count),minmax(0,1fr));gap:16px;margin:14px 0}
+.mcard{background:#fff;border:1px solid #e1e6ee;border-radius:6px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .mtitle{font-size:18px;font-weight:700}
-.m1{font-size:22px;margin:8px 0 4px} .m1 .sub{font-size:13px;color:#6b7280;margin-left:10px}
-.bar{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin:6px 0}
-.barfill{height:100%}
+.kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 8px}
+.kpi{min-width:0;border:1px solid #e5e7eb;border-radius:10px;padding:10px;text-align:center;background:#f8fafc}
+.kpi span,.kpi small{display:block;font-size:11px;color:#64748b}
+.kpi b{display:block;font-size:25px;line-height:1.2;margin:3px 0}
+.kpi-coverage b{color:#1e40af} .kpi-accuracy b{color:#059669} .kpi-hallucination b{color:#dc2626}
+.fabricated-alert{margin-top:9px;padding:9px 10px;border:2px solid #dc2626;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:13px;font-weight:650}
+.fabricated-clear{margin-top:9px;padding:7px 9px;border-radius:7px;background:#f0fdf4;color:#15803d;font-size:12px}
 .m2{font-size:13px;margin:8px 0}
 .mtab{width:100%;font-size:12.5px;border-collapse:collapse;margin-top:6px}
 .mtab td{padding:3px 4px;border-bottom:1px solid #f3f4f6}
 .mtab td:last-child{text-align:right;font-weight:600}
 .mtab tr.hl td{color:#92400e}
-table.kp{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+.kp-scroll{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.kp{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;margin-top:10px}
+.platform-layout-dense table.kp{min-width:var(--kp-min-width)}
 table.kp th{background:#f9fafb;padding:8px;text-align:left;border-bottom:2px solid #e5e7eb}
 table.kp td{padding:8px;border-bottom:1px solid #eee;vertical-align:top}
-.kid{font-weight:700;color:#6366f1;width:34px} .kdesc{width:30%;vertical-align:top}
-.kc{width:23%;vertical-align:top}
+.kid{font-weight:700;color:#6366f1;width:40px} .kdesc{width:32%;vertical-align:top}
+.kc{width:auto;vertical-align:top;overflow-wrap:anywhere}
 .catpill{display:inline-block;color:#fff;border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;cursor:help}
 .locktag{display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:4px;padding:0 5px;font-size:10.5px;cursor:help}
 .appealtag{display:inline-block;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;border-radius:4px;padding:0 5px;font-size:10.5px;cursor:help}
@@ -46,6 +60,7 @@ details.rawd summary{cursor:pointer;font-size:14px}
 ol.reflist{font-size:12.5px;margin:6px 0;padding-left:22px}
 ol.reflist li{margin:3px 0}
 .bgov{display:inline-block;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:4px;padding:0 5px;font-size:10.5px;margin-right:4px}
+.bdtv{display:inline-block;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc;border-radius:4px;padding:0 5px;font-size:10.5px;margin-right:4px;cursor:help}
 .bdt{display:inline-block;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:0 5px;font-size:10.5px;margin-right:4px;cursor:help}
 .bcom{display:inline-block;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:4px;padding:0 5px;font-size:10.5px;margin-right:4px}
 table.doc{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
@@ -58,7 +73,7 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
 .vq{font-size:19px;color:#111827;margin-bottom:8px}
 .vqlab{display:inline-block;background:#1e3a8a;color:#fff;font-size:12px;border-radius:5px;padding:2px 9px;margin-right:9px;vertical-align:middle;font-weight:600}
 .vts{font-size:14px;margin-bottom:12px}
-.vcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.vcards{display:grid;grid-template-columns:repeat(var(--platform-count),minmax(0,1fr));gap:12px}
 .vcard{background:#f9fafb;border-radius:8px;padding:10px 14px}
 .vside{font-size:14px;font-weight:700;margin-bottom:4px}
 .vhead{font-size:13.5px;color:#374151;line-height:1.55}
@@ -71,6 +86,20 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
 .refq{font-weight:600;color:#334155;margin:10px 0 4px;font-size:13.5px}
 .refq:first-child{margin-top:0}
 .refitem{font-size:12.5px;color:#475569;padding:4px 0 4px 10px;border-left:2px solid #e2e8f0;margin:3px 0;line-height:1.5}
+.locked-point{background:#fff;border:1px solid #d7dde7;border-radius:6px;margin:14px 0;padding:18px}
+.locked-point-head{align-items:flex-start;display:flex;gap:10px}
+.locked-point-head h3{font-size:17px;line-height:1.5;margin:2px 0 0}
+.point-id{background:#172033;border-radius:4px;color:#fff;display:inline-block;font-size:12px;font-weight:750;padding:4px 7px}
+.role-label{color:#637083;font-size:11px;font-weight:700}
+.locked-finding{background:#f6f8fb;border-left:4px solid #148266;margin:14px 0;padding:12px 14px}
+.locked-finding p{font-size:15px;font-weight:650;margin:5px 0 6px}
+.locked-finding a{font-size:12px}
+.locked-platforms{display:grid;gap:10px;grid-template-columns:repeat(var(--platform-count),minmax(0,1fr))}
+.locked-platform{background:#fbfcfd;border:1px solid #e1e6ee;border-radius:5px;min-width:0;padding:12px}
+.locked-platform-head{align-items:center;display:flex;gap:8px;justify-content:space-between}
+.locked-claim{font-weight:650;margin:9px 0 5px}
+.locked-reason{color:#526071;font-size:12px;margin:5px 0}
+.empty-state{background:#f6f8fb;border:1px solid #d7dde7;border-radius:6px;color:#637083;padding:14px}
 .obasis{margin:3px 0;font-size:11.5px}
 .ttab{width:100%;font-size:11.5px;border-collapse:collapse;margin:4px 0 2px}
 .ttab td{padding:2px 4px;border:none}
@@ -85,6 +114,19 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
 .toolbar{display:flex;gap:8px;margin:10px 0 0}
 .btn{font-size:13px;border:1px solid #c7d2fe;background:#eef2ff;color:#3730a3;border-radius:8px;padding:6px 14px;cursor:pointer}
 .btn:hover{background:#e0e7ff}
+@media(max-width:1200px){
+  .platform-count-4 .mwrap,.platform-count-4 .vcards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .platform-count-5 .mwrap,.platform-count-5 .vcards{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:720px){
+  .mwrap,.vcards,.locked-platforms{grid-template-columns:1fr!important}
+  table.kp{min-width:var(--kp-min-width)}
+  body{overflow-wrap:anywhere}
+  h1{font-size:24px}
+  .top{padding:22px 18px}
+  .top h1{font-size:24px}
+  .report-main{padding:16px 12px}
+}
 @media print{
   body{max-width:none;margin:0;padding:0;font-size:12px}
   .toolbar,.tt{display:none!important}
@@ -94,128 +136,160 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
   a{color:#1e40af;text-decoration:none}
   h1{font-size:18px} h2{font-size:15px}
 }
-</style></head><body>
-<h1>各方答案测评报告</h1>
-<p class="muted">查询：<b>广州无合同租房提取住房公积金每月最高多少？</b> · 2026-07-22 23:43</p>
+
+.fcx-report-nav{display:flex;flex-wrap:wrap;gap:8px;margin:14px auto 18px;max-width:1440px;padding:10px 24px;border-top:1px solid #d7dde7;border-bottom:1px solid #d7dde7;background:#fff}
+.fcx-report-nav a,.fcx-report-nav span{display:inline-flex;align-items:center;min-height:32px;padding:5px 10px;border-radius:6px;font-size:13px;text-decoration:none}
+.fcx-report-nav a{border:1px solid #c8d1dc;background:#fff;color:#285a9f}
+.fcx-report-nav a:hover{border-color:#285a9f;color:#173f74}
+.fcx-report-nav span{border:1px solid #187454;background:#e8f5f0;color:#125b42;font-weight:700}
+@media(max-width:760px){.fcx-report-nav{padding:9px 12px;overflow-x:auto;flex-wrap:nowrap}.fcx-report-nav a,.fcx-report-nav span{white-space:nowrap}}
+</style>  <meta name="fact-check-x-metrics-sha256" content="e1b7d39f6b868c77b797bb15a4e371b7bc3c72abe90d4b948deef958f36a9de0" />
+</head><body class="platform-layout-compact platform-count-2" style="--platform-count:2;--kp-min-width:860px">
+<header class="top">
+<p class="eyebrow">Fact-Check-X · 第四阶段</p>
+<h1>各方答案测评报告（问题：深圳夫妻投靠入户，申请人和被投靠人分别需要满足哪些条件？请给出当前有效政策及引用来源。）</h1>
+<p class="muted">准确性、完整性、来源质量与完整证据 · 2026-08-31 22:33</p>
 <div class="toolbar">
   <button class="btn" onclick="window.print()">⎙ 导出 PDF / 打印</button>
   <button class="btn" onclick="document.querySelectorAll('details.rawd').forEach(d=>d.open=true)">▽ 展开全部存证</button>
 </div>
-    
-      
+</header>
+<nav class="fcx-report-nav" data-fcx-report-nav="1" aria-label="事实核验四阶段报告导航"><a href="01-capture-report.html">各方答案汇总</a><a href="02-comparison-report.html">各方答案聚合</a><a href="03-authority-report.html">权威核验答案</a><span aria-current="page">各方答案测评报告</span></nav><main class="report-main">
+
+
 <div class="verdict">
-  <div class="vq"><span class="vqlab">核心问题</span>广州无合同租房提取月上限</div>
-  <div class="vcards"><div class="vcard" style="border-left:4px solid #059669"><div class="vside" style="color:#4f46e5">深知晓</div><div class="vhead"><span class="vbadge" style="background:#059669">有官方依据支持</span> 与深知晓所附官方证据一致</div></div><div class="vcard" style="border-left:4px solid #dc2626"><div class="vside" style="color:#dc2626">豆包</div><div class="vhead"><span class="vbadge" style="background:#dc2626">经核验有误</span> 2000元与官方1400元冲突</div></div></div>
+  <div class="vq"><span class="vqlab">核心问题</span>深圳夫妻投靠入户的现行申请条件与政策依据</div>
+  <div class="vcards"><div class="vcard" style="border-left:4px solid #059669"><div class="vside" style="color:#0891b2">DeepSeek</div><div class="vhead"><span class="vbadge" style="background:#059669">全部有官方依据支持</span> 全部有官方依据支持</div></div><div class="vcard" style="border-left:4px solid #059669"><div class="vside" style="color:#0ea5e9">腾讯元宝</div><div class="vhead"><span class="vbadge" style="background:#059669">全部有官方依据支持</span> 全部有官方依据支持</div></div></div>
   <div class="muted small" style="margin-top:6px">完整逐条判定见②直接答案区。</div>
 </div>
-      
+
 
 
 <div class="hero">
-  <p style="margin:0 0 6px"><b>结论：</b>共核验 1 个知识点；直接准确 1 项，间接准确 0 项，结果巧合 0 项，严重误导 1 项，凭空编造 0 项，证据不足 0 项。</p>
+  <p style="margin:0 0 6px"><b>结论：</b>共核验 6 个知识点；直接准确 11 项，间接准确 0 项，结果巧合 0 项，严重误导 1 项，凭空编造 0 项，证据不足 0 项。</p>
   <div class="mwrap">
 
     <div class="mcard">
-      <div class="mtitle" style="color:#4f46e5">深知晓 <span class="muted small">当前承载智能体完成语义分析</span></div>
-      <div class="m1"><span class="tt" title="分母：合法直接答案知识点 N。答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少。只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖">直接答案覆盖率</span> <b>100%</b><span class="sub tt" title="分母：合法直接答案知识点 N。该家没答到的合法直接答案知识点占比。与覆盖率互补，相加=100%">遗漏率 0%</span></div>
-      <div class="bar"><div class="barfill" style="width:100%;background:#4f46e5"></div></div>
+      <div class="mtitle" style="color:#0891b2">DeepSeek <span class="muted small">当前承载智能体完成语义分析</span></div>
+      <div class="kpi-grid">
+        <div class="kpi kpi-coverage"><span class="tt" title="分母：合法直接答案知识点 N。答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少。只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖">覆盖率</span><b>100%</b><small class="tt" title="分母：合法直接答案知识点 N。该家没答到的合法直接答案知识点占比。与覆盖率互补，相加=100%">遗漏率 0%</small></div>
+        <div class="kpi kpi-accuracy"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确。证据不足项单独展示，不按错误计分">准确率</span><b>100%</b><small>有据且正确</small></div>
+        <div class="kpi kpi-hallucination"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）。与准确率互补">幻觉率</span><b>0%</b><small>巧合 + 误导</small></div>
+      </div>
 
-      <div class="m2">已覆盖直接答案质量：<span class="tt" title="分母：该家直接答案覆盖数。覆盖的直接答案里「有据且正确」的比例 = 直接准确 + 间接准确。衡量说出口的话靠不靠谱；无据碰对不计入">准确</span> <b style="color:#059669">100%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。覆盖的直接答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）。与准确率互补">幻觉</span> <b style="color:#dc2626">0%</b></div>
+      <div class="m2">证据状态：<span class="tt" title="分母：该家直接答案覆盖数。已有足够权威证据完成裁决的覆盖项比例。低于100%表示仍有证据边界，不代表对应回答错误">充分</span> <b>100%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。该主张有经原文核对、确实支持它的所附官方材料。可由局部角标或无角标时的回答级参考资料语义匹配建立">官方支持</span> <b>100%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。该主张原答案片段内存在与它相连的可验证脚标。只衡量逐句引用完整性；低于事实准确率不代表答案内容错误">局部角标</span> <b>80%</b></div>
       <table class="mtab">
-        <tr><td class="tt" title="分母：该家直接答案覆盖数。声明与其所附官方依据（官方原站或官方来源）一致；含算术级显然推导（如正文'2000上增加40%'→答案'2800'）。最高可信级：答案自带官方出处，可直接自验">· 直接准确（官方依据）</td><td>100%</td></tr>
-        <tr><td class="tt" title="分母：该家直接答案覆盖数。声明忠实于所附非官方材料，且事后经官方源独立验证正确。仅当 AI 用了非官方材料；内容正确但出处不硬">· 间接准确（非官方+官方验证）</td><td>0%</td></tr>
-        <tr class="hl"><td class="tt" title="分母：该家直接答案覆盖数。声明无依据或与所附材料不符，但经官方源验证结果碰巧正确。结果对但行为不可靠（运气），故不计入准确率">· 巧合式幻觉（无据碰对）</td><td>0%</td></tr>
-        <tr class="hl"><td class="tt" title="分母：该家直接答案覆盖数。经官方源验证，声明的结果是错误的。最危险的一类：用户照做会被误导">· 误导式幻觉（结果错）</td><td>0%</td></tr>
+        <tr><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。声明与其所附官方原站材料或官方来源一致；含算术级显然推导（如正文'2000上增加40%'→答案'2800'）。最高可信级：主张由官方来源直接支持">· 直接准确（官方依据）</td><td>100%</td></tr>
+        <tr><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。声明忠实于其他非官方材料，且事后经官方源独立验证正确。内容正确，但答案自身所附出处不是官方来源">· 间接准确（非官方+官方验证）</td><td>0%</td></tr>
+        <tr class="hl"><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。声明无引用依据或与所附材料不符，但经官方源验证后与官方依据巧合一致。结果正确但缺少可核验的引用支持，故不计入准确率">· 巧合式幻觉（无引用依据但与官方依据巧合一致）</td><td>0%</td></tr>
+        <tr class="hl"><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。经官方源验证，声明的结果是错误的。最危险的一类：用户照做会被误导">· 误导式幻觉（结果错）</td><td>0%</td></tr>
       </table>
-      <div style="margin-top:7px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f8fafc;color:#94a3b8">🧪 编造 0 项</div>
-      <div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>0</b> 项 · 幻觉式提醒 <b>0</b> 项</div>
+      <div class="fabricated-clear">✓ 未检出编造</div>
+      <div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>1</b> 项 · 幻觉式提醒 <b>0</b> 项</div>
     </div>
     <div class="mcard">
-      <div class="mtitle" style="color:#dc2626">豆包 <span class="muted small">当前承载智能体完成语义分析</span></div>
-      <div class="m1"><span class="tt" title="分母：合法直接答案知识点 N。答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少。只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖">直接答案覆盖率</span> <b>100%</b><span class="sub tt" title="分母：合法直接答案知识点 N。该家没答到的合法直接答案知识点占比。与覆盖率互补，相加=100%">遗漏率 0%</span></div>
-      <div class="bar"><div class="barfill" style="width:100%;background:#dc2626"></div></div>
+      <div class="mtitle" style="color:#0ea5e9">腾讯元宝 <span class="muted small">当前承载智能体完成语义分析</span></div>
+      <div class="kpi-grid">
+        <div class="kpi kpi-coverage"><span class="tt" title="分母：合法直接答案知识点 N。答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少。只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖">覆盖率</span><b>100%</b><small class="tt" title="分母：合法直接答案知识点 N。该家没答到的合法直接答案知识点占比。与覆盖率互补，相加=100%">遗漏率 0%</small></div>
+        <div class="kpi kpi-accuracy"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确。证据不足项单独展示，不按错误计分">准确率</span><b>100%</b><small>有据且正确</small></div>
+        <div class="kpi kpi-hallucination"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）。与准确率互补">幻觉率</span><b>0%</b><small>巧合 + 误导</small></div>
+      </div>
 
-      <div class="m2">已覆盖直接答案质量：<span class="tt" title="分母：该家直接答案覆盖数。覆盖的直接答案里「有据且正确」的比例 = 直接准确 + 间接准确。衡量说出口的话靠不靠谱；无据碰对不计入">准确</span> <b style="color:#059669">0%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。覆盖的直接答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）。与准确率互补">幻觉</span> <b style="color:#dc2626">100%</b></div>
+      <div class="m2">证据状态：<span class="tt" title="分母：该家直接答案覆盖数。已有足够权威证据完成裁决的覆盖项比例。低于100%表示仍有证据边界，不代表对应回答错误">充分</span> <b>100%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。该主张有经原文核对、确实支持它的所附官方材料。可由局部角标或无角标时的回答级参考资料语义匹配建立">官方支持</span> <b>100%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。该主张原答案片段内存在与它相连的可验证脚标。只衡量逐句引用完整性；低于事实准确率不代表答案内容错误">局部角标</span> <b>0%</b></div>
       <table class="mtab">
-        <tr><td class="tt" title="分母：该家直接答案覆盖数。声明与其所附官方依据（官方原站或官方来源）一致；含算术级显然推导（如正文'2000上增加40%'→答案'2800'）。最高可信级：答案自带官方出处，可直接自验">· 直接准确（官方依据）</td><td>0%</td></tr>
-        <tr><td class="tt" title="分母：该家直接答案覆盖数。声明忠实于所附非官方材料，且事后经官方源独立验证正确。仅当 AI 用了非官方材料；内容正确但出处不硬">· 间接准确（非官方+官方验证）</td><td>0%</td></tr>
-        <tr class="hl"><td class="tt" title="分母：该家直接答案覆盖数。声明无依据或与所附材料不符，但经官方源验证结果碰巧正确。结果对但行为不可靠（运气），故不计入准确率">· 巧合式幻觉（无据碰对）</td><td>0%</td></tr>
-        <tr class="hl"><td class="tt" title="分母：该家直接答案覆盖数。经官方源验证，声明的结果是错误的。最危险的一类：用户照做会被误导">· 误导式幻觉（结果错）</td><td>100%</td></tr>
+        <tr><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。声明与其所附官方原站材料或官方来源一致；含算术级显然推导（如正文'2000上增加40%'→答案'2800'）。最高可信级：主张由官方来源直接支持">· 直接准确（官方依据）</td><td>100%</td></tr>
+        <tr><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。声明忠实于其他非官方材料，且事后经官方源独立验证正确。内容正确，但答案自身所附出处不是官方来源">· 间接准确（非官方+官方验证）</td><td>0%</td></tr>
+        <tr class="hl"><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。声明无引用依据或与所附材料不符，但经官方源验证后与官方依据巧合一致。结果正确但缺少可核验的引用支持，故不计入准确率">· 巧合式幻觉（无引用依据但与官方依据巧合一致）</td><td>0%</td></tr>
+        <tr class="hl"><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。经官方源验证，声明的结果是错误的。最危险的一类：用户照做会被误导">· 误导式幻觉（结果错）</td><td>0%</td></tr>
       </table>
-      <div style="margin-top:7px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f8fafc;color:#94a3b8">🧪 编造 0 项</div>
-      <div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>0</b> 项 · 幻觉式提醒 <b>0</b> 项</div>
+      <div class="fabricated-clear">✓ 未检出编造</div>
+      <div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>0</b> 项 · 幻觉式提醒 <b>1</b> 项</div>
     </div>
   </div>
-  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率/准确率只算【直接答案】知识点</b>（直接回答用户所问的；相关但非所问的「补充参考」与「凭空编造」都不计）。①覆盖率+遗漏率=100%（分母=合法直接答案知识点）；②准确率+幻觉率=100%（分母=直接答案覆盖数；准确=直接+间接正确，幻觉=巧合+误导）；③编造（官方查无）独立成轴；④补充参考另列分析（见②-补）。
+  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率衡量答没答，准确率衡量已有足够证据裁决的回答是否正确</b>。①覆盖率+遗漏率=100%；②准确率+幻觉率=100%，证据不足项不进入二者分母；③证据充分率单独展示当前可裁决覆盖程度；④官方证据支持率与局部角标覆盖率分开呈现；⑤补充参考另列分析（见②-补）。
   各指标含义鼠标悬停可见，完整口径见 <a href="#metricdoc">⑤ 指标口径速查</a>。</p>
 </div>
 
-<h2>① 参考性</h2>
+<h2>① 平台表现概览 <span class="muted small">（仅按直接答案范围计算）</span></h2>
 <div class="mwrap">
-  <div class="mcard"><span class="muted small">深知晓</span><br><span class="refpill" style="background:#4f46e5">无额外参考</span><div class="small muted" style="margin-top:6px">有价值正确 0 项 · 幻觉式提醒 0 项</div></div><div class="mcard"><span class="muted small">豆包</span><br><span class="refpill" style="background:#dc2626">无额外参考</span><div class="small muted" style="margin-top:6px">有价值正确 0 项 · 幻觉式提醒 0 项</div></div>
+  <div class="mcard"><span class="muted small">DeepSeek</span><br><span class="refpill" style="background:#0891b2">参考有价值</span><div class="small muted" style="margin-top:6px">有价值正确 1 项 · 幻觉式提醒 0 项</div></div><div class="mcard"><span class="muted small">腾讯元宝</span><br><span class="refpill" style="background:#0ea5e9">参考疑似有误导</span><div class="small muted" style="margin-top:6px">有价值正确 0 项 · 幻觉式提醒 1 项</div></div>
 </div>
 
-<h2>② 直接答案逐条判定 <span class="muted small">（直接答案区 · 直接回答用户所问的知识点）</span></h2>
-<p class="muted small">凡<b>直接回答用户所问</b>的知识点列在此区。每条<b>严格四类判定</b>：✅ 直接正确 / ☑ 间接正确 / 🎲 幻觉·结果巧合正确 / ⚠ 幻觉：严重误导；若某家没答到此点，标灰色「未覆盖」（状态指示，非判定）。<b>官方查无、无法核验的凭空编造不在此区</b>——无论直接还是补充，全部移到 <a href="#refzone">②-补 补充参考分析 ③凭空编造</a>，不计覆盖率/准确率。<b>「答案知识点」列</b>放该知识点的<b>共享官方依据</b>（官方验证原文 + [gov原件]，全家共用一份真值）；<b>各家列</b>放该家说法 + 自己引的所附依据原文。</p>
-<table class="kp">
-  <thead><tr><th>#</th><th>答案知识点 + 官方依据</th><th>深知晓</th><th>豆包</th></tr></thead>
-  <tbody><tr><td class="kid">K1</td><td class="kdesc">广州无租赁合同或合同未备案时每人每月住房公积金最高提取额度<div class="obgroup"><div class="prov obasis"><span class="ptag vtag">官方验证 · 通过</span><span class="muted small">官方源证实</span>（A1） <a class="govlink" href="https://gjj.gz.gov.cn/example" target="_blank">[gov原件]</a><blockquote>每人每月最高提取额度为1400元</blockquote></div></div></td><td class="kc"><span class="catpill" style="background:#059669" title="判定条件：与所附官方依据（官方原站或官方来源）一致（含算术级显然推导），可自验　｜　标准分类：直接准确">✅ 直接正确</span><div class="claim"><span class="claimtag">答案点</span>每人每月最高提取1400元</div><div class="srcline">所附源：官方原站 ｜ 忠实：符合</div><div class="evgroup"><div class="prov"><span class="ptag">所附依据</span><a href="https://gjj.gz.gov.cn/example" target="_blank">广州住房公积金规则</a><span class="muted small">（同该行官方依据原文）</span></div></div></td><td class="kc"><span class="catpill" style="background:#dc2626" title="判定条件：经官方源验证，结果是错误的（用户照做会被误导）　｜　标准分类：误导式幻觉">⚠ 幻觉：严重误导</span><div class="claim"><span class="claimtag">答案点</span>每人每月最高提取2000元</div><div class="srcline">所附源：非官方来源 ｜ 忠实：符合</div><div class="evgroup"><div class="prov"><span class="ptag">所附依据</span><a href="https://example.com/article" target="_blank">租房提取介绍</a><blockquote>租房提取额度可能为每月2000元</blockquote></div></div></td></tr></tbody>
-</table>
+<h2>② 直接答案逐知识点测评 <span class="muted small">（承接第三步锁定结果，不重新核验）</span></h2>
+<p class="muted small">每个知识点的权威结论直接引用第三步锁定数据；本阶段只比较各平台主张、引用忠实性与裁决结果。</p>
+<section class="locked-point" id="evaluation-K1"><div class="locked-point-head"><span class="point-id">K1</span><div><span class="role-label">直接答案</span><h3>被投靠人登记为深圳市常住户口满2年，且夫妻结婚登记满2年</h3></div></div><div class="locked-finding"><b>第三步锁定的权威结论</b><p>现行夫妻投靠入户的核心年限条件为：被投靠人登记为深圳市常住户口满2年，且夫妻结婚登记满2年；复婚的，以复婚登记时间起算。</p><div class="prov obasis"><span class="ptag vtag">官方验证 · 通过</span><span class="muted small">官方源证实</span>（A1、A2） <a class="govlink" href="https://www.sz.gov.cn/hdjlpt/detail?pid=2882723" target="_blank">[权威核验页]</a><a class="govlink" href="03-authority-report.html">[查看第三步最终答案与来源索引]</a></div></div><div class="locked-platforms"><article class="locked-platform" data-fcx-point="K1" data-fcx-platform="deepseek" data-fcx-binding-sha256="658071553c3c1b582938e35333ef9566a9c3be7ed004e8bc5710d9834292b150"><div class="locked-platform-head"><b style="color:#0891b2">DeepSeek</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">被投靠人登记为深圳市常住户口满2年，且夫妻结婚登记满2年</p><p class="locked-reason"><b>锁定裁决：</b>与深圳市政府在线和深圳市公安局所载现行条件一致</p><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="https://www.sz.gov.cn/hdjlpt/detail?pid=2882723" target="_blank">www.sz.gov.cn/hdjlpt/detail</a><blockquote>查询结果 受理时间： 2024-04-19 答复时间： 2024-04-22 答复单位： 深圳市公安局 答复内容： 市民： 您好，您反映的问题我单位已收悉，现回复如下： 根据《深圳市户籍迁入若干规定》，夫妻投靠申请条件：1.被投靠人登记为本市常住户口时间及夫妻结婚登记时间均满2年；</blockquote></div><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946</a><blockquote>（二）夫妻一方为深圳市户籍的，其配偶按下列要求申请投靠入户： 1．在深有就业，且同时符合本规定第八条条件的，直接办理人才引进迁户； 2．在深无就业，或者虽有就业但不符合本规定第八条条件的，分居时间满2年后可以申请入户。</blockquote></div></article><article class="locked-platform" data-fcx-point="K1" data-fcx-platform="yuanbao" data-fcx-binding-sha256="5a7f3162422242e150a5bc630554533ab305e67b5b2aee2e273c7280546c1940"><div class="locked-platform-head"><b style="color:#0ea5e9">腾讯元宝</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">被投靠人入深户满2年，且夫妻结婚登记满2年</p><p class="locked-reason"><b>锁定裁决：</b>“双2年”结论与政府来源正文一致</p><div class="prov"><span class="ptag">所附依据 · 全文语义溯源</span><a href="https://www.shanwei.gov.cn/shanwei/swzdly/txfw/txfw02/content/post_659360.html" target="_blank">深圳：夫妻投靠户籍迁入须知_服务公开_汕尾市人民政府门户网站</a><blockquote>2026年8月31日 星期一 长者助手 无障碍 手机版 网站支持IPV6 网站首页 聚焦汕尾 政务公开 政务服务 政民互动 走进汕尾 当前位置： 首页 &gt; 重点领域信息公开 &gt; 推进面向转移落户人员的服务公开 &gt; 服务公开 深圳：夫妻投靠户籍迁入须知 2020-11-11 17:33 来源： 深圳市公安局 发布机构：汕尾市人民政府门户网站 【字体：大 中 小】 分享到： 一、申请条件 （一）被投靠</blockquote></div></article></div></section><section class="locked-point" id="evaluation-K2"><div class="locked-point-head"><span class="point-id">K2</span><div><span class="role-label">直接答案</span><h3>申请人不属于党政机关在编人员</h3></div></div><div class="locked-finding"><b>第三步锁定的权威结论</b><p>申请人不得属于党政机关（部、委、办、局）在编人员。</p><div class="prov obasis"><span class="ptag vtag">官方验证 · 通过</span><span class="muted small">官方源证实</span>（A1） <a class="govlink" href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">[权威核验页]</a><a class="govlink" href="03-authority-report.html">[查看第三步最终答案与来源索引]</a></div></div><div class="locked-platforms"><article class="locked-platform" data-fcx-point="K2" data-fcx-platform="deepseek" data-fcx-binding-sha256="fea8b3814fe790950851a0cab8788d982a4e24ad5e08ed6805b0c536eef2ad4c"><div class="locked-platform-head"><b style="color:#0891b2">DeepSeek</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">申请人不属于党政机关在编人员</p><p class="locked-reason"><b>锁定裁决：</b>与深圳市公安机关公开的申请条件一致</p><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="http://www.yantian.gov.cn/cn/hdjl/dwzsk/ga/content/post_10377311.html" target="_blank">www.yantian.gov.cn/cn/hdjl/dwzsk/ga/content/post_1</a><blockquote>（二）申请人不属党政机关（部、委、办、局）在编人员。</blockquote></div><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="https://m.bendibao.com/bsy/suiqianbs" target="_blank">深圳随迁入户_深圳户口随迁条件_深圳夫妻|子女|老人户口随迁办理-深圳本地宝</a><blockquote>(二)申请人不属党政机关(部、委、办、局)在编人员。</blockquote></div></article><article class="locked-platform" data-fcx-point="K2" data-fcx-platform="yuanbao" data-fcx-binding-sha256="311b0415e9b27110a27e8811a474d76ea5ca1d16886541cfeb90a2454e8b5d35"><div class="locked-platform-head"><b style="color:#0ea5e9">腾讯元宝</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">申请人不属于党政机关在编人员</p><p class="locked-reason"><b>锁定裁决：</b>与深圳市公安机关公开的申请条件一致</p><div class="prov"><span class="ptag">所附依据 · 全文语义溯源</span><a href="https://www.shanwei.gov.cn/shanwei/swzdly/txfw/txfw02/content/post_659360.html" target="_blank">深圳：夫妻投靠户籍迁入须知_服务公开_汕尾市人民政府门户网站</a><blockquote>（二）申请人不属党政机关（部、委、办、局）在编人员。</blockquote></div></article></div></section><section class="locked-point" id="evaluation-K3"><div class="locked-point-head"><span class="point-id">K3</span><div><span class="role-label">直接答案</span><h3>申请人无参加国家禁止的组织或活动的记录</h3></div></div><div class="locked-finding"><b>第三步锁定的权威结论</b><p>申请人须无参加国家禁止的组织或活动的记录。</p><div class="prov obasis"><span class="ptag vtag">官方验证 · 通过</span><span class="muted small">官方源证实</span>（A1、A2） <a class="govlink" href="https://www.sz.gov.cn/hdjlpt/detail?pid=2882723" target="_blank">[权威核验页]</a><a class="govlink" href="03-authority-report.html">[查看第三步最终答案与来源索引]</a></div></div><div class="locked-platforms"><article class="locked-platform" data-fcx-point="K3" data-fcx-platform="deepseek" data-fcx-binding-sha256="f998a9aa3e5cdd3e2a59613a6257ecc84ad65874544908e296b3a01decf82ed8"><div class="locked-platform-head"><b style="color:#0891b2">DeepSeek</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">申请人无参加国家禁止的组织或活动的记录</p><p class="locked-reason"><b>锁定裁决：</b>深圳市政府在线答复及公安机关公开条件均有明确支持</p><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="https://www.sz.gov.cn/hdjlpt/detail?pid=2882723" target="_blank">www.sz.gov.cn/hdjlpt/detail</a><blockquote>2.申请人无参加国家禁止的组织或活动的记录。</blockquote></div><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="http://www.yantian.gov.cn/cn/hdjl/dwzsk/ga/content/post_10377311.html" target="_blank">www.yantian.gov.cn/cn/hdjl/dwzsk/ga/content/post_1</a><blockquote>（五）申请人无参加国家禁止的组织或活动的记录。</blockquote></div></article><article class="locked-platform" data-fcx-point="K3" data-fcx-platform="yuanbao" data-fcx-binding-sha256="7ec69ed30aaff886c50b903023d91be845c1c82e6ed953cc21d612d14cd2b858"><div class="locked-platform-head"><b style="color:#0ea5e9">腾讯元宝</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">申请人无参加国家禁止的组织或活动的记录</p><p class="locked-reason"><b>锁定裁决：</b>与政府来源所载申请条件一致</p><div class="prov"><span class="ptag">所附依据 · 全文语义溯源</span><a href="https://www.shanwei.gov.cn/shanwei/swzdly/txfw/txfw02/content/post_659360.html" target="_blank">深圳：夫妻投靠户籍迁入须知_服务公开_汕尾市人民政府门户网站</a><blockquote>（五）申请人无参加国家禁止的组织或活动的记录。</blockquote></div></article></div></section><section class="locked-point" id="evaluation-K4"><div class="locked-point-head"><span class="point-id">K4</span><div><span class="role-label">直接答案</span><h3>在深就业且符合人才引进条件者应直接办理人才引进；其他情形按夫妻投靠办理</h3></div></div><div class="locked-finding"><b>第三步锁定的权威结论</b><p>在深有就业且符合《深圳市户籍迁入若干规定》第八条人才引进条件的，应直接办理人才引进；在深无就业或虽有就业但不符合第八条条件的，按夫妻投靠条件申请。</p><div class="prov obasis"><span class="ptag vtag">官方验证 · 通过</span><span class="muted small">官方源证实</span>（A1、A2） <a class="govlink" href="https://www.sz.gov.cn/hdjlpt/detail?pid=2882723" target="_blank">[权威核验页]</a><a class="govlink" href="03-authority-report.html">[查看第三步最终答案与来源索引]</a></div></div><div class="locked-platforms"><article class="locked-platform" data-fcx-point="K4" data-fcx-platform="deepseek" data-fcx-binding-sha256="30c7880842ec70365e7f0ca12c9c0e2a0db1e80c9b93b4bd81ced05284bff048"><div class="locked-platform-head"><b style="color:#0891b2">DeepSeek</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">在深无工作或虽有工作但不符合人才引进条件者走夫妻投靠；符合人才引进条件者应走人才引进</p><p class="locked-reason"><b>锁定裁决：</b>与《深圳市户籍迁入若干规定》第十条规定的通道分流一致</p><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946</a><blockquote>（二）夫妻一方为深圳市户籍的，其配偶按下列要求申请投靠入户： 1．在深有就业，且同时符合本规定第八条条件的，直接办理人才引进迁户； 2．在深无就业，或者虽有就业但不符合本规定第八条条件的，分居时间满2年后可以申请入户。</blockquote></div></article><article class="locked-platform" data-fcx-point="K4" data-fcx-platform="yuanbao" data-fcx-binding-sha256="a81529f85e52fde52a84586fc789f7822714589d107558b844ff6b8d81766b78"><div class="locked-platform-head"><b style="color:#0ea5e9">腾讯元宝</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">在深就业且符合人才引进条件者走人才引进；其他情形走夫妻投靠</p><p class="locked-reason"><b>锁定裁决：</b>与《深圳市户籍迁入若干规定》第十条规定的通道分流一致</p><div class="prov"><span class="ptag">所附依据 · 全文语义溯源</span><a href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">深圳市人民政府关于印发深圳市户籍迁入若干规定的通知«重点业务«深圳市公安局</a><blockquote>市公安部门负责按计划办理纳税入户、居住社保入户及夫妻投靠、子女随迁、老人投靠入户等审核工作，衔接办理其他各类人员的迁户手续。 第八条 符合下列条件之一的人员，经核准可办理人才引进迁户： （一）经深圳市认定的高层次人才，且符合该类人才认定标准对应年龄条件的人员。</blockquote></div></article></div></section><section class="locked-point" id="evaluation-K6"><div class="locked-point-head"><span class="point-id">K6</span><div><span class="role-label">直接答案</span><h3>现行政策依据为《深圳市户籍迁入若干规定》（深府〔2016〕59号）</h3></div></div><div class="locked-finding"><b>第三步锁定的权威结论</b><p>本题现行政策依据包括《深圳市户籍迁入若干规定》（深府〔2016〕59号），该规定自2016年9月1日起施行；深圳市公安局公开页面仍以该规定办理和说明夫妻投靠。</p><div class="prov obasis"><span class="ptag vtag">官方验证 · 通过</span><span class="muted small">官方源证实</span>（A1、A2） <a class="govlink" href="https://www.sz.gov.cn/hdjlpt/detail?pid=2882723" target="_blank">[权威核验页]</a><a class="govlink" href="03-authority-report.html">[查看第三步最终答案与来源索引]</a></div></div><div class="locked-platforms"><article class="locked-platform" data-fcx-point="K6" data-fcx-platform="deepseek" data-fcx-binding-sha256="bf616fb2e7995bcc619dd8f4c598b09f01b2eedfc08bcd7799db9ee77b8fd8f5"><div class="locked-platform-head"><b style="color:#0891b2">DeepSeek</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">回答依据《深圳市户籍迁入若干规定》</p><p class="locked-reason"><b>锁定裁决：</b>回答所指法规与深圳市公安局公开的政策原文一致</p><div class="prov"><span class="ptag">所附依据 · 全文语义溯源</span><a href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946</a><blockquote>进入关怀版 首页 政务服务 融媒资讯 警务公开 便民互动 用户中心 当前位置： 首页 &gt; 户籍迁入 &gt; 政策法规 深圳市人民政府关于印发深圳市户籍迁入若干规定的通知 信息来源： 深圳市公安局 发布日期：2023-11-09 [ 内容纠错 ] 各区人民政府，市政府直属各单位： 现将《深圳市户籍迁入若干规定》印发给你们，请遵照执行。执行过程中遇到的问题，请径向市发展改革委反映。 深圳市人民政府 201</blockquote></div></article><article class="locked-platform" data-fcx-point="K6" data-fcx-platform="yuanbao" data-fcx-binding-sha256="334df2fcbff84e668e8eb28d6271946a01f576a27833ea384e6f4c8058c59036"><div class="locked-platform-head"><b style="color:#0ea5e9">腾讯元宝</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">现行法规依据为《深圳市户籍迁入若干规定》（深府〔2016〕59号），自2016年9月1日起施行</p><p class="locked-reason"><b>锁定裁决：</b>法规名称、文号和施行日期均与政府来源正文一致</p><div class="prov"><span class="ptag">所附依据 · 全文语义溯源</span><a href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">深圳市人民政府关于印发深圳市户籍迁入若干规定的通知«重点业务«深圳市公安局</a><blockquote>本规定自2016年9月1日起施行</blockquote></div></article></div></section>
 
-<h2 id="refzone">②-补 补充参考分析 <span class="muted small">（相关但非所问 · 凭空编造 · 不计覆盖率/准确率，只看参考价值）</span></h2>
-<p class="muted small">下列内容<b>不计入覆盖率/准确率</b>——只回答三个问题：① 覆盖外是否还提供了有价值的正确参考；② 是否有幻觉式的参考提醒；③ <b>无论直接答案还是补充参考，是否有任何官方材料都查不到的凭空编造</b>（直接区不再显示编造点，全部在此列出）。</p>
+<h2 id="refzone">③ 补充参考逐知识点测评 <span class="muted small">（不混入最终答案，不计直接答案指标）</span></h2>
+<p class="muted small">补充参考与用户直接所问分开呈现，保留其证据价值和风险，但不改变第三步最终答案。</p>
+<section class="locked-point" id="evaluation-K5"><div class="locked-point-head"><span class="point-id">K5</span><div><span class="role-label">补充参考</span><h3>申请人符合规定的未成年子女及特定成年子女可以一并随迁</h3></div></div><div class="locked-finding"><b>第三步锁定的权威结论</b><p>申请人有法定抚养责任或取得抚养权方同意的未成年子女可以一并申请；规定范围内的在校成年子女或一级、二级病残且生活基本不能自理的未婚未育成年子女也可以一并申请。</p><div class="prov obasis"><span class="ptag vtag">官方验证 · 通过</span><span class="muted small">官方源证实</span>（A1、A2） <a class="govlink" href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">[权威核验页]</a><a class="govlink" href="03-authority-report.html">[查看第三步最终答案与来源索引]</a></div></div><div class="locked-platforms"><article class="locked-platform" data-fcx-point="K5" data-fcx-platform="deepseek" data-fcx-binding-sha256="804cf65a7c9497549cc50088c31b8b1efeafa11413f7a242f06655d4ccdf07f0"><div class="locked-platform-head"><b style="color:#0891b2">DeepSeek</b><span class="catpill" style="background:#059669" title="与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定">直接正确</span></div><p class="locked-claim">未成年子女及符合规定的在校或病残成年子女可以一并随迁</p><p class="locked-reason"><b>锁定裁决：</b>“可以一并申请”的表述及子女范围与公安机关公开条件一致</p><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="http://www.yantian.gov.cn/cn/hdjl/dwzsk/ga/content/post_10377311.html" target="_blank">www.yantian.gov.cn/cn/hdjl/dwzsk/ga/content/post_1</a><blockquote>答：符合以下条件即可申请：（一）被投靠人登记为本市常住户口时间及夫妻结婚登记时间均满2年。属复婚的，复婚登记时间作为“结婚登记时间”。 （二）申请人不属党政机关（部、委、办、局）在编人员。 （三）申请人有法定抚养责任（或征得有抚养权一方同意办理迁户）的未成年子女（含养子女、继子女），可一并申请。 （四）以下成年子女可一并申请： 1.满18周岁不满20周岁，在高中（含中职、中技）或全日制大学在校就读</blockquote></div><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="https://m.bendibao.com/bsy/suiqianbs" target="_blank">深圳随迁入户_深圳户口随迁条件_深圳夫妻|子女|老人户口随迁办理-深圳本地宝</a><blockquote>办事指南 打开APP 深圳随迁入户 搜业务 更多业务 办理指南 最新资讯 核心要点 夫妻随迁 父母随迁 子女随迁 深圳夫妻投靠随迁入户办理指南（条件+材料+流程） 查看全文 更新时间：2026-02-02 17:09:07 办理条件 符合以下条件即可申请： (一)被投靠人入深圳户籍满2年且夫妻结婚登记满2年。属复婚的，复婚登记时间作为“结婚登记时间”。 (二)申请人不属党政机关(部、委、办、局)在</blockquote></div></article><article class="locked-platform" data-fcx-point="K5" data-fcx-platform="yuanbao" data-fcx-binding-sha256="0ae4a73ea175c234f9a13e2b8ec17811fc564b008d62b10e07b876f79d72545a"><div class="locked-platform-head"><b style="color:#0ea5e9">腾讯元宝</b><span class="catpill" style="background:#dc2626" title="经官方源验证，结果是错误的（用户照做会被误导）">幻觉：严重误导</span></div><p class="locked-claim">有法定抚养责任的未成年子女及规定范围内的在校或病残成年子女可以一并随迁</p><p class="locked-reason"><b>锁定裁决：</b>元宝称符合条件的未成年子女“须一并申请”，官方材料表述为“可一并申请”，强制性含义不一致</p><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="https://www.sznews.com/content/mb/2021-12/03/content_24788564.htm" target="_blank">扫码能看！深圳落户指南！来了就是深圳人_深圳新闻网</a><blockquote>咨询电话：0755-28917217 “ 扫码参考 申请指南 （四）随迁入户 1.市外迁入——投靠配偶 向上滑动阅览 申请条件（更多条件建议参考“深圳公安”微信公众号“市外迁入——投靠配偶”）： （1）被投靠人登记为本市常住户口时间及夫妻结婚登记时间均满2年。属复婚的，复婚登记时间作为“结婚登记时间”。 （2）申请人不属党政机关（部、委、办、局）在编人员。 （3）申请人有法定抚养责任（或征得有抚养</blockquote></div><div class="prov"><span class="ptag">所附依据 · 逐段溯源</span><a href="https://www.shanwei.gov.cn/shanwei/swzdly/txfw/txfw02/content/post_659360.html" target="_blank">深圳：夫妻投靠户籍迁入须知_服务公开_汕尾市人民政府门户网站</a><blockquote>（三）申请人有法定抚养责任（或征得有抚养权一方同意办理迁户）的未成子女（含养子女、继子女），可一并申请。 （四）以下成年子女可一并申请： 1.满18周岁不满20周岁，在高中（含中职、中技）或全日制大学在校就读，户口未迁至院校学生集体户（仍随父或母）。 2.一级或二级病残且生活基本不能自理的未婚未育（含收养子女）成年子女。</blockquote></div></article></div></section>
 
-    <div class="refbox">
-      <div class="refq">① 是否还提供了有价值的正确参考？<span class="muted small">覆盖外、经官方核验通过的正确补充</span></div>
-      <div class="muted small" style="padding:4px 0">无</div>
-      <div class="refq">② 是否有幻觉式的参考提醒？<span class="muted small">覆盖外，但无依据 / 核验为错</span></div>
-      <div class="muted small" style="padding:4px 0">无</div>
-      <div class="refq">③ 是否有凭空编造？<span class="muted small">无论是直接答案式还是补充参考式的知识点，只要 官方原站或官方来源都查不到、无法核验</span></div>
-      <div class="muted small" style="padding:4px 0">无</div>
-    </div>
-
-<h2>③ 原始答案与参考文献（存证）</h2>
-<p class="muted small">评测的原始凭证：两家 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对——包括拆解是否遗漏、该家说法（claim）是否忠实于原文。引用旁标注来源类型，并使用当前版本统一口径。</p>
+<h2>④ 原始答案与参考文献（存证）</h2>
+<p class="muted small">评测的原始凭证：各平台 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对——包括拆解是否遗漏、该家说法（claim）是否忠实于原文。引用旁标注来源类型，并使用当前版本统一口径。</p>
 
   <details class="rawd">
-    <summary><b style="color:#4f46e5">深知晓</b> 原答案（19 字）＋ 参考文献 2 条
-      <span class="refstat">官方 1 / 非官方 1</span></summary>
-    <div class="rawans">每人每月最高提取 1400 元。[1]</div>
-    <ol class="reflist"><li><span class="bgov">官方原站</span> <a href="https://gjj.gz.gov.cn/example" target="_blank">广州住房公积金规则</a></li><li><span class="bcom">非官方来源</span> <a href="https://example.com/unused" target="_blank">未在答案标出的来源</a></li></ol>
+    <summary><b style="color:#0891b2">DeepSeek</b> 原答案（578 字）＋ 参考文献 7 条
+      <span class="refstat">官方原站 4 / 官方来源 0 / 非官方 3</span></summary>
+    <div class="rawans">根据深圳市当前有效政策，夫妻投靠入户的核心条件是：被投靠人（配偶）入深圳户口的时间和双方结婚登记的时间都需要满2年[2][12]。具体到申请人和被投靠人，需要分别满足以下条件：📝 申请人（市外一方）的条件无工作限制：申请人在深圳无工作，或有工作但不符合人才引进条件[12]。如果符合人才引进条件，则应当通过人才引进渠道办理。无禁止性记录：申请人无参加国家禁止的组织或活动的记录[2][5]。特定职业限制：申请人不属于党政机关（部、委、办、局）在编人员[5][11]。随迁子女条件：申请人的未成年子女可以一并申请随迁；符合条件的成年子女（如在校大学生或病残子女）也可一并申请[5][11]。🏠 被投靠人（深圳一方）的条件户籍年限：被投靠人登记为深圳市常住户口的时间满2年[2][12]。💡 重要提醒需要留意的是，目前执行的仍是“满2年”的规定，但此前官方曾发布征求意见稿，拟将年限调整为“满5年”，后续政策存在变动的可能，建议多关注官方渠道[4]。如需办理，可通过“深圳公安”微信公众号的【政务服务】-【户籍迁入】-【市外迁入-投靠配偶】进行线上申报，后续根据指引到拟入户地的公安分局户政大厅办理即可[7][11]。以上信息主要依据《深圳市户籍迁入若干规定》及政府公开问答整理，如需获取最新最准确的办事指引，建议直接通过“深圳公安”官方渠道核实[1][2]。</div>
+    <ol class="reflist"><li><span class="bgov">官方原站</span> <a href="https://www.sz.gov.cn/hdjlpt/detail?pid=2882723" target="_blank">www.sz.gov.cn/hdjlpt/detail</a></li><li><span class="bgov">官方原站</span> <a href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html</a></li><li><span class="bgov">官方原站</span> <a href="http://www.yantian.gov.cn/cn/hdjl/dwzsk/ga/content/post_10377311.html" target="_blank">www.yantian.gov.cn/cn/hdjl/dwzsk/ga/content/post_10377311.html</a></li><li><span class="bcom">非官方来源</span> <a href="https://m.bendibao.com/bsy/suiqianbs" target="_blank">深圳随迁入户_深圳户口随迁条件_深圳夫妻|子女|老人户口随迁办理-深圳本地宝</a></li><li><span class="bcom">非官方来源</span> <a href="https://news.ycwb.com/2024-09/02/content_52900630.htm" target="_blank">news.ycwb.com/2024-09/02/content_52900630.htm</a></li><li><span class="bcom">非官方来源</span> <a href="http://bsy.sz.bendibao.com/bsyDetail/629255.html" target="_blank">bsy.sz.bendibao.com/bsyDetail/629255.html</a></li><li><span class="bgov">官方原站</span> <a href="http://www.szft.gov.cn/xxgk/zwgksxbzml/hjgl/content/post_8213969.html" target="_blank">www.szft.gov.cn/xxgk/zwgksxbzml/hjgl/content/post_8213969.html</a></li></ol>
   </details>
   <details class="rawd">
-    <summary><b style="color:#dc2626">豆包</b> 原答案（16 字）＋ 参考文献 1 条
-      <span class="refstat">官方 0 / 非官方 1</span></summary>
-    <div class="rawans">每人每月最高提取 2000 元。</div>
-    <ol class="reflist"><li><span class="bcom">非官方来源</span> <a href="https://example.com/article" target="_blank">租房提取介绍</a></li></ol>
+    <summary><b style="color:#0ea5e9">腾讯元宝</b> 原答案（1567 字）＋ 参考文献 42 条
+      <span class="refstat">官方原站 13 / 官方来源 0 / 非官方 29</span></summary>
+    <div class="rawans">结论先说
+深圳夫妻投靠入户目前仍执行&quot;双2年&quot;标准——被投靠人入深户满2年 且​ 夫妻结婚登记满2年。2021年那份拟把2年提高到5年的修订征求意见稿，至今未正式出台。【23】【39】
+现行有效的法规依据是《深圳市户籍迁入若干规定》（深府〔2016〕59号），2016年9月1日施行；深圳市公安局2026年度积分入户申请须知仍在该文件框架下制定，可佐证其继续有效。【14】【24】
+一、被投靠人（深户一方）需满足的条件
+条件具体要求户籍时间​登记为本市常住户口满2年（起算点看户口簿&quot;何时由何地迁来本址&quot;栏）例外豁免​经深圳市认定的高层次人才，或具有高级专业技术资格、高级技师、硕士以上研究生学历人员的配偶，可不受分居时间（2年）限制，并予优先解决户籍限制​若被投靠人属&quot;以招生和驻深机构人员入户&quot;、户籍落在学校或单位集体户的，不可申请夫妻投靠迁户【14】【18】【33】
+二、申请人（非深户一方）需满足的条件
+1.结婚登记时间满2年。​ 属复婚的，以复婚登记时间作为&quot;结婚登记时间&quot;重新起算
+2.不属党政机关（部、委、办、局）在编人员。​ 若户口簿&quot;服务处所&quot;栏显示为党政机关事业单位工作人员，需提供单位开具的&quot;非在编且同意户口迁出&quot;证明，或先变更户口簿服务处所信息
+3.无参加国家禁止的组织或活动的记录
+4.子女随迁规定：
+∙有法定抚养责任（或征得抚养权方同意）的未成年子女（含养子女、继子女）须一并申请。属继子女的，其生父（母）与被投靠人结婚应满2年
+∙可一并申请的成年子女：①满18周岁不满20周岁、在高中（含中职、中技）或全日制大学在读、户口未迁至院校学生集体户的未婚未育子女；②一级或二级病残且生活基本不能自理的未婚未育（含收养）成年子女【14】【33】
+⚠️ 关于&quot;两个2年&quot;：这是两个并列且独立的条件，必须同时满足，哪个时间晚就按哪个算。例如配偶2024年入户、2025年领证，则要等到2027年才能申请。系统会自动校验，差一天都无法提交。【33】
+三、走哪条通道：人才引进 vs 夫妻投靠
+法规层面做了分流，实操中应优先判断自己属于哪一类：【14】
+∙在深有就业，且同时符合规定第八条（人才引进）条件​ → 直接办理人才引进迁户，不受2年限制
+∙在深无就业，或虽有就业但不符合第八条条件​ → 分居满2年后申请夫妻投靠入户
+也就是说，如果你本身学历/职称够得上人才引进，那条路更快，没必要等2年。
+四、办理要点
+∙入口：&quot;深圳公安&quot;微信公众号 → 政务服务 → 户籍迁入 → 市外迁入-投靠配偶
+∙流程：线上填报上传材料预审 → 预约拟入户地公安分局户政窗口核验原件、领取《准予迁入证明》 → 持第二联回原籍迁出、领取《户口迁移证》 → 预约任一派出所（户政中心）办理落户
+∙时限：网上预审核15个工作日（补正材料、调查时间不计入）；广东政务服务网公示该事项承诺办结10个工作日、法定办结50个工作日，需到现场1次核验原件
+∙咨询电话：0755-84465000（深圳市公安局户政）【32】【33】
+五、需要留意的风险
+1.政策变数仍在：2021年5月发布的《深圳市户籍迁入若干规定（征求意见稿）》拟将夫妻投靠从2年提至5年，同时拟取消计生审核、增加&quot;无刑事犯罪记录&quot;要求、将造假禁申期从2年提至5年。该文件至今未正式印发，官方明确回应&quot;深圳入户政策暂无变化&quot;。若你目前卡在2年线上，建议尽早在现行政策窗口内提交。
+2.材料真实性：隐瞒、欺骗或提供虚假材料被查实的，2年内不予受理入户申请；已入户的予以注销、退回原籍。
+3.信息核实：具体情形（涉外婚姻、非婚生子女、继子女等）材料要求差异较大，最终以&quot;深圳公安&quot;公众号申报系统按你的情形自动给出的材料清单，以及拟入户地公安分局的审核意见为准。【23】【33】【39】</div>
+    <ol class="reflist"><li><span class="bgov">官方原站</span> <a href="https://ga.sz.gov.cn/JMHD/FT/ZXFT_JFRH?COLLCC=3539867042" target="_blank">积分入户«深圳市公安局</a></li><li><span class="bcom">非官方来源</span> <a href="https://www.sznews.com/news/content/2021-12/03/content_24788564.htm" target="_blank">扫码能看！深圳落户指南！来了就是深圳人_深圳新闻网</a></li><li><span class="bgov">官方原站</span> <a href="https://ga.sz.gov.cn/ZT/LHLY/LYZCWJ/content/post_8250936.html" target="_blank">深圳市人民政府关于印发深圳市户籍迁入若干规定的通知</a></li><li><span class="bcom">非官方来源</span> <a href="https://m.bendibao.com/mip/bsy617117.html" target="_blank">深圳夫妻投靠随迁入户办理指南（条件+材料+流程）- 深圳本地宝</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?src=11&amp;timestamp=1788113628&amp;ver=6936&amp;signature=PjEkQmI8yHMwPFXlTlrUNTeO7BMd6PtkulGgzSKcUamrlJp3y*GplHaVxz2*w3GvScRh5Ct16ahByN3TlzstA0x*3zcH15Ei87h3R7UchzbciloQbPqWPGJ6KJfgys5u&amp;new=1" target="_blank">深圳随迁入户办理夫妻投靠指南(条件材料流程)</a></li><li><span class="bcom">非官方来源</span> <a href="http://wx.sz.bendibao.com/weixin/csfw?controller=home.Index&amp;action=banshi&amp;bid=283&amp;t=1713031056" target="_blank">深圳夫妻投靠随迁入户办理指南（条件+材料+流程）- 深圳本地宝</a></li><li><span class="bcom">非官方来源</span> <a href="https://c.m.163.com/news/a/KN4L463T0525CKB5.html" target="_blank">非深户如何投靠配偶落户深圳？投靠入户申请流程一览→</a></li><li><span class="bcom">非官方来源</span> <a href="https://www.szrhztc.com/n/10943.html" target="_blank">深圳户口随妻子迁入，到底难不难？手把手教你避坑，附最全材料清单-深圳入户直通车</a></li><li><span class="bgov">官方原站</span> <a href="https://www.gdzwfw.gov.cn/portal/v2/guide/11440300007542689J3442106032003" target="_blank">市内移居-投靠配偶-广东政务服务网</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?__biz=MzA4OTQ5NTk2Mw==&amp;mid=2651713174&amp;idx=3&amp;sn=c40177b5e59fe137b7e2be9d97de941d&amp;chksm=8aaef65d12e552f57315669a28cde8fd27fd93ccefc6e1cdd15b616131482c5fddf89f61af57" target="_blank">深圳投靠落户都有哪些情形?需要什么条件?</a></li><li><span class="bcom">非官方来源</span> <a href="https://wfd.bendibao.com/live/20171024/327.shtm" target="_blank">瓦房店夫妻投靠随迁入户所需条件- 瓦房店本地宝</a></li><li><span class="bgov">官方原站</span> <a href="https://ga.sz.gov.cn/?channel=food" target="_blank">深圳市公安局</a></li><li><span class="bcom">非官方来源</span> <a href="https://www.szrhztc.com/n/3659.html" target="_blank">深圳市人才引进落户，深圳海归人才引进政策2023-深圳入户直通车</a></li><li><span class="bcom">非官方来源</span> <a href="https://www.sznews.com/content/mb/2021-12/03/content_24788564.htm" target="_blank">扫码能看！深圳落户指南！来了就是深圳人_深圳新闻网</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?__biz=Mzg2NzUwMTYyMA==&amp;mid=2247508126&amp;idx=1&amp;sn=4b649162000feeb3abb410749cb36639&amp;chksm=cff0c361b63ae5e694a28ba60ddbe1a460bade1b41b440c0fe8c6f56704feaaae1a6b67809d8" target="_blank">9月 | 2023年深圳入户条件最新政策</a></li><li><span class="bcom">非官方来源</span> <a href="https://m.bendibao.com/mip/bsy629255.html" target="_blank">2026年深圳结婚入户网上申办流程- 深圳本地宝</a></li><li><span class="bcom">非官方来源</span> <a href="https://m.bendibao.com/bsy634316.html" target="_blank">深圳户籍夫妻投靠办理流程- 深圳本地宝</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?__biz=MzA4OTQ5NTk2Mw==&amp;mid=2651747684&amp;idx=2&amp;sn=c96020257278f3d797fbd4faa1316373&amp;chksm=8a2897407c61d92405fa0a5c52310a5e22d6b544af23018b65318f7e32c4eee46702f4d78aae" target="_blank">外地人和深圳人结婚多久可以转深圳户口?结婚登记指南→</a></li><li><span class="bcom">非官方来源</span> <a href="https://m.bendibao.com/bsy634260.html" target="_blank">深圳配偶随迁入户条件- 深圳本地宝</a></li><li><span class="bgov">官方原站</span> <a href="https://ga.sz.gov.cn/ZDYW/ZDYWRK/HZFLFG/content/post_10946469.html" target="_blank">深圳市人民政府关于印发深圳市户籍迁入若干规定的通知«重点业务«深圳市公安局</a></li><li><span class="bcom">非官方来源</span> <a href="https://www.peopleapp.com/rmharticle/30022521600" target="_blank">深圳市拟修订户籍迁入规定 学历底线调至本科</a></li><li><span class="bgov">官方原站</span> <a href="https://szjjrh.ga.sz.gov.cn/hzpt/points-forward/points/notice/toDetail?id=3" target="_blank">深圳市积分入户申请须知</a></li><li><span class="bcom">非官方来源</span> <a href="https://m.sohu.com/a/468714010_120988533" target="_blank">深圳发改委就《深圳市户籍迁入若干规定（征求意见稿）》公开征求意见_调整</a></li><li><span class="bcom">非官方来源</span> <a href="https://www.sohu.com/a/468729230_162758" target="_blank">深圳拟调整入户政策！_人员</a></li><li><span class="bcom">非官方来源</span> <a href="http://wb.sznews.com/attachment/pdf/202105/27/de4a820f-01ee-4254-abe7-73d5843b90de.pdf" target="_blank">深圳拟调整户籍迁入政策 大专学历或不再直接核准入深户</a></li><li><span class="bgov">官方原站</span> <a href="https://hrss.sz.gov.cn/gkmlpt/content/12/12817/post_12817829.html" target="_blank">深圳市人力资源和社会保障局关于进一步做好技术技能人才引进工作的通知</a></li><li><span class="bcom">非官方来源</span> <a href="https://epaper.nfnews.com/nfdaily/html/202507/26/content_10142860.html" target="_blank">深圳拟调整积分入户办法_第43025版：广东·社情_2025-07-26_南方日报数字报_南方网</a></li><li><span class="bcom">非官方来源</span> <a href="https://aqbw.sztu.edu.cn/info/1004/2332.htm" target="_blank">​2026深户办理最新指南-应届毕业生接收-安全保卫中心</a></li><li><span class="bgov">官方原站</span> <a href="https://www.gdzwfw.gov.cn/?isLogin=false" target="_blank">下班啦,但广东政务服务网仍会为大家服务!</a></li><li><span class="bgov">官方原站</span> <a href="https://www.gdzwfw.gov.cn/portal/guide/11440300007542689J3442106100008" target="_blank">市外迁入-投靠配偶-广东政务服务网</a></li><li><span class="bgov">官方原站</span> <a href="https://www.shanwei.gov.cn/shanwei/swzdly/txfw/txfw02/content/post_659360.html" target="_blank">深圳：夫妻投靠户籍迁入须知_服务公开_汕尾市人民政府门户网站</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?__biz=MzA4NTczOTMzMQ==&amp;mid=2651583276&amp;idx=2&amp;sn=645138feba33be9c261985c56230f939&amp;chksm=857d68b8ce852ae4988fad05487c2723cd0ddbfebd712f8f15cccdd62d3b5711b20be6aa67a9" target="_blank">无学历无社保均可入深户?最新回应</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?__biz=MzU2MzY1Nzc2Mg==&amp;mid=2247483904&amp;idx=1&amp;sn=55b07dea8e8a27ad4017845e306ec4a3&amp;chksm=fd3059d00806a5e596c4ac6ef8128c6c9f9a511b2c90bcec01dd3068af33f34f679ccd1eaec1" target="_blank">2021/2022年深圳最新入户政策</a></li><li><span class="bcom">非官方来源</span> <a href="https://egs.stcn.com/news/detail/888981.html" target="_blank">深圳拟修订户籍迁入规定 涉学历夫妻投靠等方面</a></li><li><span class="bgov">官方原站</span> <a href="https://hrss.sz.gov.cn/hdjlpt/yjzj/answer/12376" target="_blank">深圳市人力资源和社会保障局关于公开征求《深圳市核准类和积分类人才引进及入户 实施办法(征求意见稿)》意见的通告 深圳市人力资源和社会保障局网</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?src=11&amp;timestamp=1788113658&amp;ver=6936&amp;signature=SLnPfo5i8VKPzBJKK0TUQhXLv5PsPhsaRBL-xwglQi9zm-c4u57mZxc0Ohet66ZyAvsAlilEvpYq9KVD8I5rHnkT1dwBoPZ7kF1BxkwUFhgvwG0Goep96*FkVJ5Ziz*Z&amp;new=1" target="_blank">2026年深圳随迁入户新政策:最新条件、全流程办理及材料清单!</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?__biz=MzI0MDI4OTI4Ng==&amp;mid=2247507385&amp;idx=1&amp;sn=5b34ed0243b7fbe920109e8c1451d9a0&amp;chksm=e8a5b0fe512410b3ef55c6ccaf529c6660bd431a79d5ee70d475489f7c8e6053d538e9bb990d" target="_blank">重磅!深圳入户政策2021年度回顾!</a></li><li><span class="bgov">官方原站</span> <a href="https://ga.sz.gov.cn/?category_path=01.34.00.00.00.00&amp;city=142&amp;key2=%ef%bf%bd%ef%bf%bd%ef%bf%bd%ef%bf%bd&amp;medium=01&amp;sort_type=sort_sale_amt_desc" target="_blank">深圳市公安局</a></li><li><span class="bcom">非官方来源</span> <a href="https://m.bendibao.com/bsy/suiqianbs" target="_blank">深圳随迁入户_深圳户口随迁条件_深圳夫妻|子女|老人户口随迁办理-深圳本地宝</a></li><li><span class="bgov">官方原站</span> <a href="https://www.gdzwfw.gov.cn/portal/guide/11440300007542689J3442106032003" target="_blank">市内移居-投靠配偶-广东政务服务网</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?src=11&amp;timestamp=1788113658&amp;ver=6936&amp;signature=PjEkQmI8yHMwPFXlTlrUNTeO7BMd6PtkulGgzSKcUamrlJp3y*GplHaVxz2*w3GvdyvgR3vuh07tUE43M2ipmEJe8pyqQw68GRaRRRfF38grOVej93grLCcze5L9Qx*y&amp;new=1" target="_blank">深圳随迁入户办理夫妻投靠指南(条件材料流程)</a></li><li><span class="bcom">非官方来源</span> <a href="http://mp.weixin.qq.com/s?src=11&amp;timestamp=1788113658&amp;ver=6936&amp;signature=9VBgMCKwXBGX1ndxTGjFD8plZTny6pHD-XgrTK9giavSQlPcjqPhPS2Ra529khuzSP56sDo4eeqrDQoPW0nztlmd3MsLb8-RtycJLsBgTZcGrm43lmWYDEow5oBnUpoX&amp;new=1" target="_blank">2026 深圳夫妻随迁入户新规!深户满 2 年  结婚满 2 年即可申请</a></li></ol>
   </details>
 
-<h2 id="metricdoc">④ 指标口径速查</h2>
+<h2 id="metricdoc">⑤ 指标口径速查</h2>
 <table class="doc">
   <thead><tr><th style="width:120px">指标</th><th style="width:110px">分母</th><th>定义</th><th style="width:30%">怎么读</th></tr></thead>
-  <tbody><tr><td><b>覆盖率</b></td><td>合法直接答案知识点 N</td><td>答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少</td><td class="muted">只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖</td></tr><tr><td><b>遗漏率</b></td><td>合法直接答案知识点 N</td><td>该家没答到的合法直接答案知识点占比</td><td class="muted">与覆盖率互补，相加=100%</td></tr><tr><td><b>准确率</b></td><td>该家直接答案覆盖数</td><td>覆盖的直接答案里「有据且正确」的比例 = 直接准确 + 间接准确</td><td class="muted">衡量说出口的话靠不靠谱；无据碰对不计入</td></tr><tr><td><b>直接准确率</b></td><td>该家直接答案覆盖数</td><td>声明与其所附官方依据（官方原站或官方来源）一致；含算术级显然推导（如正文&#x27;2000上增加40%&#x27;→答案&#x27;2800&#x27;）</td><td class="muted">最高可信级：答案自带官方出处，可直接自验</td></tr><tr><td><b>间接准确率</b></td><td>该家直接答案覆盖数</td><td>声明忠实于所附非官方材料，且事后经官方源独立验证正确</td><td class="muted">仅当 AI 用了非官方材料；内容正确但出处不硬</td></tr><tr><td><b>幻觉率</b></td><td>该家直接答案覆盖数</td><td>覆盖的直接答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）</td><td class="muted">与准确率互补</td></tr><tr><td><b>巧合式幻觉率</b></td><td>该家直接答案覆盖数</td><td>声明无依据或与所附材料不符，但经官方源验证结果碰巧正确</td><td class="muted">结果对但行为不可靠（运气），故不计入准确率</td></tr><tr><td><b>误导式幻觉率</b></td><td>该家直接答案覆盖数</td><td>经官方源验证，声明的结果是错误的</td><td class="muted">最危险的一类：用户照做会被误导</td></tr></tbody>
+  <tbody><tr><td><b>覆盖率</b></td><td>合法直接答案知识点 N</td><td>答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少</td><td class="muted">只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖</td></tr><tr><td><b>遗漏率</b></td><td>合法直接答案知识点 N</td><td>该家没答到的合法直接答案知识点占比</td><td class="muted">与覆盖率互补，相加=100%</td></tr><tr><td><b>准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确</td><td class="muted">证据不足项单独展示，不按错误计分</td></tr><tr><td><b>直接准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明与其所附官方原站材料或官方来源一致；含算术级显然推导（如正文&#x27;2000上增加40%&#x27;→答案&#x27;2800&#x27;）</td><td class="muted">最高可信级：主张由官方来源直接支持</td></tr><tr><td><b>间接准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明忠实于其他非官方材料，且事后经官方源独立验证正确</td><td class="muted">内容正确，但答案自身所附出处不是官方来源</td></tr><tr><td><b>证据充分率</b></td><td>该家直接答案覆盖数</td><td>已有足够权威证据完成裁决的覆盖项比例</td><td class="muted">低于100%表示仍有证据边界，不代表对应回答错误</td></tr><tr><td><b>官方证据支持率</b></td><td>该家直接答案覆盖数</td><td>该主张有经原文核对、确实支持它的所附官方材料</td><td class="muted">可由局部角标或无角标时的回答级参考资料语义匹配建立</td></tr><tr><td><b>局部角标覆盖率</b></td><td>该家直接答案覆盖数</td><td>该主张原答案片段内存在与它相连的可验证脚标</td><td class="muted">只衡量逐句引用完整性；低于事实准确率不代表答案内容错误</td></tr><tr><td><b>幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）</td><td class="muted">与准确率互补</td></tr><tr><td><b>巧合式幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明无引用依据或与所附材料不符，但经官方源验证后与官方依据巧合一致</td><td class="muted">结果正确但缺少可核验的引用支持，故不计入准确率</td></tr><tr><td><b>误导式幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>经官方源验证，声明的结果是错误的</td><td class="muted">最危险的一类：用户照做会被误导</td></tr></tbody>
 </table>
 <p class="muted small" style="margin-top:10px">知识点判定类别（②中的彩色标签）：外显使用描述性中性文案，标准分类可在鼠标悬停标签时查看。</p>
 <table class="doc">
   <thead><tr><th style="width:150px">外显标签</th><th style="width:96px">标准分类</th><th>判定条件</th></tr></thead>
-  <tbody><tr><td><span class="catpill" style="background:#059669">✅ 直接正确</span></td><td class="muted small">直接准确</td><td>与所附官方依据（官方原站或官方来源）一致（含算术级显然推导），可自验</td></tr><tr><td><span class="catpill" style="background:#10b981">☑ 间接正确</span></td><td class="muted small">间接准确</td><td>忠实于所附非官方材料，且经官方源独立验证通过（仅当 AI 用了非官方材料）</td></tr><tr><td><span class="catpill" style="background:#f59e0b">🎲 幻觉·结果巧合正确</span></td><td class="muted small">巧合式幻觉</td><td>无据/不符所附材料，但结果碰巧与官方一致（运气，不计准确）</td></tr><tr><td><span class="catpill" style="background:#dc2626">⚠ 幻觉：严重误导</span></td><td class="muted small">误导式幻觉</td><td>经官方源验证，结果是错误的（用户照做会被误导）</td></tr><tr><td><span class="catpill" style="background:#b91c1c">✖ 凭空编造·官方查无</span></td><td class="muted small">编造式幻觉</td><td>任何官方材料（官方原站或官方来源）都查不到、无法核验 = 凭空编造</td></tr><tr><td><span class="catpill" style="background:#64748b">? 证据不足</span></td><td class="muted small">证据不足</td><td>当前权威证据不足，不能据此判定主张真假；该项不进入准确率分母</td></tr><tr><td><span class="catpill" style="background:#9ca3af">· 未覆盖</span></td><td class="muted small">答案遗漏</td><td>该家没有答到这个知识点（状态指示，非判定）</td></tr></tbody>
+  <tbody><tr><td><span class="catpill" style="background:#059669">✅ 直接正确</span></td><td class="muted small">直接准确</td><td>与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定</td></tr><tr><td><span class="catpill" style="background:#10b981">☑ 间接正确</span></td><td class="muted small">间接准确</td><td>忠实于其他非官方材料，且经官方源独立验证通过</td></tr><tr><td><span class="catpill" style="background:#f59e0b">🎲 无引用依据，但与官方依据巧合一致</span></td><td class="muted small">巧合式幻觉</td><td>无引用依据或与所附材料不符，但经官方核验后与官方依据巧合一致</td></tr><tr><td><span class="catpill" style="background:#dc2626">⚠ 幻觉：严重误导</span></td><td class="muted small">误导式幻觉</td><td>经官方源验证，结果是错误的（用户照做会被误导）</td></tr><tr><td><span class="catpill" style="background:#b91c1c">✖ 凭空编造·官方查无</span></td><td class="muted small">编造式幻觉</td><td>在官方原站和官方来源中均查不到、无法核验 = 凭空编造</td></tr><tr><td><span class="catpill" style="background:#64748b">? 证据不足</span></td><td class="muted small">证据不足</td><td>当前权威证据不足，不能据此判定主张真假；该项不进入准确率分母</td></tr><tr><td><span class="catpill" style="background:#9ca3af">· 未覆盖</span></td><td class="muted small">答案遗漏</td><td>该家没有答到这个知识点（状态指示，非判定）</td></tr></tbody>
 </table>
 
 
 
-<h2>⑤ 评测元信息（可复现性）</h2>
+<h2>⑥ 评测元信息（可复现性）</h2>
 <table class="meta"><tbody>
-  <tr><td>评测报告生成时间</td><td>2026-07-22 23:43</td></tr>
-  <tr><td>原始答案抓取数据</td><td>legacy-result.json（文件时间 2026-07-22 23:43）· 答案与参考文献已在 ④ 全文存证</td></tr>
+  <tr><td>评测报告生成时间</td><td>2026-08-31 22:33</td></tr>
+  <tr><td>原始答案抓取数据</td><td>legacy-result.json（文件时间 2026-08-31 22:33）· 答案与参考文献已在 ④ 全文存证</td></tr>
   <tr><td>分析载体</td><td>当前承载技能的智能体（知识点拆解 / 忠实性 / 官方验证判定）</td></tr>
-  <tr><td>裁判 LLM 健康度</td><td>1 次调用 / 0 次失败</td></tr>
-  <tr><td>证据不足判定</td><td>0 项（证据不足项不进入确定答案或准确率分母）</td></tr>
+  <tr><td>自动裁决状态</td><td>6 个知识点 / 证据不足 0 项；证据不足项单列且不按错误计分</td></tr>
   <tr><td>语义分析执行方式</td><td>由当前承载技能的智能体直接完成知识点拆解与证据裁决；脚本不调用任何外部模型接口</td></tr>
-  <tr><td>真相源构成</td><td>经严格验收的深知晓可信搜索官方锚点，或逐知识点独立可信搜索所得官方材料；同一知识点的所有参与方共用同一份验证证据</td></tr>
-  <tr><td>可直接自验的官方来源</td><td>官方原站 ＋ 官方来源；范围符合要求：地域链匹配＋文件现行有效（废止/修订/过期降级为非正确源）</td></tr>
-  <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；「编造式幻觉」表示本次可信搜索未找到官方依据，不排除官方无明文或检索未覆盖，被评方可提交官方依据申诉复核</td></tr></tbody></table>
+  <tr><td>真相源构成</td><td>经严格验收的深知晓官方材料、各平台已附的 gov.cn 材料，或必要时逐知识点调用可信搜索所得官方材料；同一知识点的所有参与方共用同一份验证证据</td></tr>
+  <tr><td>可直接判定的官方来源</td><td>官方原站，或由深知可信搜索返回的 dknowc / DT_DATA 官方来源；后者统一标为“官方来源”，可注明“由深知可信搜索收录”</td></tr>
+  <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；可信搜索未取得足够材料时统一标记“证据不足”，并从确定答案和准确率分母中排除</td></tr><tr><td>第三步锁定数据摘要</td><td><code>92d4de6f1df6f2b19e93b656587996d4baeb8d4e9c851a877753936ffd6ec96a</code>；第四步仅展示该锁定数据并计算平台指标，不改变权威结论</td></tr></tbody></table>
 
 
 <p class="muted small" style="margin-top:36px;border-top:1px solid #eee;padding-top:12px">
-Fact-Check-X · 评测口径：覆盖率/准确率只算【直接答案】知识点（直接回答用户所问的）；准确=直接（官方依据，含算术级显然推导 2000×1.4=2800）+间接（非官方+官方验证）正确，幻觉=巧合+误导（覆盖数为分母，相加=100%）；直接答案区严格 4 标签；「补充参考」（相关但非所问）与「凭空编造」（官方原站或官方来源均查无）不计覆盖——凭空编造无论直接还是补充，全部在 ②-补③ 列出；全判定可溯源（依据原文 + 官方验证依据 + 原答案存证）</p>
-</body></html>
+Fact-Check-X · 评测口径：覆盖率衡量平台是否回答直接知识点；准确率与幻觉率仅以已有足够证据裁决的覆盖项为分母；证据不足项单独展示，不按正确或错误计分；全判定可回溯至平台原答案、所附依据和权威证据。</p>
+</main></body></html>

@@ -28,11 +28,8 @@ if not RESULTS_FIXTURE.exists():
 
 
 def run(*arguments: str, environment: dict[str, str] | None = None) -> dict:
-    values = list(arguments)
-    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
-        values.extend(["--execution-mode", "full-auto"])
     process = subprocess.run(
-        [sys.executable, str(PIPELINE), *values],
+        [sys.executable, str(PIPELINE), *arguments],
         text=True,
         capture_output=True,
         check=False,
@@ -41,15 +38,25 @@ def run(*arguments: str, environment: dict[str, str] | None = None) -> dict:
     if process.returncode:
         raise RuntimeError(process.stdout.strip() or process.stderr.strip())
     lines = [line for line in process.stdout.splitlines() if line.strip()]
-    return json.loads(lines[-1]) if lines else {"status": "completed"}
+    payload = json.loads(lines[-1]) if lines else {"status": "completed"}
+    checkpoint = payload.get("checkpoint") or {}
+    acknowledgement = checkpoint.get("acknowledgement") or {}
+    if checkpoint.get("status") == "awaiting_user" and acknowledgement:
+        ack = subprocess.run(
+            [sys.executable, str(PIPELINE), "acknowledge-stage",
+             "--run-dir", str(Path(checkpoint["path"]).parent),
+             "--stage", checkpoint["stage"], "--token", acknowledgement["token"],
+             "--decision", "continue"],
+            text=True, capture_output=True, check=False, env=environment,
+        )
+        if ack.returncode:
+            raise RuntimeError(ack.stdout.strip() or ack.stderr.strip())
+    return payload
 
 
 def run_blocked(*arguments: str, environment: dict[str, str] | None = None) -> dict:
-    values = list(arguments)
-    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
-        values.extend(["--execution-mode", "full-auto"])
     process = subprocess.run(
-        [sys.executable, str(PIPELINE), *values],
+        [sys.executable, str(PIPELINE), *arguments],
         text=True,
         capture_output=True,
         check=False,

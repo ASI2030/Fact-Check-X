@@ -5,7 +5,7 @@
 对一个或多个 AI 的完整回答与引用进行事实核验：无损采集原回答，结构化比较关键事实，逐点核验权威证据，再评估各平台表现。最终答案只是核验产物之一，原始证据、冲突和证据边界全程可追溯。
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.8" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.9" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
 </p>
 
 ## 三分钟开始
@@ -197,7 +197,7 @@ flowchart LR
 - `verification.json`
 - `03-authority-report.html`
 
-第三步只负责最终答案、权威证据和证据边界。完成后会锁定 `verification.json` 与报告摘要；第四步只能读取这份锁定结果。
+第三步只负责权威核验后的直接答案、证据边界和简洁来源索引。证据充分的补充参考单独写入 `supplementalFindings`，不得混入 `finalAnswer`。完成后会锁定 `verification.json` 与报告摘要；第四步只能读取这份锁定结果。
 
 ### 第四步：各方答案测评报告
 
@@ -207,9 +207,9 @@ flowchart LR
 - `pipeline.json`
 - `05-complete-report-package.zip`
 
-第四步只负责平台裁决、指标和表现比较，不重写第三步报告或权威结论。
+第四步只负责平台裁决、指标和表现比较，并承接第三步锁定的逐知识点核验明细。直接答案与补充参考分区展示，不重写第三步报告或权威结论。
 
-默认交互模式下，每一步完成后先交付本阶段产物，再让用户选择继续、修正或停止；确认记录保存在 `stage-checkpoints.json`。用户一开始明确要求连续完成时可以用 `--execution-mode full-auto` 自动推进，但四个检查点仍会写入，登录、验证码、程序门禁和技术故障仍不能跳过；证据不足作为明确边界继续进入第四步。
+每一步完成后必须先交付本阶段产物，再让用户选择继续、修正或停止；确认记录保存在 `stage-checkpoints.json`。即使用户一开始要求连续完成，也不能跳过阶段展示和确认；证据不足作为明确边界继续进入第四步。
 
 ## 动态平台数量 N ≥ 1
 
@@ -558,7 +558,7 @@ python3 scripts/fact_check_x.py acknowledge-stage \
   --decision continue
 ```
 
-后续 `comparison` 与 `authority` 阶段同样确认。只有用户最初已明确要求完整连续执行时，才给 `prepare-comparison` 增加 `--execution-mode full-auto`。
+后续 `comparison` 与 `authority` 阶段同样确认。程序不提供绕过阶段确认的自动推进模式。
 
 当前宿主智能体读取 `comparison-task.json`，完成原子知识点分析并写出 `comparison-analysis.json`，然后：
 

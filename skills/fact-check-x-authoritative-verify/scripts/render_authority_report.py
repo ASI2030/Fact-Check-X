@@ -88,10 +88,25 @@ def validate(verification: dict) -> None:
     if not points:
         raise ValueError("权威报告缺少知识点")
     final_answer = verification.get("finalAnswer")
-    point_ids = [str(point.get("id") or "") for point in points]
+    direct_ids = [
+        str(point.get("id") or "")
+        for point in points
+        if str(point.get("role") or "direct") == "direct"
+    ]
+    reference_ids = [
+        str(point.get("id") or "")
+        for point in points
+        if str(point.get("role") or "direct") != "direct"
+    ]
     included_ids = list((final_answer or {}).get("knowledgePointIds") or [])
     excluded_ids = list((final_answer or {}).get("excludedKnowledgePointIds") or [])
     answer_items = list((final_answer or {}).get("items") or [])
+    supplemental = verification.get("supplementalFindings") or {}
+    supplemental_ids = list(supplemental.get("knowledgePointIds") or [])
+    supplemental_excluded_ids = list(
+        supplemental.get("excludedKnowledgePointIds") or []
+    )
+    supplemental_items = list(supplemental.get("items") or [])
     if (
         not isinstance(final_answer, dict)
         or final_answer.get("status") not in {"verified", "partially_verified", "insufficient_evidence"}
@@ -99,7 +114,7 @@ def validate(verification: dict) -> None:
         or len(included_ids) != len(set(included_ids))
         or len(excluded_ids) != len(set(excluded_ids))
         or set(included_ids) & set(excluded_ids)
-        or set(included_ids + excluded_ids) != set(point_ids)
+        or set(included_ids + excluded_ids) != set(direct_ids)
         or (
             answer_items
             and [str(item.get("knowledgePointId") or "") for item in answer_items]
@@ -111,6 +126,18 @@ def validate(verification: dict) -> None:
         )
     ):
         raise ValueError("权威报告最终答案与已纳入、证据不足知识点的绑定不完整")
+    if (
+        len(supplemental_ids) != len(set(supplemental_ids))
+        or len(supplemental_excluded_ids) != len(set(supplemental_excluded_ids))
+        or set(supplemental_ids) & set(supplemental_excluded_ids)
+        or set(supplemental_ids + supplemental_excluded_ids) != set(reference_ids)
+        or (
+            supplemental_items
+            and [str(item.get("knowledgePointId") or "") for item in supplemental_items]
+            != supplemental_ids
+        )
+    ):
+        raise ValueError("补充参考与知识点角色绑定不完整")
     for point in points:
         point_id = str(point.get("id") or "")
         authority = point.get("authority") or {}
@@ -293,6 +320,37 @@ def render_final_answer(final_answer: dict) -> str:
     return f'<p class="final-answer-body">{escaped(final_answer.get("answer"))}</p>'
 
 
+def render_source_index(points: list[dict], final_answer: dict) -> str:
+    included_ids = set(final_answer.get("knowledgePointIds") or [])
+    entries = []
+    seen = set()
+    for point in points:
+        if point.get("id") not in included_ids:
+            continue
+        authority = point.get("authority") or {}
+        for evidence in authority.get("evidence") or []:
+            url = safe_url(evidence.get("url"))
+            key = url or compact(evidence.get("title"))
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            title = escaped(evidence.get("title") or url or "权威来源")
+            label = (
+                f'<a href="{escaped(url)}" target="_blank" rel="noreferrer">{title}</a>'
+                if url
+                else title
+            )
+            entries.append(
+                '<li class="source-item">'
+                f'<span class="source-point">{escaped(point.get("id"))}</span>'
+                f'<span>{label}</span>'
+                '</li>'
+            )
+    if not entries:
+        return '<p class="empty">当前确定答案没有可公开打开的来源链接。</p>'
+    return f'<ol class="source-list">{"".join(entries)}</ol>'
+
+
 def render_unverified_boundary(points: list[dict], final_answer: dict) -> str:
     excluded_ids = set(final_answer.get("excludedKnowledgePointIds") or [])
     if not excluded_ids:
@@ -334,7 +392,6 @@ def render(verification: dict) -> str:
         for point in points
     )
     verification_sha = canonical_sha256(verification)
-    point_sections = "".join(render_point(point) for point in points)
     final_answer = verification.get("finalAnswer") or {}
     final_status = {
         "verified": "权威核验完成",
@@ -345,6 +402,7 @@ def render(verification: dict) -> str:
     question = str(verification.get("question") or "").strip()
     report_title = f"权威核验报告（问题：{question}）"
     unverified_boundary = render_unverified_boundary(points, final_answer)
+    source_index = render_source_index(points, final_answer)
     final_report_nav = '<a href="04-final-report.html">各方答案测评报告</a>'
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -381,6 +439,12 @@ def render(verification: dict) -> str:
     .final-answer-item {{ border-top: 1px solid #d7e7e1; padding: 12px 0 0; }}
     .final-answer-item h3 {{ color: #17624f; font-size: 14px; margin: 0 0 5px; }}
     .final-answer-item p {{ font-size: 16px; font-weight: 650; line-height: 1.7; margin: 0; }}
+    .source-index {{ background: #fff; border: 1px solid #d7dde7; border-radius: 6px; margin-bottom: 22px; padding: 20px 24px; }}
+    .source-index h2 {{ font-size: 18px; margin: 0 0 6px; }}
+    .source-index > p {{ color: #637083; margin: 0 0 12px; }}
+    .source-list {{ display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }}
+    .source-item {{ align-items: flex-start; border-top: 1px solid #e5e9ef; display: grid; gap: 10px; grid-template-columns: 42px 1fr; padding: 10px 0 0; }}
+    .source-point {{ background: #e7f5f1; border-radius: 4px; color: #17624f; font-size: 12px; font-weight: 750; padding: 3px 6px; text-align: center; }}
     .point {{ background: #fff; border: 1px solid #d7dde7; border-radius: 6px; margin-bottom: 20px; padding: 22px; }}
     .point-head {{ align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }}
     .point-head h2 {{ display: inline; font-size: 19px; line-height: 1.45; margin: 0 0 0 8px; }}
@@ -462,9 +526,13 @@ def render(verification: dict) -> str:
       <div class="metric"><b>{verification.get("trustedSearchRequestCount", 0)}</b><span>可信搜索请求</span></div>
       <div class="metric"><b>{evidence_gap_count}</b><span>证据不足项</span></div>
     </section>
-    {point_sections}
+    <section class="source-index" aria-label="最终答案来源索引">
+      <h2>最终答案来源索引</h2>
+      <p>仅列出支持上方直接答案的权威来源；逐知识点裁决与平台表现移至第四阶段。</p>
+      {source_index}
+    </section>
   </main>
-  <footer>本阶段只回答事实问题、展示权威证据与证据边界；各平台表现只在第四阶段评估。</footer>
+  <footer>本阶段只交付直接答案、证据边界与来源索引；补充参考和逐知识点平台裁决只在第四阶段展示。</footer>
 </body>
 </html>
 """

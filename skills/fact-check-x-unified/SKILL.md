@@ -48,7 +48,7 @@ python3 scripts/fact_check_x.py acknowledge-stage \
   --token <checkpoint.acknowledgement.token> --decision continue
 ```
 
-未确认时，下一阶段命令会直接失败。用户在最初请求中明确要求完整自动跑完时，在 `prepare-comparison` 增加 `--execution-mode full-auto`；程序仍会按顺序记录四个检查点。
+未确认时，下一阶段命令会直接失败。即使用户最初要求完整连续执行，也必须依次展示每个阶段产物并取得确认；不存在可绕过确认的自动推进模式。
 
 当前智能体读取 `<run>/comparison-task.json`，写入 `<run>/comparison-analysis.json`，再执行：
 
@@ -100,7 +100,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 python3 scripts/fact_check_x.py finalize-authority --run-dir <run>
 ```
 
-`finalize-authority` 生成“权威核验后的最终答案”，将证据充分的知识点纳入确定答案，将证据不足的知识点写入 `evidenceGaps`。第三步只展示最终答案、权威证据和证据边界；平台裁决与评分只在第四步展示。
+`finalize-authority` 生成“权威核验后的最终答案”，只将证据充分的直接知识点纳入 `finalAnswer`，将补充参考单独写入 `supplementalFindings`，将证据不足项写入 `evidenceGaps`。第三步只展示直接答案、证据边界和简洁来源索引；逐知识点裁决与评分只在第四步展示。
 
 `finalize-authority` 完成裁决后会独立生成 `03-authority-report.html`，并通过
 `deliverables` 返回路径。调用方必须先展示这份权威报告；默认交互模式下，

@@ -522,12 +522,11 @@ def main() -> int:
         authority_html = authority_report.read_text(encoding="utf-8")
         assert f"权威核验报告（问题：{results['question'].strip()}）" in authority_html
         assert "权威核验后的最终答案" in authority_html
-        assert "官方材料" in authority_html
+        assert "最终答案来源索引" in authority_html
+        assert "https://gjj.gz.gov.cn/example" in authority_html
         assert "各平台裁决" not in authority_html
         assert "data-fcx-authority-binding-sha256" not in authority_html
-        assert ".evidence { border: 1px solid #d7dde7; border-radius: 5px; min-width: 0;" in authority_html
         assert "overflow-wrap: anywhere;" in authority_html
-        assert "word-break: break-word;" in authority_html
         assert k1["authoritativeFinding"] in authority_html
         assert k1["verdicts"]["doubao"]["reason"] not in authority_html
         boundary_verification = json.loads(json.dumps(verification, ensure_ascii=False))
@@ -561,10 +560,14 @@ def main() -> int:
         run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(verification_path), "--output", str(report)])
         report_html = report.read_text(encoding="utf-8")
         baseline_html = (ROOT / "references" / "final-report-baseline.html").read_text(encoding="utf-8")
-        for heading in ("① 参考性", "② 直接答案逐条判定", "②-补 补充参考分析", "③ 原始答案与参考文献（存证）", "④ 指标口径速查", "⑤ 评测元信息"):
-            assert heading in baseline_html and heading in report_html
+        for heading in ("① 平台表现概览", "② 直接答案逐知识点测评", "③ 补充参考逐知识点测评", "④ 原始答案与参考文献（存证）", "⑤ 指标口径速查", "⑥ 评测元信息"):
+            assert heading in report_html
+        assert "② 直接答案逐条判定" not in report_html
+        assert "②-补 补充参考分析" not in report_html
         assert "③ 关键发现" not in report_html
-        assert "03-authority-report.html#K1" in report_html
+        assert "03-authority-report.html" in report_html
+        assert "第三步锁定的权威结论" in report_html
+        assert "第三步锁定数据摘要" in report_html
         assert "https://gjj.gz.gov.cn/example" in report_html
         assert "官方原站" in report_html
         assert "官方来源" in report_html
@@ -573,15 +576,15 @@ def main() -> int:
         assert "DT库·gov一手收录" not in report_html
         assert 'class="kpi-grid"' in report_html
         assert ">覆盖率<" in report_html and ">准确率<" in report_html and ">幻觉率<" in report_html
-        assert "溯源方式：未建立溯源" in report_html
+        assert "该家未附依据" in report_html
         assert "局部角标绑定" not in report_html
         assert "平台声明全局来源" not in report_html
         assert "@media(max-width:720px)" in report_html
         assert 'class="platform-layout-compact platform-count-2"' in report_html
         assert "--platform-count:2;--kp-min-width:860px" in report_html
-        assert 'class="kp-scroll"' in report_html
-        assert ".kp-scroll{max-width:100%;overflow-x:auto" in report_html
-        assert ".kc{width:auto" in report_html
+        assert 'class="locked-platforms"' in report_html
+        assert ".locked-platforms{display:grid" in report_html
+        assert ".mwrap,.vcards,.locked-platforms{grid-template-columns:1fr!important}" in report_html
         assert "各平台 AI 的完整原答案" in report_html
         assert "全部有官方依据支持" in report_html
         assert "无据碰对" not in report_html
@@ -633,9 +636,9 @@ def main() -> int:
         long_anchor_authority_html = long_anchor_authority_report.read_text(
             encoding="utf-8"
         )
-        assert '查看完整原文' in long_anchor_authority_html
-        assert 'class="evidence-excerpt"' in long_anchor_authority_html
-        assert long_anchor_body in long_anchor_authority_html
+        assert "最终答案来源索引" in long_anchor_authority_html
+        assert "https://gjj.gz.gov.cn/example" in long_anchor_authority_html
+        assert long_anchor_body not in long_anchor_authority_html
         long_anchor_report = out / "long-anchor-report.html"
         run([
             sys.executable,
@@ -651,7 +654,7 @@ def main() -> int:
         ])
         long_anchor_html = long_anchor_report.read_text(encoding="utf-8")
         assert long_anchor_body not in long_anchor_html
-        assert "03-authority-report.html#K1" in long_anchor_html
+        assert "03-authority-report.html" in long_anchor_html
         assert "该平台未覆盖此知识点。" in long_anchor_html
 
         reference_anchor_verification = json.loads(
@@ -678,7 +681,7 @@ def main() -> int:
             str(reference_anchor_report),
         ])
         reference_anchor_html = reference_anchor_report.read_text(encoding="utf-8")
-        assert "查看第三步权威证据" in reference_anchor_html
+        assert "查看第三步最终答案与来源索引" in reference_anchor_html
         assert long_anchor_body not in reference_anchor_html
 
         fabricated_verification = json.loads(json.dumps(verification, ensure_ascii=False))

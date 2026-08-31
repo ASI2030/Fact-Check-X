@@ -18,10 +18,7 @@ AUTHORITY = SKILLS / "fact-check-x-authoritative-verify" / "tests" / "fixtures"
 
 
 def command(*arguments: str) -> list[str]:
-    values = list(arguments)
-    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
-        values.extend(["--execution-mode", "full-auto"])
-    return [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), *values]
+    return [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), *arguments]
 
 
 def run(arguments: list[str], environment: dict[str, str] | None = None) -> dict:
@@ -34,7 +31,20 @@ def run(arguments: list[str], environment: dict[str, str] | None = None) -> dict
     )
     if process.returncode:
         raise AssertionError(process.stdout or process.stderr)
-    return json.loads([line for line in process.stdout.splitlines() if line.strip()][-1])
+    payload = json.loads([line for line in process.stdout.splitlines() if line.strip()][-1])
+    checkpoint = payload.get("checkpoint") or {}
+    acknowledgement = checkpoint.get("acknowledgement") or {}
+    if checkpoint.get("status") == "awaiting_user" and acknowledgement:
+        acknowledged = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"),
+             "acknowledge-stage", "--run-dir", str(Path(checkpoint["path"]).parent),
+             "--stage", checkpoint["stage"], "--token", acknowledgement["token"],
+             "--decision", "continue"],
+            text=True, capture_output=True, check=False, env=environment,
+        )
+        if acknowledged.returncode:
+            raise AssertionError(acknowledged.stdout or acknowledged.stderr)
+    return payload
 
 
 def run_failed(arguments: list[str]) -> dict:
@@ -332,8 +342,10 @@ def main() -> int:
             '<body class="platform-layout-compact platform-count-3" '
             'style="--platform-count:3;'
         ) in final_html
-        assert '<div class="kp-scroll"' in final_html
-        assert ".platform-layout-dense table.kp" in final_html
+        assert 'class="locked-platforms"' in final_html
+        assert ".locked-platforms{display:grid" in final_html
+        assert "② 直接答案逐知识点测评" in final_html
+        assert "③ 补充参考逐知识点测评" in final_html
 
     if os.getenv("FACT_CHECK_X_ASSERTIONS_OUTPUT"):
         Path(os.environ["FACT_CHECK_X_ASSERTIONS_OUTPUT"]).write_text(json.dumps({

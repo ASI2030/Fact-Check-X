@@ -49,6 +49,7 @@ def main() -> int:
             "--run-dir", str(run_dir),
         ))
         assert capture["checkpoint"]["status"] == "awaiting_user"
+        assert capture["checkpoint"]["acknowledgement"]["token"].startswith("fcx_")
         blocked = run(command(
             "complete-comparison",
             "--results", str(results),
@@ -85,22 +86,16 @@ def main() -> int:
         assert "尚未得到" in stopped["error"]
 
         automatic_dir = root / "automatic"
-        automatic = run(command(
+        rejected = subprocess.run(command(
             "prepare-comparison",
             "--results", str(results),
             "--run-dir", str(automatic_dir),
             "--execution-mode", "full-auto",
-        ))
-        assert automatic["checkpoint"]["status"] == "auto_acknowledged"
-        completed = run(command(
-            "complete-comparison",
-            "--results", str(results),
-            "--analysis", str(analysis),
-            "--run-dir", str(automatic_dir),
-        ))
-        assert completed["checkpoint"]["status"] == "auto_acknowledged"
+        ), text=True, capture_output=True, check=False)
+        assert rejected.returncode != 0
+        assert "invalid choice" in rejected.stderr
 
-    print("PASS 互动模式硬门禁与全自动检查点")
+    print("PASS 互动模式硬门禁且 full-auto 无法绕过")
     return 0
 
 

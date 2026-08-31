@@ -5,7 +5,7 @@
 Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.8" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.9" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start
@@ -57,10 +57,10 @@ The selected set is dynamic. `N=1` runs a complete single-platform verification.
 
 1. **Answer collection**: complete answers, references, screenshots and HTML evidence.
 2. **Answer aggregation (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness.
-3. **Authoritatively verified final answer**: evidence-supported conclusions, authoritative sources and evidence boundaries, without platform scoring.
-4. **Answer performance report**: reads the locked stage-three result to show accuracy, completeness, source quality and platform differences without recomputing the authoritative answer.
+3. **Authoritatively verified final answer**: direct answers supported by evidence, evidence boundaries, and a compact source index. Supplemental findings are stored separately and never mixed into the final answer.
+4. **Answer performance report**: reads the locked stage-three result to show per-point platform verdicts, accuracy, completeness, source quality and platform differences. Direct answers and supplemental references remain visibly separate.
 
-Interactive runs use machine-enforced acknowledgement tokens and artifact hashes between stages. A caller may select `--execution-mode full-auto` only when the user requested an uninterrupted run; all four reports and checkpoints are still emitted in order.
+Every run uses machine-enforced acknowledgement tokens and artifact hashes between stages. Each report must be opened and presented before the user chooses whether to continue, revise, or stop; there is no mode that bypasses these confirmations.
 
 Capture and comparison require no API key. Authoritative verification first reuses official material already attached by DKnow, or `gov.cn` material attached by another platform, when the captured body actually supports the claim. Trusted Search is used only for the remaining evidence gaps. On first use, the user signs in to the DKnow MaaS page; the skill obtains or creates a dedicated local key without asking the user to paste secrets into chat. Semantic analysis runs in the current host and does not call an external model API.
 

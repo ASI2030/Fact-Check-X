@@ -24,7 +24,20 @@ def run(arguments: list[str], environment: dict[str, str] | None = None) -> dict
     process = subprocess.run(arguments, text=True, capture_output=True, check=False, env=environment)
     if process.returncode:
         raise AssertionError(process.stdout or process.stderr)
-    return json.loads([line for line in process.stdout.splitlines() if line.strip()][-1])
+    payload = json.loads([line for line in process.stdout.splitlines() if line.strip()][-1])
+    checkpoint = payload.get("checkpoint") or {}
+    acknowledgement = checkpoint.get("acknowledgement") or {}
+    if checkpoint.get("status") == "awaiting_user" and acknowledgement:
+        acknowledged = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"),
+             "acknowledge-stage", "--run-dir", str(Path(checkpoint["path"]).parent),
+             "--stage", checkpoint["stage"], "--token", acknowledgement["token"],
+             "--decision", "continue"],
+            text=True, capture_output=True, check=False, env=environment,
+        )
+        if acknowledged.returncode:
+            raise AssertionError(acknowledged.stdout or acknowledged.stderr)
+    return payload
 
 
 def run_failed(arguments: list[str], environment: dict[str, str] | None = None) -> dict:
@@ -35,10 +48,7 @@ def run_failed(arguments: list[str], environment: dict[str, str] | None = None) 
 
 
 def command(*arguments: str) -> list[str]:
-    values = list(arguments)
-    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
-        values.extend(["--execution-mode", "full-auto"])
-    return [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), *values]
+    return [sys.executable, str(ROOT / "scripts" / "fact_check_x.py"), *arguments]
 
 
 def main() -> int:
@@ -54,8 +64,26 @@ def main() -> int:
             "requestId": "K1",
             "searchMode": "trusted_search",
             "requestCount": 1,
+            "authoritativeFinding": "直接问题权威结论。",
+            "claims": {
+                "doubao": {"covered": True, "claim": "直接问题平台主张。"},
+            },
             "verdicts": {
                 "doubao": {"verdict": "contradicted"},
+            },
+            "evidenceGaps": [],
+        }), encoding="utf-8")
+        (merge_results / "K2.json").write_text(json.dumps({
+            "schemaVersion": "fact-check-x/authority-result@1",
+            "requestId": "K2",
+            "searchMode": "trusted_search",
+            "requestCount": 1,
+            "authoritativeFinding": "补充参考权威结论。",
+            "claims": {
+                "doubao": {"covered": True, "claim": "补充参考平台主张。"},
+            },
+            "verdicts": {
+                "doubao": {"verdict": "supported"},
             },
             "evidenceGaps": [],
         }), encoding="utf-8")
@@ -64,6 +92,13 @@ def main() -> int:
             "platforms": [{"platform": "doubao", "label": "豆包"}],
             "knowledgePoints": [{
                 "id": "K1",
+                "description": "直接问题",
+                "role": "direct",
+                "trustedAnchor": {"eligible": False},
+            }, {
+                "id": "K2",
+                "description": "补充参考",
+                "role": "reference",
                 "trustedAnchor": {"eligible": False},
             }],
             "analysisGaps": [{
@@ -75,6 +110,9 @@ def main() -> int:
         }, merge_results)
         assert merged["status"] == "completed"
         assert merged["evidenceGaps"] == []
+        assert merged["finalAnswer"]["knowledgePointIds"] == ["K1"]
+        assert merged["supplementalFindings"]["knowledgePointIds"] == ["K2"]
+        assert "补充参考权威结论" not in merged["finalAnswer"]["answer"]
 
         run_dir = Path(temp) / "run"
         results = COMPARE_FIXTURES / "results.json"
@@ -242,7 +280,10 @@ def main() -> int:
                 "04-final-report.html",
             )
         )
-        assert "① 参考性" in report and "③ 原始答案与参考文献（存证）" in report
+        assert "① 平台表现概览" in report
+        assert "④ 原始答案与参考文献（存证）" in report
+        assert "② 直接答案逐条判定" not in report
+        assert "②-补 补充参考分析" not in report
         assert (run_dir / "comparison.html").exists()
         capture_report = (run_dir / "capture" / "report.html").read_text(encoding="utf-8")
         assert "各方答案汇总（问题：" in capture_report

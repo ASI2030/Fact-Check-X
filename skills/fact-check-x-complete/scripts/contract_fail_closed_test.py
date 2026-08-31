@@ -19,10 +19,23 @@ if not FIXTURE.is_dir():
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
-    values = list(args)
-    if values and values[0] == "prepare-comparison" and "--execution-mode" not in values:
-        values.extend(["--execution-mode", "full-auto"])
-    return subprocess.run([sys.executable, str(PIPELINE), *values], text=True, capture_output=True, check=False)
+    process = subprocess.run([sys.executable, str(PIPELINE), *args], text=True, capture_output=True, check=False)
+    if process.returncode == 0:
+        lines = [line for line in process.stdout.splitlines() if line.strip()]
+        payload = json.loads(lines[-1]) if lines else {}
+        checkpoint = payload.get("checkpoint") or {}
+        acknowledgement = checkpoint.get("acknowledgement") or {}
+        if checkpoint.get("status") == "awaiting_user" and acknowledgement:
+            acknowledged = subprocess.run(
+                [sys.executable, str(PIPELINE), "acknowledge-stage",
+                 "--run-dir", str(Path(checkpoint["path"]).parent),
+                 "--stage", checkpoint["stage"], "--token", acknowledgement["token"],
+                 "--decision", "continue"],
+                text=True, capture_output=True, check=False,
+            )
+            if acknowledged.returncode:
+                return acknowledged
+    return process
 
 
 def main() -> int:

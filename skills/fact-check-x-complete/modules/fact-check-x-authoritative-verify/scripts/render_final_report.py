@@ -354,6 +354,14 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
             "evidenceGaps": verification.get("evidenceGaps") or [],
         },
         "agent_todo": [],
+        "authority_verification_sha256": hashlib.sha256(
+            json.dumps(
+                verification,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest(),
     }
     scraped = {}
     for platform in platforms:

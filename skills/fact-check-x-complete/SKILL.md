@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.8"
+  version: "1.1.9"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.8)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.9)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，证据不足的内容不会写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -52,7 +52,7 @@ metadata:
 7. `login` 或 `run` 非零退出、浏览器意外关闭、人工处理超时或采集失败时，立即读取 `capture-recovery.json`。运行载体有 Computer Use 时调用它恢复；没有时明确说明“当前载体无法调用 Computer Use，原始答案采集已停止”，停在原始答案采集阶段。
 8. 进入 Computer Use 恢复后，禁止改用 headless/无头浏览器、清理锁文件、修改启动参数或用命令行诊断规避接管。允许使用原持久化配置重新打开同一平台，并直接复用 `capture-recovery.json.question`。
 9. `capture-gate.json` 未证明所有指定平台均成功前，禁止进入知识点对比和后续流程。不得用已有材料、搜索结果、空回答或部分成功结果替代失败平台。
-10. **分阶段交付门禁**：默认在原始答案采集、知识点对比和权威证据核验各自完成后，先向用户发送本阶段真实可打开的独立产物，再询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”。程序会在 `stage-checkpoints.json` 记录产物摘要和一次性确认令牌；收到用户“继续下一步”后，必须用 `acknowledge-stage --decision continue` 提交该令牌，否则下一阶段命令会直接失败。用户在最初请求中明确要求“完整跑完、无需逐步确认”时，`prepare-comparison` 必须增加 `--execution-mode full-auto`；程序仍按顺序写入四个检查点，且调用方仍要逐阶段发送可打开产物和状态。证据不足属于可交付结论，不阻断后续报告。
+10. **分阶段交付门禁**：原始答案采集、知识点对比和权威证据核验各自完成后，必须先向用户发送本阶段真实可打开的独立产物，再询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”。程序会在 `stage-checkpoints.json` 记录产物摘要和一次性确认令牌；收到用户“继续下一步”后，必须用 `acknowledge-stage --decision continue` 提交该令牌，否则下一阶段命令会直接失败。即使用户最初要求完整连续执行，也不能跳过阶段产物展示和用户确认。证据不足属于可交付结论，不阻断后续报告。
 
 本技能是对外唯一入口，包内自带三个独立业务模块：
 
@@ -160,7 +160,7 @@ python3 scripts/fact_check_x.py prepare-comparison \
   --run-dir <run目录>
 ```
 
-上述命令默认为交互模式。只有用户在最初已明确授权完整自动跑完时，才在命令末尾增加 `--execution-mode full-auto`。交互模式下，每次用户确认继续后执行：
+上述命令固定使用交互模式。每次向用户展示当前阶段产物并收到继续确认后执行：
 
 ```bash
 python3 scripts/fact_check_x.py acknowledge-stage \
@@ -179,7 +179,7 @@ python3 scripts/fact_check_x.py acknowledge-stage \
 - `capture/report.md`：可迁移文本报告；
 - `capture-gate.json`：全部平台采集成功证明。
 
-必须原样展示命令返回的 `checkpoint.message`；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 生成真正的 Markdown 文件链接，例如 `[打开各方答案汇总](<返回路径>)`；禁止仅用反引号显示路径。该检查点必须在开始知识点对比前对用户可见。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。不得只把路径藏在“运行命令”、折叠执行详情或最终总结中。
+必须原样展示命令返回的 `checkpoint.message`；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 生成真正的 Markdown 文件链接，例如 `[打开各方答案汇总](<返回路径>)`；禁止仅用反引号显示路径。该检查点必须在开始知识点对比前对用户可见。必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；用户最初要求完整执行也不能替代本阶段确认。不得只把路径藏在“运行命令”、折叠执行详情或最终总结中。
 
 豆包等页面可能只显示来源名称而不暴露原文 URL。采集器会先尝试展开来源标签获取真实链接；仍无链接时写入 `sourceMentions`。此时必须表述为“0 条可回溯参考文献，N 个无 URL 来源标签”，不得说“页面没有来源”，也不得把标签伪造成参考文献。
 
@@ -205,7 +205,7 @@ python3 scripts/fact_check_x.py complete-comparison \
 `complete-comparison`，最多自动修复 2 次。两次后仍失败则明确报告知识点对比
 阻断及缺失字段，禁止进入 `prepare-authority`，也禁止静默结束任务。
 
-命令成功后，必须立刻向用户发送一条独立的 **各方答案聚合完成检查点**，展示知识点数量、分析信息不足数量和“综合草案（未核验）”。必须原样展示命令返回的 `checkpoint.message`；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 发送 `[打开各方答案聚合（未核验）](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。默认询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；只有最初请求已明确授权完整自动跑完时才可不等待。
+命令成功后，必须立刻向用户发送一条独立的 **各方答案聚合完成检查点**，展示知识点数量、分析信息不足数量和“综合草案（未核验）”。必须原样展示命令返回的 `checkpoint.message`；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 发送 `[打开各方答案聚合（未核验）](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；用户最初要求完整执行也不能替代本阶段确认。
 
 ### 第三步：权威核验后的最终答案（可选增强）
 
@@ -261,7 +261,7 @@ python3 scripts/fact_check_x.py finalize-authority --run-dir <run目录>
 ```
 
 `finalize-authority` 完成裁决后会独立生成 `verification.json` 和
-`03-authority-report.html`。证据充分的知识点进入 `finalAnswer`；证据不足的知识点进入 `evidenceGaps`，从确定答案和准确率分母中排除。必须立即发送 **权威证据核验检查点** 和 `[打开权威核验后的最终答案](<返回路径>)`。本报告只展示最终答案、权威证据和证据边界，不展示平台裁决或评分。交互模式下，用户确认继续后必须执行 `acknowledge-stage`。
+`03-authority-report.html`。只有证据充分的直接答案知识点进入 `finalAnswer`；补充参考单独进入 `supplementalFindings`，不得混入最终答案；证据不足的知识点进入 `evidenceGaps`。必须立即发送 **权威证据核验检查点** 和 `[打开权威核验后的最终答案](<返回路径>)`。本报告只展示直接答案、证据边界和简洁来源索引，不展示逐平台裁决或评分。用户确认继续后必须执行 `acknowledge-stage`。
 
 ### 第四步：各方答案测评报告
 
@@ -273,7 +273,7 @@ python3 scripts/fact_check_x.py deliver \
   --run-dir <run目录>
 ```
 
-`deliver` 只能读取第三步已锁定的 `verification.json` 和 `03-authority-report.html`；摘要不一致时必须拒绝，不得重算、覆盖或变更第三步结论。技术流程成功但存在 `evidenceGaps` 时继续交付第四步，这些项目不进入确定答案和准确率分母。
+`deliver` 只能读取第三步已锁定的 `verification.json` 和 `03-authority-report.html`；摘要不一致时必须拒绝，不得重算、覆盖或变更第三步结论。第四步承接逐知识点核验明细，直接答案与补充参考分区展示；旧的重复裁决矩阵不得再次生成。技术流程成功但存在 `evidenceGaps` 时继续交付第四步，这些项目不进入确定答案和准确率分母。
 
 可信搜索返回成功但当前知识点 `no_evidence` 时，归类为 `insufficient_evidence`。单次检索未返回材料不等于官方明确否定，更不等于平台主张“编造”；程序必须完成本知识点的证据边界记录，并继续后续报告。
 

@@ -24,8 +24,8 @@ def main() -> int:
     assert "**分阶段交付门禁**" in instructions
     for choice in ("继续下一步", "修正当前结果", "到此结束并保留产物"):
         assert choice in instructions
-    assert "完整跑完、无需逐步确认" in instructions
-    assert "逐阶段发送可打开产物和状态" in instructions
+    assert "即使用户最初要求完整连续执行，也不能跳过阶段产物展示和用户确认" in instructions
+    assert "--execution-mode full-auto" not in instructions
     assert "综合草案（未核验）" in instructions
     assert "权威核验后的最终答案" in instructions
     assert "`dknowc-deep-research`" in instructions

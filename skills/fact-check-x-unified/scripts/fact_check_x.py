@@ -117,15 +117,8 @@ def record_stage_checkpoint(
     resolved = path.resolve()
     if not resolved.is_file():
         raise PipelineError(f"阶段产物不存在：{resolved}")
-    execution_mode = gate.get("executionMode")
-    status = (
-        "completed"
-        if not next_stage
-        else "auto_acknowledged"
-        if execution_mode == "full-auto"
-        else "awaiting_user"
-    )
-    token = secrets.token_urlsafe(18) if status == "awaiting_user" else None
+    status = "completed" if not next_stage else "awaiting_user"
+    token = f"fcx_{secrets.token_urlsafe(18)}" if status == "awaiting_user" else None
     entry = {
         "stage": stage,
         "label": label,
@@ -136,8 +129,6 @@ def record_stage_checkpoint(
         "token": token,
         "createdAt": now_iso(),
     }
-    if status == "auto_acknowledged":
-        entry.update({"decision": "continue", "acknowledgedAt": now_iso()})
     gate.setdefault("stages", {})[stage] = entry
     dump_json(interaction_gate_path(run_dir), gate)
     checkpoint = {
@@ -175,7 +166,7 @@ def require_stage_acknowledged(run_dir: Path, stage: str) -> dict:
     path = Path(str(entry.get("path") or ""))
     if not path.is_file() or capture_digest(path) != entry.get("sha256"):
         raise PipelineError(f"{stage} 阶段产物已缺失或被修改，禁止继续")
-    if entry.get("status") not in {"acknowledged", "auto_acknowledged"}:
+    if entry.get("status") != "acknowledged":
         raise PipelineError(
             f"{stage} 阶段产物尚未得到‘继续下一步’确认，禁止进入后续流程"
         )
@@ -189,7 +180,7 @@ def acknowledge_stage(args: argparse.Namespace) -> dict:
     if not entry:
         raise PipelineError(f"未找到可确认的 {args.stage} 阶段")
     if gate.get("executionMode") != "interactive":
-        raise PipelineError("当前运行是 full-auto 模式，不需要人工确认")
+        raise PipelineError("阶段交付门禁配置无效；请重新执行 prepare-comparison")
     if entry.get("status") != "awaiting_user" or not secrets.compare_digest(
         str(entry.get("token") or ""), str(args.token or "")
     ):
@@ -1190,6 +1181,9 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
     final_answer_items = []
     final_answer_point_ids = []
     excluded_point_ids = []
+    supplemental_items = []
+    supplemental_point_ids = []
+    supplemental_excluded_point_ids = []
     for point in points:
         authority = point.get("authority") or {}
         claims = authority.get("claims") or {}
@@ -1200,8 +1194,12 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             for platform, verdict in verdicts.items()
         )
         point_id = str(point.get("id") or "")
+        role = str(point.get("role") or "direct")
         if not resolved:
-            excluded_point_ids.append(point_id)
+            if role == "direct":
+                excluded_point_ids.append(point_id)
+            else:
+                supplemental_excluded_point_ids.append(point_id)
             continue
         finding = str(
             (authority.get("authoritativeFinding") or "")
@@ -1213,13 +1211,18 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             finding,
             count=1,
         ).strip() or finding
-        final_answer_point_ids.append(point_id)
-        final_answer_lines.append(answer)
-        final_answer_items.append({
+        item = {
             "knowledgePointId": point_id,
             "title": title,
             "answer": answer,
-        })
+        }
+        if role == "direct":
+            final_answer_point_ids.append(point_id)
+            final_answer_lines.append(answer)
+            final_answer_items.append(item)
+        else:
+            supplemental_point_ids.append(point_id)
+            supplemental_items.append(item)
     final_answer_status = (
         "verified"
         if final_answer_point_ids and not excluded_point_ids
@@ -1238,6 +1241,11 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             "items": final_answer_items,
             "knowledgePointIds": final_answer_point_ids,
             "excludedKnowledgePointIds": excluded_point_ids,
+        },
+        "supplementalFindings": {
+            "items": supplemental_items,
+            "knowledgePointIds": supplemental_point_ids,
+            "excludedKnowledgePointIds": supplemental_excluded_point_ids,
         },
         "createdAt": now_iso(),
         "platforms": comparison.get("platforms") or [],
@@ -1436,8 +1444,9 @@ def parser() -> argparse.ArgumentParser:
     prepare.add_argument("--run-dir", required=True)
     prepare.add_argument(
         "--execution-mode",
-        choices=("interactive", "full-auto"),
+        choices=("interactive",),
         default="interactive",
+        help="固定为 interactive；每阶段均需用户确认后才能继续。",
     )
     acknowledge = commands.add_parser("acknowledge-stage")
     acknowledge.add_argument("--run-dir", required=True)

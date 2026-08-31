@@ -74,6 +74,7 @@ ai = A.get('ai_info', {})
 SCRAPED = R.get('scraped', {})
 HEALTH = A.get('llm_health', {})
 APPEALS = A.get('appeals', [])
+AUTHORITY_VERIFICATION_SHA256 = str(A.get('authority_verification_sha256') or '')
 
 TIER_META = {  # 角色标签只保留核心 / 直接相关；补充参考另区。
     "core":    ("核心", "#1e3a8a", "用户问的那个裁定性核心点（能不能/多久/多少钱）"),
@@ -374,8 +375,8 @@ def official_basis_html(k):
     ob = k.get("official_basis") or {}
     parts = []
     authority_ref = (
-        f'<a class="govlink" href="03-authority-report.html#{escape(str(k.get("id") or ""))}">'
-        '[查看第三步权威证据]</a>'
+        '<a class="govlink" href="03-authority-report.html">'
+        '[查看第三步最终答案与来源索引]</a>'
     )
     res = str(ob.get("verify_result", "") or "")
     gov = ob.get("gov_url", "")
@@ -414,140 +415,51 @@ def official_basis_html(k):
                      f'<span class="muted small">{chtxt}</span>{govlinks}{authority_ref}</div>')
     return "".join(parts)
 
-def tier_pill(k):
-    t = tier_of(k)
-    lab, col, doc = TIER_META[t]
-    return f'<span class="tierpill" style="color:{col};border-color:{col}" title="{escape(doc)}">{lab}</span>'
-
-# ── 角色 / 编造判定：直接答案与补充参考分开计算 ──
 def _role(k):
     return (k.get("role") or "direct")
 
-def _kp_is_fab(k):
-    """该 K 是否凭空编造（官方查无、无任一方有锚点）。"""
-    grounded = {"直接准确", "间接准确", "巧合式幻觉", "误导式幻觉"}
-    cats = [cat_norm(SE.get(s, {}).get(k.get("id"), {}).get("category", "答案遗漏"))
-            for s in (sk for sk, _, _ in SIDE)]
-    return any(c == "编造式幻觉" for c in cats) and not any(c in grounded for c in cats)
 
-def kp_rows(roles=("direct",), exclude_fab=True):
-    out = []
+def locked_knowledge_point_details(role="direct"):
+    """展示第三步 verification.json 已锁定的逐知识点结论，不重新裁决。"""
+    blocks = []
     for k in N_list:
-        if _role(k) not in roles:
+        if _role(k) != role:
             continue
-        if exclude_fab and _kp_is_fab(k):
-            continue
-        kid = k.get("id","?")
-        desc = escape(k.get("desc","")[:80])
-        def cell(side):
-            e = SE.get(side,{}).get(kid,{})
-            attrs = (
-                f' data-fcx-point="{escape(kid)}"'
-                f' data-fcx-platform="{escape(side)}"'
-                f' data-fcx-binding-sha256="{escape(e.get("semantic_binding_sha256", ""))}"'
+        kid = str(k.get("id") or "?")
+        finding = escape(str(k.get("authoritative_finding") or "证据不足"))
+        platform_cards = []
+        for sk, sname, color in SIDE:
+            entry = (SE.get(sk) or {}).get(kid) or {}
+            category = cat_norm(entry.get("category", "答案遗漏"))
+            col, _, category_doc, neutral = CAT_STYLE.get(
+                category, CAT_STYLE["答案遗漏"]
             )
-            if not e or not e.get("covered"):
-                reason = escape(e.get("verdict_reason") or "该平台未覆盖此知识点。")
-                return (
-                    f'<td class="kc"{attrs}>'
-                    '<span class="catpill" style="background:#9ca3af">· 未覆盖</span>'
-                    f'<div class="verdictreason"><b>状态：</b>{reason}</div></td>'
-                )
-            cn = cat_norm(e.get("category","答案遗漏"))
-            # 直接答案区保持四类稳定标签；编造式单独进入补充分析区。
-            if exclude_fab and cn == "编造式幻觉":
-                return (f'<td class="kc"{attrs}><span class="catpill" style="background:#9ca3af"'
-                        ' title="该家在本知识点上凭空编造，详见下方「补充参考分析 · ③凭空编造」">· 见下方编造区</span></td>')
-            col, ic, cdoc, neutral = CAT_STYLE[cn]
-            claim = escape((e.get("claim") or "")[:90])
-            locked = ''
-            ap = e.get("appeal_applied")
-            if ap:
-                locked += (f' <span class="appealtag" title="经申诉复核更正：{escape(ap.get("prev_category",""))}→{escape(ap.get("new_category",""))}'
-                           f'｜复核 {escape(ap.get("reviewer",""))} {escape(ap.get("reviewed_at",""))}｜{escape(ap.get("rationale","")[:60])}">⚖ 经申诉更正</span>')
-            # 外显中性标签，标准分类进入 tooltip。
-            pill = (f'<span class="catpill" style="background:{col}" '
-                    f'title="判定条件：{escape(cdoc)}　｜　标准分类：{escape(cn)}">{ic} {neutral}</span>')
-            # 答案点 → 所附依据 → 官方验证 同列分组（一个证据块）
-            reason = escape((e.get("verdict_reason") or "")[:180])
-            return (f'<td class="kc"{attrs}>{pill}{locked}'
-                    f'<div class="claim"><span class="claimtag">答案点</span>{claim}</div>'
-                    f'<div class="srcline">所附源：{escape((e.get("source_type") or "—")[:28])} ｜ 溯源方式：{escape({"local":"逐段溯源","declared_global":"无对应的清单","answer_level_semantic":"全文语义溯源","none":"未建立溯源"}.get(e.get("reference_binding"), e.get("reference_binding") or "未建立溯源"))} ｜ 忠实：{escape(e.get("faithful","?"))}</div>'
-                    f'<div class="verdictreason"><b>裁决：</b>{reason or "证据不足"}</div>'
-                    f'<div class="evgroup">{prov_html(e, (k.get("official_basis") or {}).get("excerpt", ""))}</div></td>')
-        ob_html = official_basis_html(k)
-        finding = escape(str(k.get("authoritative_finding") or ""))
-        kdesc_cell = (f'<td class="kdesc">{desc}'
-                      + (f'<div class="verdictreason"><b>权威结论：</b>{finding}</div>' if finding else '')
-                      + (f'<div class="obgroup">{ob_html}</div>' if ob_html else
-                         '<div class="muted small" style="margin-top:6px">官方依据：—</div>')
-                      + '</td>')
-        out.append(f'<tr><td class="kid">{kid}</td>'
-                   f'{kdesc_cell}{"".join(cell(sk) for sk, _, _ in SIDE)}</tr>')
-    return "\n".join(out)
-
-def reference_analysis_html():
-    """补充参考分析只回答 3 个问题。
-    ① 有价值的正确参考（reference 区 直接/间接准确）
-    ② 幻觉式的参考提醒（reference 区 巧合/误导）
-    ③ 凭空编造（任何区 编造，官方查无）"""
-    ACC = {"直接准确", "间接准确"}; HAL = {"巧合式幻觉", "误导式幻觉"}
-    def collect(pred):
-        items = []
-        for k in N_list:
-            kid = k.get("id")
-            for sk, sname, scolor in SIDE:
-                c = cat_norm(SE.get(sk, {}).get(kid, {}).get("category", "答案遗漏"))
-                if pred(k, c):
-                    items.append((k, sk, sname, scolor, c))
-        return items
-    valuable = collect(lambda k, c: _role(k) == "reference" and not _kp_is_fab(k) and c in ACC)
-    hallu_ref = collect(lambda k, c: _role(k) == "reference" and not _kp_is_fab(k) and c in HAL)
-    # 凭空编造统一进入补充分析区，直接答案区不重复显示。
-    fab_items = collect(lambda k, c: c == "编造式幻觉")
-    def render(items, empty):
-        if not items:
-            return f'<div class="muted small" style="padding:4px 0">{empty}</div>'
-        rows = []
-        rendered_basis = set()
-        for k, sk, sname, scolor, c in items:
-            kid = k.get("id")
-            entry = SE.get(sk, {}).get(kid, {})
-            claim = escape((entry.get("claim") or k.get("desc", ""))[:110])
-            reason = escape((entry.get("verdict_reason") or "")[:180])
-            attrs = (
-                f' data-fcx-point="{escape(kid)}"'
-                f' data-fcx-platform="{escape(sk)}"'
-                f' data-fcx-binding-sha256="{escape(entry.get("semantic_binding_sha256", ""))}"'
+            claim = escape(entry.get("claim") or "未覆盖")
+            reason = escape(entry.get("verdict_reason") or "该平台未覆盖此知识点。")
+            platform_cards.append(
+                f'<article class="locked-platform" data-fcx-point="{escape(kid)}" '
+                f'data-fcx-platform="{escape(sk)}" '
+                f'data-fcx-binding-sha256="{escape(entry.get("semantic_binding_sha256", ""))}">'
+                f'<div class="locked-platform-head"><b style="color:{color}">{escape(sname)}</b>'
+                f'<span class="catpill" style="background:{col}" title="{escape(category_doc)}">{escape(neutral)}</span></div>'
+                f'<p class="locked-claim">{claim}</p>'
+                f'<p class="locked-reason"><b>锁定裁决：</b>{reason}</p>'
+                f'{prov_html(entry)}'
+                '</article>'
             )
-            col, ic, cdoc, neutral = CAT_STYLE.get(c, CAT_STYLE["答案遗漏"])
-            ob = (k.get("official_basis") or {})
-            gov = ob.get("gov_url", "")
-            govlink = f' <a class="govlink" href="{_safe_href(gov)}" target="_blank">[权威核验页]</a>' if gov else ''
-            basis_html = ""
-            if kid not in rendered_basis:
-                rendered_basis.add(kid)
-                basis_html = (
-                    '<div class="prov obasis"><span class="ptag vtag">权威依据</span>'
-                    f'<a class="govlink" href="03-authority-report.html#{escape(str(kid))}">'
-                    '[查看第三步权威证据]</a></div>'
-                )
-            rows.append(
-                f'<div class="refitem"{attrs}><b style="color:{scolor}">{escape(sname)}</b>'
-                f' <span class="catpill" style="background:{col}">{ic} {neutral}</span> '
-                f'<span class="muted small">[{escape(k.get("desc","")[:24])}]</span> {claim}{govlink}'
-                f'<div class="verdictreason"><b>裁决：</b>{reason or "证据不足"}</div>'
-                f'{basis_html}</div>')
-        return "".join(rows)
-    return f'''
-    <div class="refbox">
-      <div class="refq">① 是否还提供了有价值的正确参考？<span class="muted small">覆盖外、经官方核验通过的正确补充</span></div>
-      {render(valuable, "无")}
-      <div class="refq">② 是否有幻觉式的参考提醒？<span class="muted small">覆盖外，但无依据 / 核验为错</span></div>
-      {render(hallu_ref, "无")}
-      <div class="refq">③ 是否有凭空编造？<span class="muted small">无论是直接答案式还是补充参考式的知识点，只要官方原站和官方来源都查不到、无法核验</span></div>
-      {render(fab_items, "无")}
-    </div>'''
+        role_label = "直接答案" if role == "direct" else "补充参考"
+        blocks.append(
+            f'<section class="locked-point" id="evaluation-{escape(kid)}">'
+            f'<div class="locked-point-head"><span class="point-id">{escape(kid)}</span>'
+            f'<div><span class="role-label">{role_label}</span><h3>{escape(k.get("desc") or "")}</h3></div></div>'
+            f'<div class="locked-finding"><b>第三步锁定的权威结论</b><p>{finding}</p>'
+            f'{official_basis_html(k)}</div>'
+            f'<div class="locked-platforms">{"".join(platform_cards)}</div>'
+            '</section>'
+        )
+    if blocks:
+        return "".join(blocks)
+    return '<p class="empty-state">本次没有该类知识点。</p>'
 
 # ──────────────── 原始答案 + 参考文献存证 ────────────────
 def raw_block(sk, sname, color):
@@ -610,6 +522,12 @@ meta_rows = f'''
   <tr><td>真相源构成</td><td>经严格验收的深知晓官方材料、各平台已附的 gov.cn 材料，或必要时逐知识点调用可信搜索所得官方材料；同一知识点的所有参与方共用同一份验证证据</td></tr>
   <tr><td>可直接判定的官方来源</td><td>官方原站，或由深知可信搜索返回的 dknowc / DT_DATA 官方来源；后者统一标为“官方来源”，可注明“由深知可信搜索收录”</td></tr>
   <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；可信搜索未取得足够材料时统一标记“证据不足”，并从确定答案和准确率分母中排除</td></tr>'''
+if AUTHORITY_VERIFICATION_SHA256:
+    meta_rows += (
+        '<tr><td>第三步锁定数据摘要</td><td><code>'
+        + escape(AUTHORITY_VERIFICATION_SHA256)
+        + '</code>；第四步仅展示该锁定数据并计算平台指标，不改变权威结论</td></tr>'
+    )
 
 # 申诉声明（中立公信力护栏）：有凭空编造或可申诉项时显示——被评方可提交官方依据复核
 _appeal_needed = any(
@@ -627,7 +545,14 @@ appeal_block = ('''
 html = f'''<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>各方答案测评报告（问题：{escape(query)}）</title><style>
 *{{box-sizing:border-box}}
-body{{font-family:-apple-system,"PingFang SC",sans-serif;max-width:1440px;width:100%;margin:24px auto;padding:0 24px;color:#1f2937;line-height:1.6}}
+body{{font-family:-apple-system,"PingFang SC",sans-serif;width:100%;margin:0;padding:0;color:#1f2937;background:#eef1f5;line-height:1.6;letter-spacing:0}}
+.top{{background:#172033;color:#fff;padding:28px max(24px,calc((100vw - 1440px)/2 + 24px))}}
+.top .eyebrow{{color:#9bd4ca;font-size:13px;font-weight:700;margin:0 0 8px}}
+.top h1{{color:#fff;border:0;font-size:30px;line-height:1.25;margin:0;padding:0}}
+.top .muted{{color:#d8e0ec}}
+.top .toolbar{{margin-top:14px}}
+.top .btn{{background:#fff;border-color:#fff;color:#173f74}}
+.report-main{{background:#fff;max-width:1440px;margin:0 auto;padding:24px}}
 h1{{color:#1e3a8a;border-bottom:3px solid #e5e7eb;padding-bottom:10px}}
 h2{{color:#1e40af;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6px}}
 .muted{{color:#6b7280}} .small{{font-size:12px}}
@@ -705,6 +630,20 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
 .refq{{font-weight:600;color:#334155;margin:10px 0 4px;font-size:13.5px}}
 .refq:first-child{{margin-top:0}}
 .refitem{{font-size:12.5px;color:#475569;padding:4px 0 4px 10px;border-left:2px solid #e2e8f0;margin:3px 0;line-height:1.5}}
+.locked-point{{background:#fff;border:1px solid #d7dde7;border-radius:6px;margin:14px 0;padding:18px}}
+.locked-point-head{{align-items:flex-start;display:flex;gap:10px}}
+.locked-point-head h3{{font-size:17px;line-height:1.5;margin:2px 0 0}}
+.point-id{{background:#172033;border-radius:4px;color:#fff;display:inline-block;font-size:12px;font-weight:750;padding:4px 7px}}
+.role-label{{color:#637083;font-size:11px;font-weight:700}}
+.locked-finding{{background:#f6f8fb;border-left:4px solid #148266;margin:14px 0;padding:12px 14px}}
+.locked-finding p{{font-size:15px;font-weight:650;margin:5px 0 6px}}
+.locked-finding a{{font-size:12px}}
+.locked-platforms{{display:grid;gap:10px;grid-template-columns:repeat(var(--platform-count),minmax(0,1fr))}}
+.locked-platform{{background:#fbfcfd;border:1px solid #e1e6ee;border-radius:5px;min-width:0;padding:12px}}
+.locked-platform-head{{align-items:center;display:flex;gap:8px;justify-content:space-between}}
+.locked-claim{{font-weight:650;margin:9px 0 5px}}
+.locked-reason{{color:#526071;font-size:12px;margin:5px 0}}
+.empty-state{{background:#f6f8fb;border:1px solid #d7dde7;border-radius:6px;color:#637083;padding:14px}}
 .obasis{{margin:3px 0;font-size:11.5px}}
 .ttab{{width:100%;font-size:11.5px;border-collapse:collapse;margin:4px 0 2px}}
 .ttab td{{padding:2px 4px;border:none}}
@@ -724,10 +663,13 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   .platform-count-5 .mwrap,.platform-count-5 .vcards{{grid-template-columns:repeat(3,minmax(0,1fr))}}
 }}
 @media(max-width:720px){{
-  .mwrap,.vcards{{grid-template-columns:1fr!important}}
+  .mwrap,.vcards,.locked-platforms{{grid-template-columns:1fr!important}}
   table.kp{{min-width:var(--kp-min-width)}}
   body{{overflow-wrap:anywhere}}
   h1{{font-size:24px}}
+  .top{{padding:22px 18px}}
+  .top h1{{font-size:24px}}
+  .report-main{{padding:16px 12px}}
 }}
 @media print{{
   body{{max-width:none;margin:0;padding:0;font-size:12px}}
@@ -739,12 +681,16 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   h1{{font-size:18px}} h2{{font-size:15px}}
 }}
 </style></head><body class="{PLATFORM_LAYOUT} platform-count-{PLATFORM_COUNT}" style="--platform-count:{PLATFORM_COUNT};--kp-min-width:{KP_MIN_WIDTH}px">
+<header class="top">
+<p class="eyebrow">Fact-Check-X · 第四阶段</p>
 <h1>各方答案测评报告（问题：{escape(query)}）</h1>
 <p class="muted">准确性、完整性、来源质量与完整证据 · {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
 <div class="toolbar">
   <button class="btn" onclick="window.print()">⎙ 导出 PDF / 打印</button>
   <button class="btn" onclick="document.querySelectorAll('details.rawd').forEach(d=>d.open=true)">▽ 展开全部存证</button>
 </div>
+</header>
+<main class="report-main">
 
 {verdict_block()}
 
@@ -759,29 +705,24 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   各指标含义鼠标悬停可见，完整口径见 <a href="#metricdoc">⑤ 指标口径速查</a>。</p>
 </div>
 
-<h2>① 参考性</h2>
+<h2>① 平台表现概览 <span class="muted small">（仅按直接答案范围计算）</span></h2>
 <div class="mwrap">
   {"".join(f'<div class="mcard"><span class="muted small">{escape(sn)}</span><br><span class="refpill" style="background:{col}">{escape(ref.get(sk,"—"))}</span><div class="small muted" style="margin-top:6px">{escape(ref.get(sk+"_note",""))}</div></div>' for sk, sn, col in SIDE)}
 </div>
 
-<h2>② 直接答案逐条判定 <span class="muted small">（直接答案区 · 直接回答用户所问的知识点）</span></h2>
-<p class="muted small">凡<b>直接回答用户所问</b>的知识点列在此区。已有足够证据时使用四类裁决：直接正确、间接正确、结果巧合正确、严重误导；证据不足时单独标记，不按正确或错误计分；未回答则标记“未覆盖”。<b>「答案知识点」列</b>展示共享权威依据，<b>各家列</b>展示该家说法及其所附依据。</p>
-<div class="kp-scroll" aria-label="直接答案逐条判定横向查看">
-<table class="kp">
-  <thead><tr><th>#</th><th>答案知识点 + 官方依据</th>{"".join(f"<th>{escape(sn)}</th>" for _, sn, _ in SIDE)}</tr></thead>
-  <tbody>{kp_rows(roles=("direct",), exclude_fab=True)}</tbody>
-</table>
-</div>
+<h2>② 直接答案逐知识点测评 <span class="muted small">（承接第三步锁定结果，不重新核验）</span></h2>
+<p class="muted small">每个知识点的权威结论直接引用第三步锁定数据；本阶段只比较各平台主张、引用忠实性与裁决结果。</p>
+{locked_knowledge_point_details("direct")}
 
-<h2 id="refzone">②-补 补充参考分析 <span class="muted small">（相关但非所问 · 凭空编造 · 不计覆盖率/准确率，只看参考价值）</span></h2>
-<p class="muted small">下列内容<b>不计入覆盖率/准确率</b>——只回答三个问题：① 覆盖外是否还提供了有价值的正确参考；② 是否有幻觉式的参考提醒；③ <b>无论直接答案还是补充参考，是否有任何官方材料都查不到的凭空编造</b>（直接区不再显示编造点，全部在此列出）。</p>
-{reference_analysis_html()}
+<h2 id="refzone">③ 补充参考逐知识点测评 <span class="muted small">（不混入最终答案，不计直接答案指标）</span></h2>
+<p class="muted small">补充参考与用户直接所问分开呈现，保留其证据价值和风险，但不改变第三步最终答案。</p>
+{locked_knowledge_point_details("reference")}
 
-<h2>③ 原始答案与参考文献（存证）</h2>
+<h2>④ 原始答案与参考文献（存证）</h2>
 <p class="muted small">评测的原始凭证：各平台 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对——包括拆解是否遗漏、该家说法（claim）是否忠实于原文。引用旁标注来源类型，并使用当前版本统一口径。</p>
 {"".join(raw_block(sk, sn, col) for sk, sn, col in SIDE)}
 
-<h2 id="metricdoc">④ 指标口径速查</h2>
+<h2 id="metricdoc">⑤ 指标口径速查</h2>
 <table class="doc">
   <thead><tr><th style="width:120px">指标</th><th style="width:110px">分母</th><th>定义</th><th style="width:30%">怎么读</th></tr></thead>
   <tbody>{metric_doc_rows()}</tbody>
@@ -805,13 +746,13 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
     for x in APPEALS) +
   "</tbody></table>") if APPEALS else ""}
 
-<h2>⑤ 评测元信息（可复现性）</h2>
+<h2>⑥ 评测元信息（可复现性）</h2>
 <table class="meta"><tbody>{meta_rows}</tbody></table>
 {appeal_block}
 
 <p class="muted small" style="margin-top:36px;border-top:1px solid #eee;padding-top:12px">
 Fact-Check-X · 评测口径：覆盖率衡量平台是否回答直接知识点；准确率与幻觉率仅以已有足够证据裁决的覆盖项为分母；证据不足项单独展示，不按正确或错误计分；全判定可回溯至平台原答案、所附依据和权威证据。</p>
-</body></html>'''
+</main></body></html>'''
 
 ts = datetime.now().strftime("%Y%m%d_%H%M")
 out = Path(a.out) if a.out else (Path(__file__).parent / "reports" / f"factcheck_{ts}_{a.topic}.html")

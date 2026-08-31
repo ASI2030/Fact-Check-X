@@ -91,9 +91,7 @@ export function renderHtmlReport(run) {
     body {
       margin: 0;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(246, 247, 249, 0.92) 340px),
-        linear-gradient(90deg, rgba(15, 118, 110, 0.08), rgba(29, 78, 216, 0.05), rgba(161, 92, 0, 0.05));
+      background: #eef1f5;
       color: var(--text);
       line-height: 1.55;
     }
@@ -124,9 +122,7 @@ export function renderHtmlReport(run) {
       width: 30px;
       height: 30px;
       border-radius: 8px;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0)),
-        linear-gradient(135deg, var(--accent), var(--blue));
+      background: var(--accent);
       box-shadow: 0 10px 24px rgba(15, 118, 110, 0.24);
       flex: 0 0 auto;
     }
@@ -154,7 +150,7 @@ export function renderHtmlReport(run) {
       box-shadow: var(--shadow);
     }
     .hero-copy { min-width: 0; }
-    h1 { margin: 0 0 10px; font-size: clamp(28px, 3.4vw, 48px); line-height: 1.04; letter-spacing: 0; }
+    h1 { margin: 0 0 10px; font-size: 32px; line-height: 1.2; letter-spacing: 0; }
     h2 { margin: 0; font-size: 21px; letter-spacing: 0; }
     h3 { margin: 0; font-size: 15px; letter-spacing: 0; }
     .en {

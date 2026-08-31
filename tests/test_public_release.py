@@ -13,10 +13,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-VERSION = "1.1.8"
-PUBLISHED_VERSION = "1.1.8"
-WORKBUDDY_VERSION = "1.1.8"
-OFFICIAL_SHA = "b8b3075c22437847179970ee232fee7ee426c7454ec462a21a1f5bed36c402ac"
+VERSION = "1.1.9"
+PUBLISHED_VERSION = "1.1.9"
+WORKBUDDY_VERSION = "1.1.9"
+OFFICIAL_SHA = "ddab930f31340b4c2e38696703f2d36022778d4b0a9e9dcd05804be1e17a1651"
 
 
 def load_module(name: str, path: Path):
@@ -41,7 +41,7 @@ class PublicReleaseTest(unittest.TestCase):
         self.assertTrue(overview.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
         for readme in ("README.md", "README.en.md"):
             self.assertIn(
-                "assets/fact-check-x-overview.png?v=1.1.8",
+                "assets/fact-check-x-overview.png?v=1.1.9",
                 (ROOT / readme).read_text(encoding="utf-8"),
             )
 
@@ -199,7 +199,7 @@ class PublicReleaseTest(unittest.TestCase):
                 self.assertNotIn("](references/", skill)
                 self.assertNotIn("V8", skill)
                 self.assertIn(
-                    "https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.8",
+                    "https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.9",
                     skill,
                 )
                 for platform in (
