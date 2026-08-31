@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.9",
-  "tag": "v1.1.9",
-  "sourceCommitSha": "64bc2b57f6f9e8a41d1347bdc2700ad0bc6476a3",
-  "publishedAt": "2026-09-01T00:00:44+08:00",
+  "version": "1.1.10",
+  "tag": "v1.1.10",
+  "sourceCommitSha": "9e7eed759a53fbfdd6ee00f0441003bd6ceeff00",
+  "publishedAt": "2026-09-01T01:51:29+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度溯源）",
@@ -20,57 +20,57 @@
   ],
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 319920,
+    "bytes": 329516,
     "files": 97,
-    "sha256": "ddab930f31340b4c2e38696703f2d36022778d4b0a9e9dcd05804be1e17a1651",
-    "skillSourceTreeSha256": "e073191170de475f427500ab9366cf03f40e5c433465f96569bf70a237d19ff4"
+    "sha256": "dcee85cf4ed913486239ced3414955e45760013a0af63f5ec9c37224b1298bb7",
+    "skillSourceTreeSha256": "191a76eafda1d0933383d34418bc7c592e43a4205a3ede5fb57cf76a4e85bd0b"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.9.zip",
-      "sha256": "cf3072be6fbc0944ca2006b5aaa7bf33b686045dd9d7c871050e78b052af5fb7"
+      "file": "llm-answer-reference-compare-v1.1.10.zip",
+      "sha256": "8e44c9c76cd2628f8d9207d3d20476179efc696dbd830ef28fe866732aa3f3d1"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.9.zip",
-      "sha256": "d302a1489dc277ad515abc8c1b97615ffb2885fa9d0493129e3d0dc1c1695271"
+      "file": "fact-check-x-knowledge-compare-v1.1.10.zip",
+      "sha256": "216e2b36aaaa2d89df387800cd510a1c129dc862e06d06ddd3bc059d46888f52"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.9.zip",
-      "sha256": "56abd03606bde89ebd2aaf7bb6aa5e695e8eebc488286cc42d6284dfb2ac00ed"
+      "file": "fact-check-x-authoritative-verify-v1.1.10.zip",
+      "sha256": "460b6102705d38a59fe40e2815a188de799c72d59fb9b9abda3f06b90c79c0fd"
     },
     {
-      "file": "fact-check-x-unified-v1.1.9.zip",
-      "sha256": "447d4988e9087629ee98b17c0fa6b14a4a4f668deb216e0c254ebcccc9c1f9a2"
+      "file": "fact-check-x-unified-v1.1.10.zip",
+      "sha256": "fb53797d980d817571984a33292b553e9a3f7993f333c8ad82f16fc343d1e269"
     },
     {
-      "file": "fact-check-x-suite-v1.1.9.zip",
-      "sha256": "81a338d362ac8987a2808e98e518d03f985ce93e8706ca45f63d826fa4cddfee"
+      "file": "fact-check-x-suite-v1.1.10.zip",
+      "sha256": "b93f047ccdd99f4287e3b83c5d718eed27bd4fa656521a47e9ce5010d34bb795"
     },
     {
-      "file": "fact-check-x-complete-v1.1.9.zip",
-      "sha256": "f87e8bccc26c3388f25aa971db021ced2ddb302d7e7d6a4d1a0a4d39c474139d"
+      "file": "fact-check-x-complete-v1.1.10.zip",
+      "sha256": "bbca2c11ff13ed6e223eda35d254b07c52dc6c608d4e64ff8b5617189d47e7d6"
     }
   ],
   "distribution": {
     "github": {
       "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.9",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.10",
       "assetCount": 12
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.9",
-      "versionId": 279095,
-      "submittedPackageSha256": "9e8a3e743d78fc91857f3175da7030d4af0a84b041a8d861f73c134e683d8cd4",
-      "contentFingerprint": "da13519628e9b57afe52d9bfa9d5bdcbda2b833252f92066e047064b423d76b1",
+      "version": "1.1.10",
+      "versionId": 279207,
+      "submittedPackageSha256": "0528b83cf9869737690544047e443698912691105d64e3ae9e17881f089d0626",
+      "contentFingerprint": "ef389b82d9da79bd8391111c5ddcb7f7671863295251030c012dfb95756cce29",
       "platformSignature": "pending",
       "publisherRealNameVerified": true
     },
     "workbuddy": {
       "status": "installed_and_verified",
-      "version": "1.1.9",
-      "installSource": "GitHub v1.1.9 formal package",
+      "version": "1.1.10",
+      "installSource": "GitHub v1.1.10 formal package with matching SHA-256",
       "runtime": "ready",
       "smokeTest": "passed"
     }
@@ -81,35 +81,35 @@
     "publicTreeAudit": "passed",
     "publicReleaseTests": 4,
     "releaseRegressionSuite": "passed",
-    "feedbackCoverage": "frozen v1.1.9 acceptance criteria passed",
+    "feedbackCoverage": "18/18 golden regressions and 36/36 feedback identifiers passed",
     "cleanPackageRuntime": "verified",
-    "packageFunctionalTests": "passed",
+    "packageFunctionalTests": "18 Python package/module checks and 10 JavaScript collector checks passed",
     "workbuddyInstalled": "verified",
     "marketplaceSignature": "pending",
     "liveTwoPlatformEndToEnd": {
       "status": "passed",
-      "basis": "A real Shenzhen spouse-settlement policy question completed all four stages with DeepSeek and Tencent Yuanbao. DeepSeek captured 7/7 reference bodies and Yuanbao captured 64/67 reference bodies; eleven atomic knowledge points were verified against eleven government anchors, with zero Trusted Search requests and zero evidence gaps because the captured official evidence was sufficient. All three attempts to bypass a stage acknowledgement were rejected.",
-      "reportPackageSha256": "c21b896ae2c577a093bacea11166363d38c74f2abca69d03c16998bb642b16cf"
+      "basis": "A real Shenzhen spouse-settlement policy question completed all four stages with DeepSeek and Tencent Yuanbao. DeepSeek captured 7/7 reference bodies and Yuanbao captured 64/67; one blocked and two failed acquisitions remained explicit. Eleven atomic knowledge points retained the same authority decisions while Stage 2 separated direct and supplemental material, Stage 3 exposed only the authoritative answer and evidence boundary, and Stage 4 consumed one locked per-point result without recomputation. Installed checkpoint tests rejected acknowledgement bypasses.",
+      "reportPackageSha256": "2a270391260ccf399a06b21ddfb48677c46325565d2c49277544b733509fd6d3"
     }
   },
   "supplyChain": {
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "bfe6e701e96c0c18fba1ef4e1dc5372897577ae93c07be24663806588791c5f6"
+      "sha256": "b907f2e3a7a700c9ddfe202605895494989c3f4ec5f9dd08817a134f5103ebbd"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "8487ef5837d19d86b1c8d49eed97717439d781d133b6392aac4215ad7ae5242d"
+      "sha256": "89c99bfbd2bab2ad0c3e8733a0bc80ec84aef00ad7153f827adf3dd88d557cdc"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "b1bd4324a61aba624b3f7f696d7d80cf2650b28f05b3a344e6ec9dcc125ecfca"
+      "sha256": "a5564776c541260908d50644e2167f0459815814230adda89a9ac9339dab83f6"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.9 is published to GitHub and submitted to SkillHub; subsequent changes require a new version."
+    "blockingReason": "v1.1.10 is published to GitHub and submitted to SkillHub; subsequent changes require a new version."
   }
 }
