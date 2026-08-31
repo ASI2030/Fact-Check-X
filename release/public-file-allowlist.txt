@@ -22,6 +22,8 @@ docs/**
 examples/**
 release/manifest.json
 release/public-file-allowlist.txt
+release/v1.1.8-acceptance.md
+release/v1.1.9-acceptance.md
 scripts/**
 tests/**
 skills/fact-check-x-complete/**
