@@ -8,13 +8,14 @@ Fact-Check-X 各方答案测评报告渲染器。
   可裁决的覆盖类下：准确率 + 幻觉率 = 100%（分母 = 已有足够证据裁决的直接答案覆盖数）
     准确率 = 直接准确（官方依据，含算术级显然推导 2000×1.4=2800）+ 间接准确（非官方+官方验证通过）
     幻觉率 = 巧合式（无引用依据但与官方依据巧合一致）+ 误导式（结果错）
-  编造（官方查无）独立轴，不计覆盖/准确/幻觉；无论直接/补充，全进补充参考③
-  直接答案区只有 4 标签 + 灰色未覆盖；补充参考分析回答 3 问
+  编造（官方查无）独立轴，不计覆盖/准确/幻觉；直接答案与补充参考始终分区呈现
+  直接答案区只有 4 标签 + 灰色未覆盖；补充参考单独保留证据价值与风险
 
-溯源三件套：
+溯源与复现：
   ① 每个知识点判定带「所附依据原文」+「官方验证依据原文」
   ② 原始答案 + 参考文献全文存证（原始凭证，防"我们没这么答过"）
-  ③ 指标口径速查 + 评测元信息（可复现性）
+  ③ 原始答案与参考文献全文存证
+  ④ 指标口径速查 + ⑤ 评测元信息（可复现性）
 """
 import argparse, json, os, subprocess
 from datetime import datetime
@@ -461,6 +462,24 @@ def locked_knowledge_point_details(role="direct"):
         return "".join(blocks)
     return '<p class="empty-state">本次没有该类知识点。</p>'
 
+
+def locked_role_section(role="direct"):
+    """按知识点角色分区承接第三步锁定结果。"""
+    label = "直接答案" if role == "direct" else "补充参考"
+    description = (
+        "直接回应用户问题；平台表现指标只按本区已有充分证据裁决的知识点计算。"
+        if role == "direct"
+        else "平台额外提供的信息；单独保留证据价值与风险，不混入最终答案或直接答案指标。"
+    )
+    return (
+        f'<section class="locked-role locked-role-{role}" '
+        f'data-fcx-locked-role="{role}">'
+        f'<header class="locked-role-head"><div><p class="locked-role-kicker">{label}</p>'
+        f'<h3>{label}</h3><p>{description}</p></div></header>'
+        f'{locked_knowledge_point_details(role)}'
+        '</section>'
+    )
+
 # ──────────────── 原始答案 + 参考文献存证 ────────────────
 def raw_block(sk, sname, color):
     ans = SCRAPED.get(f"{sk}_answer", "")
@@ -640,10 +659,21 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
 .locked-finding a{{font-size:12px}}
 .locked-platforms{{display:grid;gap:10px;grid-template-columns:repeat(var(--platform-count),minmax(0,1fr))}}
 .locked-platform{{background:#fbfcfd;border:1px solid #e1e6ee;border-radius:5px;min-width:0;padding:12px}}
+.locked-platform .evgroup{{display:block;width:100%}}
 .locked-platform-head{{align-items:center;display:flex;gap:8px;justify-content:space-between}}
 .locked-claim{{font-weight:650;margin:9px 0 5px}}
 .locked-reason{{color:#526071;font-size:12px;margin:5px 0}}
 .empty-state{{background:#f6f8fb;border:1px solid #d7dde7;border-radius:6px;color:#637083;padding:14px}}
+.locked-role-stack{{display:grid;gap:24px;margin-top:16px}}
+.locked-role{{border-top:6px solid;padding-top:16px}}
+.locked-role-direct{{border-top-color:#285a9f}}
+.locked-role-reference{{background:#fffaf0;border-top-color:#b7791f;padding:16px 14px 2px}}
+.locked-role-head{{align-items:flex-start;display:flex;justify-content:space-between;margin:0 0 12px}}
+.locked-role-head h3{{font-size:21px;letter-spacing:0;margin:0}}
+.locked-role-head p{{color:#526071;margin:5px 0 0}}
+.locked-role-kicker{{font-size:11px!important;font-weight:750;letter-spacing:0!important;margin:0 0 3px!important;text-transform:uppercase}}
+.locked-role-direct .locked-role-kicker,.locked-role-direct .locked-role-head h3{{color:#285a9f}}
+.locked-role-reference .locked-role-kicker,.locked-role-reference .locked-role-head h3{{color:#8a5712}}
 .obasis{{margin:3px 0;font-size:11.5px}}
 .ttab{{width:100%;font-size:11.5px;border-collapse:collapse;margin:4px 0 2px}}
 .ttab td{{padding:2px 4px;border:none}}
@@ -670,6 +700,8 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   .top{{padding:22px 18px}}
   .top h1{{font-size:24px}}
   .report-main{{padding:16px 12px}}
+  .locked-role-reference{{padding:14px 10px 2px}}
+  .locked-role-head h3{{font-size:19px}}
 }}
 @media print{{
   body{{max-width:none;margin:0;padding:0;font-size:12px}}
@@ -701,8 +733,8 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   <div class="mwrap">
     {"".join(metric_card(sk, sn, col) for sk, sn, col in SIDE)}
   </div>
-  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率衡量答没答，准确率衡量已有足够证据裁决的回答是否正确</b>。①覆盖率+遗漏率=100%；②准确率+幻觉率=100%，证据不足项不进入二者分母；③证据充分率单独展示当前可裁决覆盖程度；④官方证据支持率与局部角标覆盖率分开呈现；⑤补充参考另列分析（见②-补）。
-  各指标含义鼠标悬停可见，完整口径见 <a href="#metricdoc">⑤ 指标口径速查</a>。</p>
+  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率衡量答没答，准确率衡量已有足够证据裁决的回答是否正确</b>。①覆盖率+遗漏率=100%；②准确率+幻觉率=100%，证据不足项不进入二者分母；③证据充分率单独展示当前可裁决覆盖程度；④官方证据支持率与局部角标覆盖率分开呈现；⑤补充参考在同一核验明细中独立分区，不混入直接答案指标。
+  各指标含义鼠标悬停可见，完整口径见 <a href="#metricdoc">④ 指标口径速查</a>。</p>
 </div>
 
 <h2>① 平台表现概览 <span class="muted small">（仅按直接答案范围计算）</span></h2>
@@ -710,19 +742,18 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   {"".join(f'<div class="mcard"><span class="muted small">{escape(sn)}</span><br><span class="refpill" style="background:{col}">{escape(ref.get(sk,"—"))}</span><div class="small muted" style="margin-top:6px">{escape(ref.get(sk+"_note",""))}</div></div>' for sk, sn, col in SIDE)}
 </div>
 
-<h2>② 直接答案逐知识点测评 <span class="muted small">（承接第三步锁定结果，不重新核验）</span></h2>
-<p class="muted small">每个知识点的权威结论直接引用第三步锁定数据；本阶段只比较各平台主张、引用忠实性与裁决结果。</p>
-{locked_knowledge_point_details("direct")}
+<h2>② 逐知识点核验明细 <span class="muted small">（完整承接第三步锁定结果，不重新核验）</span></h2>
+<p class="muted small">本区只引用第三步已经锁定的权威结论，再比较各平台主张与引用忠实性；直接答案和补充参考在同一分析区内明确分开。</p>
+<div class="locked-role-stack">
+  {locked_role_section("direct")}
+  {locked_role_section("reference")}
+</div>
 
-<h2 id="refzone">③ 补充参考逐知识点测评 <span class="muted small">（不混入最终答案，不计直接答案指标）</span></h2>
-<p class="muted small">补充参考与用户直接所问分开呈现，保留其证据价值和风险，但不改变第三步最终答案。</p>
-{locked_knowledge_point_details("reference")}
-
-<h2>④ 原始答案与参考文献（存证）</h2>
-<p class="muted small">评测的原始凭证：各平台 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对——包括拆解是否遗漏、该家说法（claim）是否忠实于原文。引用旁标注来源类型，并使用当前版本统一口径。</p>
+<h2>③ 原始答案与参考文献（存证）</h2>
+<p class="muted small">评测的原始凭证：各平台 AI 的完整原答案与全部参考文献，未做任何删改。所有知识点判定（②）均可在此回溯核对，包括拆解是否遗漏、平台主张是否忠实于原文。引用旁标注来源类型，并使用当前版本统一口径。</p>
 {"".join(raw_block(sk, sn, col) for sk, sn, col in SIDE)}
 
-<h2 id="metricdoc">⑤ 指标口径速查</h2>
+<h2 id="metricdoc">④ 指标口径速查</h2>
 <table class="doc">
   <thead><tr><th style="width:120px">指标</th><th style="width:110px">分母</th><th>定义</th><th style="width:30%">怎么读</th></tr></thead>
   <tbody>{metric_doc_rows()}</tbody>
@@ -733,7 +764,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   <tbody>{cat_doc_rows()}</tbody>
 </table>
 
-{("<h2>⑤-补 申诉记录（复核更正留痕）</h2>" +
+{("<h2>④-补 申诉记录（复核更正留痕）</h2>" +
   "<p class='muted small'>下列结论经申诉复核更正，对应知识点带「⚖ 经申诉更正」标记。更正可双向（推翻错罚或错奖），全程留痕。</p>" +
   "<table class='ap'><thead><tr><th>申诉号</th><th>对象</th><th>更正</th><th>提交方</th><th>复核</th><th>依据/理由</th></tr></thead><tbody>" +
   "".join(
@@ -746,7 +777,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
     for x in APPEALS) +
   "</tbody></table>") if APPEALS else ""}
 
-<h2>⑥ 评测元信息（可复现性）</h2>
+<h2>⑤ 评测元信息（可复现性）</h2>
 <table class="meta"><tbody>{meta_rows}</tbody></table>
 {appeal_block}
 

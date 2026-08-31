@@ -281,7 +281,15 @@ def main() -> int:
             )
         )
         assert "① 平台表现概览" in report
-        assert "④ 原始答案与参考文献（存证）" in report
+        assert "② 逐知识点核验明细" in report
+        assert "③ 原始答案与参考文献（存证）" in report
+        assert "④ 指标口径速查" in report
+        assert "⑤ 评测元信息" in report
+        assert report.count("② 逐知识点核验明细") == 1
+        assert 'data-fcx-locked-role="direct"' in report
+        assert 'data-fcx-locked-role="reference"' in report
+        assert "② 直接答案逐知识点测评" not in report
+        assert "③ 补充参考逐知识点测评" not in report
         assert "② 直接答案逐条判定" not in report
         assert "②-补 补充参考分析" not in report
         assert (run_dir / "comparison.html").exists()
@@ -584,6 +592,8 @@ def main() -> int:
                 "report.checkpoints_indexed",
                 "report.unverified_draft_visible",
                 "report.verified_final_answer_visible",
+                "report.stage2_role_sections",
+                "report.stage4_single_locked_detail",
                 "report.renamed_four_stages",
                 "authority.finalize_transaction_rollback",
             ],

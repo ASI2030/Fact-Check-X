@@ -560,8 +560,21 @@ def main() -> int:
         run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(verification_path), "--output", str(report)])
         report_html = report.read_text(encoding="utf-8")
         baseline_html = (ROOT / "references" / "final-report-baseline.html").read_text(encoding="utf-8")
-        for heading in ("① 平台表现概览", "② 直接答案逐知识点测评", "③ 补充参考逐知识点测评", "④ 原始答案与参考文献（存证）", "⑤ 指标口径速查", "⑥ 评测元信息"):
+        for heading in ("① 平台表现概览", "② 逐知识点核验明细", "③ 原始答案与参考文献（存证）", "④ 指标口径速查", "⑤ 评测元信息"):
             assert heading in report_html
+            assert heading in baseline_html
+        assert report_html.count("② 逐知识点核验明细") == 1
+        assert baseline_html.count("② 逐知识点核验明细") == 1
+        assert 'data-fcx-locked-role="direct"' in report_html
+        assert 'data-fcx-locked-role="reference"' in report_html
+        assert 'data-fcx-locked-role="direct"' in baseline_html
+        assert 'data-fcx-locked-role="reference"' in baseline_html
+        assert report_html.index('data-fcx-locked-role="direct"') < report_html.index('data-fcx-locked-role="reference"')
+        assert baseline_html.index('data-fcx-locked-role="direct"') < baseline_html.index('data-fcx-locked-role="reference"')
+        assert "② 直接答案逐知识点测评" not in report_html
+        assert "③ 补充参考逐知识点测评" not in report_html
+        assert "② 直接答案逐知识点测评" not in baseline_html
+        assert "③ 补充参考逐知识点测评" not in baseline_html
         assert "② 直接答案逐条判定" not in report_html
         assert "②-补 补充参考分析" not in report_html
         assert "③ 关键发现" not in report_html

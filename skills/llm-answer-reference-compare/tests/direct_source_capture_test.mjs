@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { captureGenericChat } from "../assets/tool/dist/capture/generic-chat.js";
@@ -109,6 +109,17 @@ try {
 } finally {
     server.close();
     await rm(out, { recursive: true, force: true });
+}
+
+if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
+    await writeFile(process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT, JSON.stringify({
+        schemaVersion: "fact-check-x/test-assertions@1",
+        actualAssertionIds: [
+            "capture.deepseek_source_body",
+            "capture.yuanbao_source_body",
+            "capture.source_failure_states_distinct"
+        ]
+    }), "utf8");
 }
 
 console.log("PASS DeepSeek/元宝引用链接逐条打开、正文存证与受阻状态区分");

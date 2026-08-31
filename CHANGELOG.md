@@ -4,6 +4,21 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.10] - 2026-09-01
+
+- Separate direct answers and supplemental references into distinct overview and per-point regions in stage two, instead of relying on small role badges inside mixed tables.
+- Consolidate stage four into one locked per-point verification area with direct-answer and supplemental-reference subsections; remove the remaining duplicate top-level evaluation sections and keep all findings bound to stage three.
+- Make explicit per-stage acknowledgement the only public interaction contract: an initial request to run the complete workflow cannot bypass report presentation or user confirmation.
+- Add a golden regression for DeepSeek and Tencent Yuanbao source-body capture, blocked/failed acquisition states, stage interaction, and the stage-two-to-stage-four report structure.
+- Refresh the shipped Shenzhen spouse-settlement report baseline and align GitHub, SkillHub and package descriptions with the verified product behavior.
+
+## [1.1.9] - 2026-08-31
+
+- Limit stage three to the authoritative direct answer, evidence boundaries and a compact source index; move platform verdict details into stage four.
+- Make stage four consume the locked stage-three result without recomputation and separate direct answers from supplemental references.
+- Enforce user acknowledgement between every stage and remove the executable `full-auto` path.
+- Unify the four report interfaces across desktop and mobile, and verify the complete workflow with a live DeepSeek and Tencent Yuanbao Shenzhen spouse-settlement case.
+
 ## [1.1.8] - 2026-08-31
 
 - Open DeepSeek and Tencent Yuanbao citation targets and capture source bodies before treating them as textual evidence; answer-page context and failed or blocked acquisition remain distinct non-evidence states.

@@ -48,6 +48,17 @@ def main() -> int:
         assert "非官方来源" in html
         assert "role-direct" in html and "role-reference" in html
         assert "role-badge" in html
+        for heading in (
+            "直接答案概览",
+            "补充参考概览",
+            "直接答案逐知识点对照",
+            "补充参考逐知识点对照",
+        ):
+            assert heading in html
+        assert html.count('data-fcx-role-section="direct"') == 2
+        assert html.count('data-fcx-role-section="reference"') == 2
+        assert html.index("直接答案概览") < html.index("补充参考概览")
+        assert html.index("直接答案逐知识点对照") < html.index("补充参考逐知识点对照")
         assert "trusted_repository" not in html
         assert 'href="01-capture-report.html"' in html
         assert 'href="03-authority-report.html"' in html

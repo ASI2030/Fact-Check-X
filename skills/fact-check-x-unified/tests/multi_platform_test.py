@@ -344,8 +344,12 @@ def main() -> int:
         ) in final_html
         assert 'class="locked-platforms"' in final_html
         assert ".locked-platforms{display:grid" in final_html
-        assert "② 直接答案逐知识点测评" in final_html
-        assert "③ 补充参考逐知识点测评" in final_html
+        assert "② 逐知识点核验明细" in final_html
+        assert final_html.count("② 逐知识点核验明细") == 1
+        assert 'data-fcx-locked-role="direct"' in final_html
+        assert 'data-fcx-locked-role="reference"' in final_html
+        assert "② 直接答案逐知识点测评" not in final_html
+        assert "③ 补充参考逐知识点测评" not in final_html
 
     if os.getenv("FACT_CHECK_X_ASSERTIONS_OUTPUT"):
         Path(os.environ["FACT_CHECK_X_ASSERTIONS_OUTPUT"]).write_text(json.dumps({

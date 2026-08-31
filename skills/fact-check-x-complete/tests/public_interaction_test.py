@@ -150,8 +150,11 @@ def main() -> int:
         "修正当前结果",
         "到此结束并保留产物",
     ]
-    assert stage_interaction["autoRunOnlyWhenInitiallyExplicit"] is True
-    assert stage_interaction["autoRunStillEmitsCheckpoints"] is True
+    assert stage_interaction["explicitAcknowledgementRequired"] is True
+    assert stage_interaction["autoRunAllowed"] is False
+    assert stage_interaction["initialCompleteRequestCountsAsAcknowledgement"] is False
+    assert "autoRunOnlyWhenInitiallyExplicit" not in stage_interaction
+    assert "autoRunStillEmitsCheckpoints" not in stage_interaction
     assert instructions.index("强制执行门禁") < instructions.index("本技能是对外唯一入口")
     collector_test = ROOT / "modules/llm-answer-reference-compare/tests/smoke_test.py"
     if not collector_test.is_file():
@@ -188,6 +191,7 @@ def main() -> int:
                         "ui.preflight_no_false_start",
                         "ui.source_matrix_layout",
                         "ui.stage_confirmation_choices",
+                        "ui.stage_explicit_ack_required",
                         "ui.deep_trace_initial_selection",
                         "ui.report_names",
                     ],

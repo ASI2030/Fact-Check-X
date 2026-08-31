@@ -38,8 +38,9 @@
       "修正当前结果",
       "到此结束并保留产物"
     ],
-    "autoRunOnlyWhenInitiallyExplicit": true,
-    "autoRunStillEmitsCheckpoints": true,
+    "explicitAcknowledgementRequired": true,
+    "autoRunAllowed": false,
+    "initialCompleteRequestCountsAsAcknowledgement": false,
     "hardGatesAlwaysApply": true
   },
   "trustedSearch": {

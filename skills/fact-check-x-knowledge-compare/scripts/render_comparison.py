@@ -96,9 +96,15 @@ def render_answer(platform: dict) -> str:
     </section>'''
 
 
-def render_overview(comparison: dict, single_platform: bool) -> str:
+def render_overview_group(
+    comparison: dict,
+    role: str,
+    single_platform: bool,
+) -> str:
     rows = []
     for point in comparison.get("knowledgePoints") or []:
+        if str(point.get("role") or "reference") != role:
+            continue
         status = (point.get("comparison") or {}).get("status")
         status_label = (
             "单平台结果"
@@ -107,10 +113,30 @@ def render_overview(comparison: dict, single_platform: bool) -> str:
         )
         anchor = point.get("trustedAnchor") or {}
         anchor_text = " · 深知晓权威锚点" if anchor.get("eligible") else ""
-        role = str(point.get("role") or "reference")
         rows.append(f'<li class="role-{esc(role)}"><b>{esc(point.get("id"))}</b><span class="role-badge">{esc(ROLE.get(role, role))}</span><span class="state {esc(status)}">{esc(status_label)}</span><p>{esc(point.get("description"))}</p><small>{anchor_text.lstrip(" ·") or "原子知识点"}<br>{esc((point.get("comparison") or {}).get("summary"))}</small></li>')
+    label = ROLE[role]
+    description = (
+        "直接回应用户问题，进入第三步权威答案候选。"
+        if role == "direct"
+        else "平台额外提供的相关信息，独立核验但不混入直接答案。"
+    )
+    content = (
+        f'<ol class="overview">{"".join(rows)}</ol>'
+        if rows
+        else '<p class="role-empty">本次没有该类知识点。</p>'
+    )
+    return f'''<section class="role-overview role-overview-{esc(role)}" data-fcx-role-section="{esc(role)}">
+      <header class="role-overview-head"><div><p class="role-kicker">{esc(label)}</p><h3>{esc(label)}概览</h3><p>{esc(description)}</p></div><strong>{len(rows)} 个知识点</strong></header>
+      {content}
+    </section>'''
+
+
+def render_overview(comparison: dict, single_platform: bool) -> str:
     title = "知识点结构化" if single_platform else "知识点对比"
-    return f'''<section class="overview-panel"><header><h2>{title}</h2><span>{len(rows)} 个知识点</span></header><ol class="overview">{"".join(rows)}</ol></section>'''
+    count = len(comparison.get("knowledgePoints") or [])
+    return f'''<section class="overview-panel"><header class="overview-head"><h2>{title}</h2><span>{count} 个知识点</span></header>
+      <div class="role-overview-stack">{render_overview_group(comparison, "direct", single_platform)}{render_overview_group(comparison, "reference", single_platform)}</div>
+    </section>'''
 
 
 def render_synthesis_draft(comparison: dict) -> str:
@@ -168,20 +194,45 @@ def render_detail(
     return f'<tr class="role-{esc(role)}"><th><b>{esc(point.get("id"))}</b><span class="role-badge">{esc(ROLE.get(role, role))}</span><p>{esc(point.get("description"))}</p></th>{"".join(cells)}{comparison_cell}</tr>'
 
 
+def render_detail_group(
+    comparison: dict,
+    role: str,
+    single_platform: bool,
+    headers: str,
+    comparison_header: str,
+) -> str:
+    points = [
+        point
+        for point in comparison.get("knowledgePoints") or []
+        if str(point.get("role") or "reference") == role
+    ]
+    rows = "".join(
+        render_detail(point, comparison.get("platforms") or [], single_platform)
+        for point in points
+    )
+    label = ROLE[role]
+    description = (
+        "逐个平台对照直接回答、引用忠实性和差异。"
+        if role == "direct"
+        else "单独对照延伸信息，不把它并入用户问题的直接答案。"
+    )
+    table = (
+        f'<div class="table-wrap"><table><thead><tr><th>知识点</th>{headers}{comparison_header}</tr></thead><tbody>{rows}</tbody></table></div>'
+        if rows
+        else '<p class="role-empty">本次没有该类知识点。</p>'
+    )
+    return f'''<section class="detail-role detail-role-{esc(role)}" data-fcx-role-section="{esc(role)}">
+      <header class="detail-role-head"><div><p class="role-kicker">{esc(label)}</p><h3>{esc(label)}逐知识点对照</h3><p>{esc(description)}</p></div><strong>{len(points)} 个知识点</strong></header>
+      {table}
+    </section>'''
+
+
 def build_html(results: dict, comparison: dict) -> str:
     originals = {platform.get("platform"): platform for platform in results.get("platforms") or []}
     ordered = [originals[p["platform"]] for p in comparison.get("platforms") or [] if p.get("platform") in originals]
     single_platform = len(ordered) == 1
     answer_panels = "".join(render_answer(platform) for platform in ordered)
     headers = "".join(f'<th>{esc(p.get("label") or p["platform"])}</th>' for p in comparison.get("platforms") or [])
-    rows = "".join(
-        render_detail(
-            point,
-            comparison.get("platforms") or [],
-            single_platform,
-        )
-        for point in comparison.get("knowledgePoints") or []
-    )
     question = str(results.get("question") or "").strip()
     report_title = f"各方答案聚合（问题：{question}）"
     report_title_html = esc(report_title)
@@ -202,8 +253,8 @@ def build_html(results: dict, comparison: dict) -> str:
         440 + 240 * platform_count,
     )
     return f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{report_title_html}</title><style>
-    :root{{--ink:#1f2933;--muted:#68737f;--line:#d9dee4;--paper:#fff;--soft:#f4f6f8;--blue:#285a9f;--red:#b33b32;--green:#187454;--amber:#946200}}*{{box-sizing:border-box}}body{{margin:0;color:var(--ink);background:var(--soft);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;letter-spacing:0}}main{{max-width:1440px;margin:auto;background:var(--paper);min-height:100vh}}.title{{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:24px;background:#172033;color:#fff;border-bottom:1px solid #2c384c}}.title-copy{{min-width:0}}h1{{font-size:24px;margin:0 0 4px;overflow-wrap:anywhere}}h2{{font-size:16px;margin:0}}.title p{{margin:0;color:#c9d3e2;word-break:break-word}}.report-nav{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;flex:none}}.report-nav a{{display:inline-flex;align-items:center;min-height:34px;padding:5px 10px;border:1px solid #66758b;border-radius:4px;background:#fff;color:var(--ink);text-decoration:none;white-space:nowrap}}.report-nav a:first-child{{border-color:#8ba8cc;color:#194d8c;background:#f5f9fe}}.report-nav a:hover{{border-color:#8bbce9;color:var(--blue)}}.platform-grid{{display:grid;grid-template-columns:repeat(var(--platform-count),minmax(0,1fr));border-bottom:1px solid var(--line)}}.platform-grid>section{{min-width:0;padding:18px;border-right:1px solid var(--line)}}.platform-grid>section:last-child{{border-right:0}}section header{{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px}}section header span{{color:var(--muted);white-space:nowrap}}.answer-text{{height:48vh;overflow:auto;white-space:pre-wrap;word-break:break-word;padding:14px 2px;font-size:14px}}details{{border-top:1px solid var(--line);padding-top:10px}}details ol{{padding-left:20px}}details li{{margin:10px 0}}.source-level{{display:inline-block;padding:1px 5px;border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#475569;font-size:11px}}blockquote{{margin:5px 0;padding-left:10px;border-left:2px solid var(--line);color:var(--muted);white-space:pre-wrap}}a{{color:var(--blue)}}.overview-panel{{padding:20px 24px;background:#f8fafc;border-bottom:1px solid var(--line)}}.overview{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 24px;padding:0;list-style:none}}.overview li{{padding:9px 10px;border:1px solid var(--line);border-left-width:5px;border-radius:5px;background:#fff}}.overview li.role-direct{{border-left-color:#285a9f}}.overview li.role-reference{{border-left-color:#b7791f;background:#fffaf0}}.overview p{{margin:3px 0}}small,.muted{{color:var(--muted)}}.role-badge{{display:inline-block!important;margin-left:7px;padding:1px 6px;border:1px solid currentColor;border-radius:4px;font-size:11px;font-weight:700}}.role-direct .role-badge{{color:#194d8c;background:#f2f7fd}}.role-reference .role-badge{{color:#7a5200;background:#fff8e8}}.state{{display:inline-block;margin-left:7px;padding:1px 6px;border:1px solid currentColor;border-radius:4px;font-size:11px}}.state.conflict{{color:var(--red)}}.state.consensus,.state.mostly_consensus{{color:var(--green)}}.state.partial{{color:var(--amber)}}.draft-panel{{padding:22px 24px;border-bottom:1px solid var(--line);background:#fff8e8}}.draft-panel header{{align-items:flex-start;border-bottom:0;padding:0}}.draft-kicker{{margin:0 0 2px;color:#7a5200;font-size:12px;font-weight:750}}.draft-panel h2{{font-size:18px}}.draft-status{{display:inline-block;padding:3px 7px;border:1px solid #d2a94d;border-radius:4px;background:#fff;color:#7a5200;font-size:12px;font-weight:750}}.draft-answer{{margin-top:14px;white-space:pre-wrap;font-size:16px;line-height:1.75}}.draft-basis{{margin:12px 0 0;color:var(--muted);font-size:12px}}.details{{padding:28px 24px 48px}}.details h2{{font-size:20px;margin-bottom:14px}}.table-wrap{{overflow:auto}}table{{width:100%;border-collapse:collapse;table-layout:fixed;min-width:{table_min_width}px}}.single-platform table{{min-width:0}}.single-platform tbody th{{width:42%}}th,td{{padding:11px;border:1px solid var(--line);text-align:left;vertical-align:top;overflow-wrap:anywhere}}thead th{{background:var(--soft)}}thead th:first-child,tbody th{{width:220px}}.multi-platform thead th:last-child{{width:220px}}tbody tr.role-direct>th{{border-left:5px solid #285a9f;background:#f2f7fd}}tbody tr.role-reference>th{{border-left:5px solid #b7791f;background:#fffaf0}}tbody th p,td p{{margin:5px 0}}dl{{display:grid;grid-template-columns:70px 1fr;margin:8px 0;font-size:12px}}dt{{color:var(--muted)}}dd{{margin:0}}@media(max-width:1200px){{.platform-count-4 .platform-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.platform-count-5 .platform-grid{{grid-template-columns:repeat(3,minmax(0,1fr))}}}}@media(max-width:900px){{.title{{display:block}}.report-nav{{justify-content:flex-start;margin-top:12px}}.platform-grid{{grid-template-columns:1fr!important}}.platform-grid>section{{border-right:0;border-bottom:1px solid var(--line)}}.answer-text{{height:auto;max-height:50vh}}}}@media(max-width:600px){{.single-platform table,.single-platform tbody,.single-platform tr,.single-platform th,.single-platform td{{display:block;width:100%}}.single-platform thead{{display:none}}.single-platform tbody th{{background:var(--soft)}}}}
-</style></head><body><main class="{main_class}" style="--platform-count:{platform_count}"><header class="title"><div class="title-copy"><h1>{report_title_html}</h1></div><nav class="report-nav" aria-label="核验报告导航"><a href="01-capture-report.html">各方答案汇总</a><a href="03-authority-report.html">权威核验答案</a><a href="04-final-report.html">各方答案测评报告</a></nav></header><div class="platform-grid">{answer_panels}</div>{render_overview(comparison, single_platform)}{render_synthesis_draft(comparison)}<section class="details"><h2>{detail_title}</h2><div class="table-wrap"><table><thead><tr><th>知识点</th>{headers}{comparison_header}</tr></thead><tbody>{rows}</tbody></table></div></section></main></body></html>'''
+    :root{{--ink:#1f2933;--muted:#68737f;--line:#d9dee4;--paper:#fff;--soft:#f4f6f8;--blue:#285a9f;--red:#b33b32;--green:#187454;--amber:#946200}}*{{box-sizing:border-box}}body{{margin:0;color:var(--ink);background:var(--soft);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;letter-spacing:0}}main{{max-width:1440px;margin:auto;background:var(--paper);min-height:100vh}}.title{{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:24px;background:#172033;color:#fff;border-bottom:1px solid #2c384c}}.title-copy{{min-width:0}}h1{{font-size:24px;margin:0 0 4px;overflow-wrap:anywhere}}h2{{font-size:16px;margin:0}}h3{{font-size:18px;letter-spacing:0;margin:0}}.title p{{margin:0;color:#c9d3e2;word-break:break-word}}.report-nav{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;flex:none}}.report-nav a{{display:inline-flex;align-items:center;min-height:34px;padding:5px 10px;border:1px solid #66758b;border-radius:4px;background:#fff;color:var(--ink);text-decoration:none;white-space:nowrap}}.report-nav a:first-child{{border-color:#8ba8cc;color:#194d8c;background:#f5f9fe}}.report-nav a:hover{{border-color:#8bbce9;color:var(--blue)}}.platform-grid{{display:grid;grid-template-columns:repeat(var(--platform-count),minmax(0,1fr));border-bottom:1px solid var(--line)}}.platform-grid>section{{min-width:0;padding:18px;border-right:1px solid var(--line)}}.platform-grid>section:last-child{{border-right:0}}section header{{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px}}section header span{{color:var(--muted);white-space:nowrap}}.answer-text{{height:48vh;overflow:auto;white-space:pre-wrap;word-break:break-word;padding:14px 2px;font-size:14px}}details{{border-top:1px solid var(--line);padding-top:10px}}details ol{{padding-left:20px}}details li{{margin:10px 0}}.source-level{{display:inline-block;padding:1px 5px;border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#475569;font-size:11px}}blockquote{{margin:5px 0;padding-left:10px;border-left:2px solid var(--line);color:var(--muted);white-space:pre-wrap}}a{{color:var(--blue)}}.overview-panel{{padding:20px 24px;background:#f8fafc;border-bottom:1px solid var(--line)}}.overview-head{{margin-bottom:16px}}.role-overview-stack{{display:grid;gap:16px}}.role-overview{{border-left:6px solid;padding:18px 20px}}.role-overview-direct{{background:#eef6ff;border-left-color:#285a9f}}.role-overview-reference{{background:#fff5dc;border-left-color:#b7791f}}.role-overview-head{{align-items:flex-start!important;border:0!important;padding:0!important}}.role-overview-head>div>p{{margin:3px 0;color:var(--muted)}}.role-overview-head strong,.detail-role-head strong{{white-space:nowrap}}.role-kicker{{font-size:12px;font-weight:750;margin:0 0 2px!important}}.role-overview-direct .role-kicker,.detail-role-direct .role-kicker{{color:#194d8c}}.role-overview-reference .role-kicker,.detail-role-reference .role-kicker{{color:#7a5200}}.overview{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 16px;padding:0;list-style:none}}.overview li{{padding:9px 10px;border:1px solid var(--line);border-left-width:5px;border-radius:5px;background:#fff}}.overview li.role-direct{{border-left-color:#285a9f}}.overview li.role-reference{{border-left-color:#b7791f;background:#fffdf8}}.overview p{{margin:3px 0}}.role-empty{{color:var(--muted);margin:10px 0 0}}small,.muted{{color:var(--muted)}}.role-badge{{display:inline-block!important;margin-left:7px;padding:1px 6px;border:1px solid currentColor;border-radius:4px;font-size:11px;font-weight:700}}.role-direct .role-badge{{color:#194d8c;background:#f2f7fd}}.role-reference .role-badge{{color:#7a5200;background:#fff8e8}}.state{{display:inline-block;margin-left:7px;padding:1px 6px;border:1px solid currentColor;border-radius:4px;font-size:11px}}.state.conflict{{color:var(--red)}}.state.consensus,.state.mostly_consensus{{color:var(--green)}}.state.partial{{color:var(--amber)}}.draft-panel{{padding:22px 24px;border-bottom:1px solid var(--line);background:#fff8e8}}.draft-panel header{{align-items:flex-start;border-bottom:0;padding:0}}.draft-kicker{{margin:0 0 2px;color:#7a5200;font-size:12px;font-weight:750}}.draft-panel h2{{font-size:18px}}.draft-status{{display:inline-block;padding:3px 7px;border:1px solid #d2a94d;border-radius:4px;background:#fff;color:#7a5200;font-size:12px;font-weight:750}}.draft-answer{{margin-top:14px;white-space:pre-wrap;font-size:16px;line-height:1.75}}.draft-basis{{margin:12px 0 0;color:var(--muted);font-size:12px}}.details{{padding:28px 24px 48px}}.details>h2{{font-size:20px;margin-bottom:14px}}.detail-role{{border-top:5px solid;margin-top:22px;padding-top:16px}}.detail-role-direct{{border-top-color:#285a9f}}.detail-role-reference{{border-top-color:#b7791f}}.detail-role-head{{align-items:flex-start!important;border:0!important;padding:0 0 12px!important}}.detail-role-head p{{color:var(--muted);margin:3px 0 0}}.table-wrap{{overflow:auto}}table{{width:100%;border-collapse:collapse;table-layout:fixed;min-width:{table_min_width}px}}.single-platform table{{min-width:0}}.single-platform tbody th{{width:42%}}th,td{{padding:11px;border:1px solid var(--line);text-align:left;vertical-align:top;overflow-wrap:anywhere}}thead th{{background:var(--soft)}}thead th:first-child,tbody th{{width:220px}}.multi-platform thead th:last-child{{width:220px}}tbody tr.role-direct>th{{border-left:5px solid #285a9f;background:#f2f7fd}}tbody tr.role-reference>th{{border-left:5px solid #b7791f;background:#fffaf0}}tbody th p,td p{{margin:5px 0}}dl{{display:grid;grid-template-columns:70px 1fr;margin:8px 0;font-size:12px}}dt{{color:var(--muted)}}dd{{margin:0}}@media(max-width:1200px){{.platform-count-4 .platform-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.platform-count-5 .platform-grid{{grid-template-columns:repeat(3,minmax(0,1fr))}}}}@media(max-width:900px){{.title{{display:block}}.report-nav{{justify-content:flex-start;margin-top:12px}}.platform-grid{{grid-template-columns:1fr!important}}.platform-grid>section{{border-right:0;border-bottom:1px solid var(--line)}}.answer-text{{height:auto;max-height:50vh}}}}@media(max-width:600px){{.overview-panel,.details{{padding-left:14px;padding-right:14px}}.role-overview{{padding:14px 12px}}.role-overview-head,.detail-role-head{{display:block!important}}.role-overview-head strong,.detail-role-head strong{{display:block;margin-top:8px}}.single-platform table,.single-platform tbody,.single-platform tr,.single-platform th,.single-platform td{{display:block;width:100%}}.single-platform thead{{display:none}}.single-platform tbody th{{background:var(--soft)}}}}
+</style></head><body><main class="{main_class}" style="--platform-count:{platform_count}"><header class="title"><div class="title-copy"><h1>{report_title_html}</h1></div><nav class="report-nav" aria-label="核验报告导航"><a href="01-capture-report.html">各方答案汇总</a><a href="03-authority-report.html">权威核验答案</a><a href="04-final-report.html">各方答案测评报告</a></nav></header><div class="platform-grid">{answer_panels}</div>{render_overview(comparison, single_platform)}{render_synthesis_draft(comparison)}<section class="details"><h2>{detail_title}</h2>{render_detail_group(comparison, "direct", single_platform, headers, comparison_header)}{render_detail_group(comparison, "reference", single_platform, headers, comparison_header)}</section></main></body></html>'''
 
 
 def main() -> int:

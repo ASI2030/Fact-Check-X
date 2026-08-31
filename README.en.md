@@ -5,7 +5,7 @@
 Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.9" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.10" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start
@@ -56,9 +56,9 @@ The selected set is dynamic. `N=1` runs a complete single-platform verification.
 ## Four independent deliverables
 
 1. **Answer collection**: complete answers, references, screenshots and HTML evidence.
-2. **Answer aggregation (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness.
+2. **Answer aggregation (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness, with direct answers and supplemental references separated in both overview and per-point detail sections.
 3. **Authoritatively verified final answer**: direct answers supported by evidence, evidence boundaries, and a compact source index. Supplemental findings are stored separately and never mixed into the final answer.
-4. **Answer performance report**: reads the locked stage-three result to show per-point platform verdicts, accuracy, completeness, source quality and platform differences. Direct answers and supplemental references remain visibly separate.
+4. **Answer performance report**: reads the locked stage-three result without recomputation, uses one per-point verification area with separate direct-answer and supplemental-reference subsections, then shows platform verdicts, accuracy, completeness, source quality and differences.
 
 Every run uses machine-enforced acknowledgement tokens and artifact hashes between stages. Each report must be opened and presented before the user chooses whether to continue, revise, or stop; there is no mode that bypasses these confirmations.
 

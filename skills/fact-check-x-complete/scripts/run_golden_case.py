@@ -30,8 +30,9 @@ SCENARIOS = {
     "GR-015": ["python3", "modules/fact-check-x-knowledge-compare/tests/smoke_test.py"],
     "GR-016": ["node", "modules/llm-answer-reference-compare/tests/capture_wait_test.mjs"],
     "GR-017": ["python3", "modules/fact-check-x-authoritative-verify/tests/smoke_test.py"],
+    "GR-018": ["node", "modules/llm-answer-reference-compare/tests/direct_source_capture_test.mjs"],
 }
-NODE_RUNTIME_CASES = {"GR-003", "GR-004", "GR-008", "GR-013", "GR-014", "GR-016"}
+NODE_RUNTIME_CASES = {"GR-003", "GR-004", "GR-008", "GR-013", "GR-014", "GR-016", "GR-018"}
 
 
 def sha(path: Path) -> str:
