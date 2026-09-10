@@ -99,7 +99,8 @@ def main() -> int:
     registry_text = platform_registry.read_text(encoding="utf-8")
     assert 'name: "dknowc-deep-research"' in registry_text
     assert 'label: "深知晓（深度溯源）"' in registry_text
-    assert "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/" in registry_text
+    assert registry_text.count("https://yun.dknowc.cn/wlcb/szx/#/") == 2
+    assert "button:has-text('深度溯源')" in registry_text
     for platform in (
         "dknowc-chat",
         "dknowc-deep-research",

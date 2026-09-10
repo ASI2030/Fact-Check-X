@@ -121,8 +121,8 @@ async function runCommand(options) {
     const retryCount = nonnegativeInteger(options.retries, 2);
     const retryDelayMs = nonnegativeInteger(options.retryDelay, 3000);
     const configs = options.platform.map(resolvePlatformTarget);
-    const platforms = [];
-    for (const config of configs) {
+    const resultsByPlatform = new Map();
+    for (const { config, deepCompanionConfig } of buildCapturePlan(configs)) {
         const loginTimeoutMs = positiveNumber(options.loginTimeout, 300000);
         const result = await captureWithRetries(config, {
             question: options.question,
@@ -132,10 +132,22 @@ async function runCommand(options) {
             timeoutMs,
             loginTimeoutMs,
             retryCount,
-            retryDelayMs
+            retryDelayMs,
+            deepCompanionConfig
         });
-        platforms.push(result);
+        const { companionResult, ...primaryResult } = result;
+        resultsByPlatform.set(config.name, primaryResult);
+        if (companionResult) {
+            resultsByPlatform.set(companionResult.platform, companionResult);
+        }
+        else if (deepCompanionConfig) {
+            resultsByPlatform.set(deepCompanionConfig.name, dependentCaptureFailure(
+                deepCompanionConfig,
+                result
+            ));
+        }
     }
+    const platforms = configs.map((config) => resultsByPlatform.get(config.name));
     const run = parseRunResult({
         schemaVersion: "1",
         question: options.question,
@@ -185,19 +197,36 @@ async function runCommand(options) {
         failedPlatforms: []
     });
 }
+export function buildCapturePlan(configs) {
+    const dknowcChat = configs.find((config) => config.name === "dknowc-chat");
+    const dknowcDeepResearch = configs.find((config) => config.name === "dknowc-deep-research");
+    return configs
+        .filter((config) => !(config.name === "dknowc-deep-research" && dknowcChat))
+        .map((config) => ({
+            config,
+            deepCompanionConfig: config.name === "dknowc-chat"
+                ? dknowcDeepResearch
+                : undefined
+        }));
+}
 export async function captureWithRetries(config, options, capture = capturePlatform, wait = sleep) {
     const maxAttempts = options.retryCount + 1;
     let result;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         console.log(`正在采集 ${config.label}（第 ${attempt}/${maxAttempts} 次，最长等待 ${Math.round(options.timeoutMs / 1000)} 秒）`);
         result = await capture(config, options);
-        if (result.status === "success") {
+        const companionSucceeded = !result.companionResult
+            || result.companionResult.status === "success";
+        if (result.status === "success" && companionSucceeded) {
             console.log(`${config.label} 已确认采集完成。`);
             break;
         }
-        console.log(`${config.label} 本次采集未完成：${result.status}；${result.error || "未知原因"}`);
-        if (["login_required", "verification_required"].includes(result.status)) {
-            console.log(`${config.label} 需要人工接管。已停止机械重采并保留原始问题；请根据 capture-recovery.json 继续。`);
+        const failedResult = result.status === "success"
+            ? result.companionResult
+            : result;
+        console.log(`${failedResult.label || config.label} 本次采集未完成：${failedResult.status}；${failedResult.error || "未知原因"}`);
+        if (["login_required", "verification_required"].includes(failedResult.status)) {
+            console.log(`${failedResult.label || config.label} 需要人工接管。已停止机械重采并保留原始问题；请根据 capture-recovery.json 继续。`);
             break;
         }
         if (attempt < maxAttempts) {
@@ -206,6 +235,19 @@ export async function captureWithRetries(config, options, capture = capturePlatf
         }
     }
     return result;
+}
+function dependentCaptureFailure(config, primaryResult) {
+    return {
+        platform: config.name,
+        label: config.label,
+        url: config.url,
+        status: primaryResult.status === "success" ? "failed" : primaryResult.status,
+        answerMarkdown: "",
+        references: [],
+        sourceMentions: [],
+        durationMs: primaryResult.durationMs,
+        error: `普通深知晓未成功，未启动深度溯源：${primaryResult.error || "采集未完成"}`
+    };
 }
 async function capturePlatform(config, options) {
     if (config.adapter === "dknowc-chat") {

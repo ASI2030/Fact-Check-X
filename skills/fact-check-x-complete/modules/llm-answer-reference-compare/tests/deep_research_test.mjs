@@ -29,14 +29,14 @@ assert.ok(config);
 assert.equal(config.label, "深知晓（深度溯源）");
 assert.equal(
     config.url,
-    "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/"
+    "https://yun.dknowc.cn/wlcb/szx/#/"
 );
 assert.equal(config.profile, "dknowc-chat");
 assert.notEqual(config.name, "dknowc-chat");
 
 const deepResearchSource = sourceDescriptor({
     title: "深度研究政策材料",
-    url: "https://poc1.dknowc.cn/wlcb/DT_DATA/policy/1",
+    url: "https://yun.dknowc.cn/wlcb/szx/#/policy/1",
     snippet: "政策原文"
 }, "dknowc-deep-research");
 assert.equal(deepResearchSource.key, "dknow_trusted_search_official");
@@ -65,7 +65,7 @@ assert.doesNotMatch(noOrigin.note, /来源链接待补/);
 let clicked = 0;
 const ordinaryPage = {
     locator(selector) {
-        assert.equal(selector, ".chatgpt-deepsearch.open");
+        assert.equal(selector, "button:has-text('深度溯源')");
         return {
             last() {
                 return this;
@@ -89,7 +89,7 @@ const ordinaryPage = {
 const reportPage = {
     async waitForLoadState() {},
     url() {
-        return "https://poc1.dknowc.cn/wlcb/SDSYbaogao/?uid=test";
+        return "https://yun.dknowc.cn/wlcb/SDSYbaogao/?uid=test";
     },
 };
 const context = {
@@ -115,7 +115,7 @@ assert.equal(clicked, 1);
 const wrongPage = {
     async waitForLoadState() {},
     url() {
-        return "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/";
+        return "https://example.com/unrelated";
     },
 };
 const wrongContext = {
@@ -136,6 +136,48 @@ await assert.rejects(
     /打开了非预期页面/
 );
 
+let inlineAnswer = "普通回答";
+const inlinePage = {
+    locator(selector) {
+        if (selector === "button:has-text('深度溯源')") {
+            return {
+                last() { return this; },
+                nth() { return this; },
+                async count() { return 1; },
+                async isVisible() { return true; },
+                async click() { inlineAnswer = "深度溯源回答"; },
+            };
+        }
+        return {
+            last() { return this; },
+            async count() { return 1; },
+            async isVisible() { return false; },
+            async innerText() { return ""; },
+            async evaluateAll(callback) {
+                return callback([{ innerText: inlineAnswer }]);
+            },
+        };
+    },
+    async waitForTimeout() {},
+    async waitForLoadState() {},
+    isClosed() { return false; },
+    url() { return "https://yun.dknowc.cn/wlcb/szx/#/"; },
+};
+const inlineContext = {
+    pages() { return [inlinePage]; },
+    async waitForEvent() { return undefined; },
+};
+assert.equal(
+    await activateDknowcDeepResearch(
+        inlinePage,
+        inlineContext,
+        config,
+        1000,
+        "普通回答"
+    ),
+    inlinePage
+);
+
 if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
     await writeFile(
         process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT,
@@ -145,6 +187,7 @@ if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
                 "deep_research.independent_platform_registered",
                 "deep_research.initial_answer_then_click",
                 "deep_research.report_page_required",
+                "deep_research.inline_result_supported",
                 "deep_research.source_policy_official",
                 "dknow.non_gov_origin_traceable",
                 "dknow.missing_origin_not_downgraded",

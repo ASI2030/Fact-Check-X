@@ -190,12 +190,43 @@ export async function captureGenericChat(config, options) {
             interactive: Boolean(options.headed && options.interactive),
             verificationTimeoutMs: options.loginTimeoutMs || 300000
         });
+        if (config.name === "dknowc-chat" && options.deepCompanionConfig) {
+            const ordinaryValidation = validateCapturedAnswer(config, answerMarkdown);
+            if (ordinaryValidation) {
+                return failure(
+                    config,
+                    ordinaryValidation.status,
+                    started,
+                    ordinaryValidation.error,
+                    await saveArtifacts(page, artifactDir, options.outDir)
+                );
+            }
+            const references = await extractReferences(config, page, options.question);
+            const artifacts = await saveArtifacts(page, artifactDir, options.outDir);
+            const ordinaryResult = success(
+                config,
+                started,
+                answerMarkdown,
+                references,
+                [],
+                artifacts
+            );
+            ordinaryResult.companionResult = await captureDknowcDeepCompanion(
+                page,
+                context,
+                options.deepCompanionConfig,
+                options,
+                answerMarkdown
+            );
+            return ordinaryResult;
+        }
         if (config.adapter === "dknowc-deep-research") {
             page = await activateDknowcDeepResearch(
                 page,
                 context,
                 config,
-                Math.min(options.timeoutMs, 20000)
+                Math.min(options.timeoutMs, 20000),
+                answerMarkdown
             );
             page.setDefaultTimeout(options.timeoutMs);
             page.setDefaultNavigationTimeout(options.timeoutMs);
@@ -222,31 +253,14 @@ export async function captureGenericChat(config, options) {
             : [];
         capturedSourceMentions = sourceMentions;
         const artifacts = await saveArtifacts(page, artifactDir, options.outDir);
-        if (looksLikeLoginOnlyText(answerMarkdown)
-            || looksLikeNonAnswerPrompt(answerMarkdown)
-            || (config.name === "yuanbao" && looksLikeYuanbaoInterimAnswer(answerMarkdown))) {
+        const validation = validateCapturedAnswer(config, answerMarkdown);
+        if (validation) {
             return {
-                ...failure(config, "login_required", started, "捕获内容仍是登录、地区选择或初始化提示，不是完整回答。", artifacts),
+                ...failure(config, validation.status, started, validation.error, artifacts),
                 artifacts
             };
         }
-        if (!answerMarkdown.trim()) {
-            return {
-                ...failure(config, "failed", started, "No answer text detected.", artifacts),
-                artifacts
-            };
-        }
-        return {
-            platform: config.name,
-            label: config.label,
-            url: config.url,
-            status: "success",
-            answerMarkdown,
-            references,
-            sourceMentions,
-            artifacts,
-            durationMs: Date.now() - started
-        };
+        return success(config, started, answerMarkdown, references, sourceMentions, artifacts);
     }
     catch (error) {
         const status = error && typeof error === "object" && "captureStatus" in error
@@ -635,12 +649,13 @@ async function extractKimiAnswer(page) {
     }
     return normalizeAnswerText(text);
 }
-async function extractDknowcAnswer(page) {
+export async function extractDknowcAnswer(page) {
     if (await isDknowcStillLoading(page)) {
         return "";
     }
     return page.locator(".czkj-robot:not(.chat-load-text) .czkj-msg").evaluateAll((nodes) => {
         const texts = nodes
+            .filter((node) => !node.closest?.(".czkj-welcome-msg, .zhipu-hot, .czkj-recommend-group"))
             .map((node) => {
             if (typeof node.cloneNode !== "function") {
                 return node.innerText?.trim() || "";
@@ -2394,39 +2409,82 @@ export async function activateDknowcDeepResearch(
     page,
     context,
     config,
-    timeoutMs = 20000
+    timeoutMs = 20000,
+    ordinaryAnswer = ""
 ) {
     const selectors = config.selectors?.deepResearch || [
+        "button:has-text('深度溯源')",
+        "[role='button']:has-text('深度溯源')",
+        "[class*='deep']:has-text('深度溯源')",
+        "text=深度溯源",
         ".chatgpt-deepsearch.open",
-        ".chatgpt-deepsearch[data-opens]"
+        ".chatgpt-deepsearch[data-opens]",
+        ".chatgpt-deepsearch.pointer",
+        ".chatgpt-deepsearch"
     ];
     const action = await waitForFirstVisible(page, selectors, timeoutMs);
     if (!action) {
-        throw new Error("普通回答已生成，但未找到可用的“深度研究”入口。");
+        throw new Error("普通回答已生成，但未找到可用的“深度溯源”入口。");
     }
     const pagesBefore = new Set(context.pages());
     const popupPromise = context.waitForEvent("page", { timeout: timeoutMs })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .then((candidate) => candidate || new Promise(() => undefined));
     const clicked = await action.click({ timeout: timeoutMs })
         .then(() => true)
         .catch(() => false);
     if (!clicked) {
-        throw new Error("已找到“深度研究”入口，但自动点击失败，必须重新采集或由 Computer Use 接管。");
+        throw new Error("已找到“深度溯源”入口，但自动点击失败，必须重新采集或由 Computer Use 接管。");
     }
-    let resultPage = await popupPromise;
+    const inlinePromise = waitForDknowcDeepResearchSurface(
+        page,
+        config,
+        ordinaryAnswer,
+        timeoutMs
+    ).then((found) => found ? page : undefined);
+    let resultPage = await Promise.race([popupPromise, inlinePromise]);
+    resultPage ||= context.pages().find((candidate) => !pagesBefore.has(candidate));
     if (!resultPage) {
-        resultPage = context.pages().find((candidate) => !pagesBefore.has(candidate));
+        throw new Error("点击“深度溯源”后未出现结果，必须重新采集或由 Computer Use 接管。");
     }
-    if (!resultPage) {
-        throw new Error("点击“深度研究”后未打开报告页，必须重新采集或由 Computer Use 接管。");
+    if (resultPage !== page && typeof resultPage.waitForURL === "function") {
+        await resultPage.waitForURL(
+            (url) => Boolean(url?.hostname && url.pathname !== "blank"),
+            { timeout: timeoutMs }
+        ).catch(() => undefined);
     }
     await resultPage.waitForLoadState("domcontentloaded", { timeout: timeoutMs })
         .catch(() => undefined);
     const resultUrl = resultPage.url();
-    if (!/\/wlcb\/SDSYbaogao\//i.test(resultUrl)) {
-        throw new Error(`“深度研究”打开了非预期页面：${resultUrl}`);
+    if (resultPage !== page && !isDknowcDeepResearchUrl(resultUrl, config.url)) {
+        throw new Error(`“深度溯源”打开了非预期页面：${resultUrl}`);
     }
     return resultPage;
+}
+async function waitForDknowcDeepResearchSurface(page, config, ordinaryAnswer, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        if (page.isClosed?.()) {
+            return false;
+        }
+        const answer = await extractAnswer(config, page).catch(() => "");
+        if (answer && (!ordinaryAnswer || answer !== ordinaryAnswer)) {
+            return true;
+        }
+        await page.waitForTimeout(400);
+    }
+    return false;
+}
+function isDknowcDeepResearchUrl(resultUrl, entryUrl) {
+    try {
+        const result = new URL(resultUrl);
+        const entry = new URL(entryUrl);
+        return result.hostname === entry.hostname
+            && /\/wlcb\//i.test(result.pathname);
+    }
+    catch {
+        return false;
+    }
 }
 async function pageLooksLikeGate(page) {
     const title = (await page.title().catch(() => "")).toLowerCase();
@@ -2576,6 +2634,100 @@ function looksLikeLoadingText(value) {
         "loading"
     ];
     return markers.some((marker) => value.includes(marker));
+}
+async function captureDknowcDeepCompanion(
+    ordinaryPage,
+    context,
+    config,
+    options,
+    ordinaryAnswer
+) {
+    const started = Date.now();
+    const artifactDir = join(options.outDir, "artifacts", config.name);
+    await ensureDir(artifactDir);
+    let page = ordinaryPage;
+    let answerMarkdown = "";
+    let references = [];
+    try {
+        page = await activateDknowcDeepResearch(
+            ordinaryPage,
+            context,
+            config,
+            Math.min(options.timeoutMs, 20000),
+            ordinaryAnswer
+        );
+        page.setDefaultTimeout(options.timeoutMs);
+        page.setDefaultNavigationTimeout(options.timeoutMs);
+        const deepResearchTimeoutMs = Number(config.deepResearchTimeoutMs)
+            || options.timeoutMs;
+        answerMarkdown = await waitForAnswer(
+            config,
+            page,
+            deepResearchTimeoutMs,
+            page === ordinaryPage ? ordinaryAnswer : "",
+            options.question,
+            {
+                interactive: Boolean(options.headed && options.interactive),
+                verificationTimeoutMs: options.loginTimeoutMs || 300000
+            }
+        );
+        references = await extractReferences(config, page, options.question);
+        const artifacts = await saveArtifacts(page, artifactDir, options.outDir);
+        const validation = validateCapturedAnswer(config, answerMarkdown);
+        if (validation) {
+            return failure(config, validation.status, started, validation.error, artifacts, {
+                answerMarkdown,
+                references
+            });
+        }
+        return success(config, started, answerMarkdown, references, [], artifacts);
+    }
+    catch (error) {
+        const status = error && typeof error === "object" && "captureStatus" in error
+            ? error.captureStatus
+            : "failed";
+        const artifacts = page
+            ? await saveArtifacts(page, artifactDir, options.outDir).catch(() => undefined)
+            : undefined;
+        return failure(
+            config,
+            status,
+            started,
+            error instanceof Error ? error.message : String(error),
+            artifacts,
+            { answerMarkdown, references }
+        );
+    }
+}
+function validateCapturedAnswer(config, answerMarkdown) {
+    if (looksLikeLoginOnlyText(answerMarkdown)
+        || looksLikeNonAnswerPrompt(answerMarkdown)
+        || (config.name === "yuanbao" && looksLikeYuanbaoInterimAnswer(answerMarkdown))) {
+        return {
+            status: "login_required",
+            error: "捕获内容仍是登录、地区选择或初始化提示，不是完整回答。"
+        };
+    }
+    if (!answerMarkdown.trim()) {
+        return {
+            status: "failed",
+            error: "No answer text detected."
+        };
+    }
+    return undefined;
+}
+function success(config, started, answerMarkdown, references, sourceMentions, artifacts) {
+    return {
+        platform: config.name,
+        label: config.label,
+        url: config.url,
+        status: "success",
+        answerMarkdown,
+        references,
+        sourceMentions,
+        artifacts,
+        durationMs: Date.now() - started
+    };
 }
 function failure(config, status, started, error, artifacts, partial = {}) {
     return {

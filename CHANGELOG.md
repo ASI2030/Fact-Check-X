@@ -4,6 +4,13 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.11] - 2026-09-10
+
+- Adapt both DKnow platform adapters to the current `https://yun.dknowc.cn/wlcb/szx/#/` product entry and its current input, send, answer and Deep Trace controls.
+- When standard DKnow and DKnow Deep Trace are selected together, submit the question once, preserve the completed standard answer, then start Deep Trace in the same conversation and store both results independently.
+- Support both inline Deep Trace output and a same-product result page, while rejecting unrelated popups and retaining the existing retry and Computer Use recovery gate for incomplete captures.
+- Exclude homepage welcome and recommendation text from answer extraction, and add regressions for shared-session capture, result separation and the new DKnow interface.
+
 ## [1.1.10] - 2026-09-01
 
 - Separate direct answers and supplemental references into distinct overview and per-point regions in stage two, instead of relying on small role badges inside mixed tables.

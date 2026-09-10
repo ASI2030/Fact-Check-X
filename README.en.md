@@ -5,7 +5,7 @@
 Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.10" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.11" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start
@@ -45,7 +45,7 @@ Platforms: DeepSeek, Qwen and Doubao.
 | Platform ID | Name | Capture |
 |---|---|---|
 | `dknowc-chat` | DKnow Chat / 深知晓 | Standard answer, citations and official sources |
-| `dknowc-deep-research` | DKnow Deep Trace | Runs after the normal answer, opens the Deep Research report, and is saved as a separate platform result |
+| `dknowc-deep-research` | DKnow Deep Trace | Runs from the normal answer in the same conversation and is saved as a separate platform result |
 | `doubao` | Doubao | Complete answer, citations and page evidence |
 | `yuanbao` | Tencent Yuanbao | Complete answer, citations, opened source bodies and page evidence |
 | `deepseek` | DeepSeek | Complete answer, citations, opened source bodies and page evidence |
@@ -70,12 +70,12 @@ Capture and comparison require no API key. Authoritative verification first reus
 
 1. submit the original question in the same authenticated session;
 2. wait for the normal answer to finish;
-3. invoke the Deep Research entry;
-4. take over the newly opened provenance report;
+3. invoke the Deep Trace entry without resubmitting the question;
+4. capture the inline result, or take over a same-product result page if one opens;
 5. wait for it to finish;
 6. save its answer, sources, screenshot and page evidence separately.
 
-A missing button, unopened report or incomplete result is a capture failure. DKnow Deep Trace does not inherit the normal DKnow result; it can establish an official-material anchor only from its own captured evidence.
+A missing button, missing result or incomplete result is a capture failure. When both platform IDs are selected, the question is submitted once while answers, references, screenshots and HTML evidence are stored separately. DKnow Deep Trace does not inherit the normal DKnow result; it can establish an official-material anchor only from its own captured evidence.
 
 ## Requirements
 

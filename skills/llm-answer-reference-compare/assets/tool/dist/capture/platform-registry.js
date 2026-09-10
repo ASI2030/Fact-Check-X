@@ -123,12 +123,13 @@ export const builtInPlatforms = [
     {
         name: "dknowc-chat",
         label: "深知晓",
-        url: "https://yun.dknowc.cn/wlcb/dknowc-chat/",
+        url: "https://yun.dknowc.cn/wlcb/szx/#/",
         adapter: "dknowc-chat",
         profile: "dknowc-chat",
+        requiresLogin: true,
         selectors: {
-            input: ["textarea", "[contenteditable='true']", "input[type='text']"],
-            send: ["button:has-text('发送')", "button[type='submit']", "button"],
+            input: ["textarea.czkj-textarea", "textarea", "[contenteditable='true']", "input[type='text']"],
+            send: [".czkj-enter-btn.actived", ".czkj-fasong.active", "img.chatSend", "button:has-text('发送')", "button[type='submit']"],
             answer: [
                 ".czkj-robot:not(.chat-load-text) .czkj-msg",
                 ".czkj-robot .czkj-msg",
@@ -155,13 +156,14 @@ export const builtInPlatforms = [
     {
         name: "dknowc-deep-research",
         label: "深知晓（深度溯源）",
-        url: "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/",
+        url: "https://yun.dknowc.cn/wlcb/szx/#/",
         adapter: "dknowc-deep-research",
         profile: "dknowc-chat",
+        requiresLogin: true,
         deepResearchTimeoutMs: 600000,
         selectors: {
-            input: ["textarea", "[contenteditable='true']", "input[type='text']"],
-            send: ["button:has-text('发送')", "button[type='submit']", "button"],
+            input: ["textarea.czkj-textarea", "textarea", "[contenteditable='true']", "input[type='text']"],
+            send: [".czkj-enter-btn.actived", ".czkj-fasong.active", "img.chatSend", "button:has-text('发送')", "button[type='submit']"],
             answer: [
                 ".czkj-robot:not(.chat-load-text) .czkj-msg",
                 ".czkj-robot .czkj-msg",
@@ -184,8 +186,14 @@ export const builtInPlatforms = [
                 "[class*='reference'] a[href]"
             ],
             deepResearch: [
+                "button:has-text('深度溯源')",
+                "[role='button']:has-text('深度溯源')",
+                "[class*='deep']:has-text('深度溯源')",
+                "text=深度溯源",
                 ".chatgpt-deepsearch.open",
-                ".chatgpt-deepsearch[data-opens]"
+                ".chatgpt-deepsearch[data-opens]",
+                ".chatgpt-deepsearch.pointer",
+                ".chatgpt-deepsearch"
             ]
         }
     },

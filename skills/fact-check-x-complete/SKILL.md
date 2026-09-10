@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.10"
+  version: "1.1.11"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.10)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.11)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，证据不足的内容不会写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -24,7 +24,7 @@ metadata:
 | 平台 | 能力 |
 |---|---|
 | 深知晓 | 标准问答、引用与官方来源采集 |
-| 深知晓（深度溯源） | 等待普通回答完成后启动深度研究，并作为独立结果采集 |
+| 深知晓（深度溯源） | 等待普通回答完成后在同一会话启动深度溯源，并作为独立结果采集 |
 | 豆包 | 回答、引用与页面存证 |
 | DeepSeek | 回答、引用、逐条来源正文与页面存证 |
 | 通义千问 | 回答、引用与页面存证 |
@@ -125,8 +125,10 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
 默认使用 2 个平台，也允许重复 `--platform` 选择任意 N 个平台（N≥1）。`N=1` 执行单平台知识点结构化与权威核验；`N≥2` 额外执行跨平台一致性和差异对比。
 标准深知晓使用 `dknowc-chat`。深知晓（深度溯源）使用
 `dknowc-deep-research`：采集器会在同一会话先等待普通回答完整生成，再点击
-“深度研究”，接管新打开的可信溯源报告页，等待结果完整生成后独立保存为一个
-平台；按钮缺失、报告页未打开或结果未完成均按采集失败处理。平台组合完全按用户输入决定，
+“深度溯源”；同页弹出结果时在当前页续采，打开同源结果页时接管新页面，等待结果
+完整生成后独立保存为一个平台。两个平台同时选择时只提交一次原问题，普通答案与
+深度溯源答案、引用和存证分别保存、互不覆盖；按钮缺失、结果未出现或结果未完成均
+按采集失败处理。平台组合完全按用户输入决定，
 正式支持的内置选项包括
 `dknowc-chat`、`dknowc-deep-research`、`doubao`、`yuanbao`、`deepseek`、
 `qianwen`；`generic` 仅供开发者适配和验证新网页，不属于正式支持平台。

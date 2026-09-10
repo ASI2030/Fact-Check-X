@@ -6,6 +6,7 @@ import {
 import {
     activateDknowcDeepResearch,
     confirmPromptSubmission,
+    extractDknowcAnswer,
     extractDoubaoSourceMentions,
     isPdfReference,
     looksLikeLoginOnlyText,
@@ -14,7 +15,7 @@ import {
     waitForAnswer
 } from "../assets/tool/dist/capture/generic-chat.js";
 import { builtInPlatforms } from "../assets/tool/dist/capture/platform-registry.js";
-import { captureWithRetries } from "../assets/tool/dist/cli.js";
+import { buildCapturePlan, captureWithRetries } from "../assets/tool/dist/cli.js";
 import { normalizeUrl } from "../assets/tool/dist/utils/urls.js";
 
 const started = Date.now();
@@ -24,20 +25,45 @@ const deepResearchConfig = builtInPlatforms.find(
 assert.equal(deepResearchConfig.label, "深知晓（深度溯源）");
 assert.equal(
     deepResearchConfig.url,
-    "https://poc1.dknowc.cn/wlcb/shenzhimini-test5/"
+    "https://yun.dknowc.cn/wlcb/szx/#/"
 );
 assert.equal(deepResearchConfig.profile, "dknowc-chat");
+assert.equal(deepResearchConfig.selectors.send[0], ".czkj-enter-btn.actived");
+const pairedPlan = buildCapturePlan([
+    builtInPlatforms.find((platform) => platform.name === "dknowc-chat"),
+    deepResearchConfig,
+]);
+assert.equal(pairedPlan.length, 1);
+assert.equal(pairedPlan[0].config.name, "dknowc-chat");
+assert.equal(pairedPlan[0].deepCompanionConfig.name, "dknowc-deep-research");
+
+const dknowHomepagePage = {
+    locator(selector) {
+        return {
+            last() { return this; },
+            async isVisible() { return false; },
+            async evaluateAll(callback) {
+                assert.equal(selector, ".czkj-robot:not(.chat-load-text) .czkj-msg");
+                return callback([{
+                    innerText: "首页推荐问题，不是回答",
+                    closest() { return {}; }
+                }]);
+            }
+        };
+    }
+};
+assert.equal(await extractDknowcAnswer(dknowHomepagePage), "");
 
 const deepResultPage = {
     async waitForLoadState() {},
     url() {
-        return "https://poc1.dknowc.cn/wlcb/SDSYbaogao/?uid=test";
+        return "https://yun.dknowc.cn/wlcb/SDSYbaogao/?uid=test";
     }
 };
 let deepResearchClicked = 0;
 const deepResearchPage = {
     locator(selector) {
-        assert.equal(selector, ".chatgpt-deepsearch.open");
+        assert.equal(selector, "button:has-text('深度溯源')");
         return {
             last() {
                 return this;
@@ -272,6 +298,36 @@ const retried = await captureWithRetries(
 );
 assert.equal(attempts, 3);
 assert.equal(retried.status, "success");
+
+let pairedAttempts = 0;
+const paired = await captureWithRetries(
+    { name: "dknowc-chat", label: "深知晓", url: "https://yun.dknowc.cn/wlcb/szx/#/" },
+    { timeoutMs: 1000, retryCount: 1, retryDelayMs: 0 },
+    async (config) => {
+        pairedAttempts += 1;
+        return {
+            platform: config.name,
+            label: config.label,
+            url: config.url,
+            status: "success",
+            answerMarkdown: "普通回答",
+            references: [],
+            companionResult: {
+                platform: "dknowc-deep-research",
+                label: "深知晓（深度溯源）",
+                url: config.url,
+                status: pairedAttempts === 1 ? "failed" : "success",
+                answerMarkdown: pairedAttempts === 1 ? "" : "深度溯源回答",
+                references: [],
+                error: pairedAttempts === 1 ? "深度溯源尚未完成" : undefined
+            }
+        };
+    },
+    async () => undefined
+);
+assert.equal(pairedAttempts, 2);
+assert.equal(paired.status, "success");
+assert.equal(paired.companionResult.status, "success");
 
 const replayQuestion = "页面关闭后必须重新提交的原问题";
 let replayAttempts = 0;

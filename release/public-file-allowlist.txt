@@ -25,6 +25,7 @@ release/public-file-allowlist.txt
 release/v1.1.8-acceptance.md
 release/v1.1.9-acceptance.md
 release/v1.1.10-acceptance.md
+release/v1.1.11-acceptance.md
 scripts/**
 tests/**
 skills/fact-check-x-complete/**
