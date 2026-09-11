@@ -58,14 +58,16 @@
       "assetCount": 12
     },
     "skillhub": {
-      "status": "submitted_pending_review",
+      "status": "approved",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
       "version": "1.1.12",
       "versionId": 304970,
       "submittedPackageSha256": "ed37d17586e7dbe589ff21522c3ea3819d59a8854298737774b3269246258596",
       "contentFingerprint": "e337b431e727b5b827e4e9913360659323c2fc59ac2bae6b5a32548f595cec96",
-      "platformSignature": "pending",
-      "publisherRealNameVerified": true
+      "platformSignature": "issued",
+      "publisherRealNameVerified": true,
+      "signatureKeyId": "skillhub-platform-v1",
+      "signatureVerifiedAt": "2026-09-11T13:00:00+08:00"
     },
     "workbuddy": {
       "status": "installed_and_verified",
@@ -84,7 +86,7 @@
     "packageFunctionalTests": "18 Python package/module checks and 11 JavaScript collector checks passed",
     "workbuddyInstalled": "verified",
     "workbuddyOfflineAcceptance": "35/35 checks passed on the installed v1.1.12 tree",
-    "marketplaceSignature": "pending",
+    "marketplaceSignature": "verified",
     "dknowCitationCoverage": {
       "status": "passed",
       "basis": "Replayed against the real captured DOM of a live run on the current DKnow interface. dknowc-chat marker coverage rose from 4 of 7 to 7 of 7, the two references that had resolved to an image URL are gone, and all 7 references now carry evidence text where previously none did. dknowc-deep-research covers markers 1 through 24 on the same page; the previous 29 references held two duplicate markers, four entries with no marker, and were missing marker 17. A new real-DOM regression fails on the previous code with the reported symptom and passes on this version."
