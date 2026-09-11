@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.11",
-  "tag": "v1.1.11",
-  "sourceCommitSha": "10af34f73a6b23f51ed49857ca0ee4deb99ac59d",
-  "publishedAt": "2026-09-10T20:35:07+08:00",
+  "version": "1.1.12",
+  "tag": "v1.1.12",
+  "sourceCommitSha": "d25171addf005d5f0d7b60da7e01ea57609f7d87",
+  "publishedAt": "2026-09-11T10:45:00+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度溯源）",
@@ -20,57 +20,57 @@
   ],
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 331950,
-    "files": 97,
-    "sha256": "fc05a947ffd0a42bca32e0c032cdf3845031f468000e43c4cbe487097d59f74d",
-    "skillSourceTreeSha256": "60e88f4d7fb4d88723c2085b4813884ea3ed05e082da455c488688882abc9ab8"
+    "bytes": 335203,
+    "files": 98,
+    "sha256": "866479a4bcc8f1fa4bdd3322a4bab4b02c5830781176855efb845bddb651dd8b",
+    "skillSourceTreeSha256": "12975d1ff0bb53796037fd8b334673f619a53b4911b0bbc7674ad668f5db55a6"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.11.zip",
-      "sha256": "217ab7dd8cea5910a3c19280fd41ad3ac756af5ea95179ee23181d73d686edbc"
+      "file": "llm-answer-reference-compare-v1.1.12.zip",
+      "sha256": "cefead3490778f1888fce668aa2209ed8d660615d168d1577c54dcefc5a8c5ad"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.11.zip",
+      "file": "fact-check-x-knowledge-compare-v1.1.12.zip",
       "sha256": "216e2b36aaaa2d89df387800cd510a1c129dc862e06d06ddd3bc059d46888f52"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.11.zip",
+      "file": "fact-check-x-authoritative-verify-v1.1.12.zip",
       "sha256": "460b6102705d38a59fe40e2815a188de799c72d59fb9b9abda3f06b90c79c0fd"
     },
     {
-      "file": "fact-check-x-unified-v1.1.11.zip",
+      "file": "fact-check-x-unified-v1.1.12.zip",
       "sha256": "fb53797d980d817571984a33292b553e9a3f7993f333c8ad82f16fc343d1e269"
     },
     {
-      "file": "fact-check-x-suite-v1.1.11.zip",
-      "sha256": "d04b54435d2960d2a1db5a3b3d6a76d112c1df8d57a434ef15b5521a17b8d4ad"
+      "file": "fact-check-x-suite-v1.1.12.zip",
+      "sha256": "ddbcf2938463d829aa3e0a4bf722e5c399bad58278e37e8fa7c9575feca2c63a"
     },
     {
-      "file": "fact-check-x-complete-v1.1.11.zip",
-      "sha256": "09ed8bfec10a70e57ce2356644a33a6082ef8c8b596c554be5dade19cfeb3f66"
+      "file": "fact-check-x-complete-v1.1.12.zip",
+      "sha256": "116cabfbca915be69c7c2af45c5e0a5e61363af9b059a0ce3d983554227e6dc5"
     }
   ],
   "distribution": {
     "github": {
       "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.11",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.12",
       "assetCount": 12
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.11",
-      "versionId": 304172,
-      "submittedPackageSha256": "d8853464b43c2bb66c6b4cf044543ff5152e76a7858e34a45f4a434fbf4d0523",
-      "contentFingerprint": "1b8663476ae27b48fbbfc4ae9ea678d7b2e6a2e378786df02868e447bfee962a",
+      "version": "1.1.12",
+      "versionId": 304970,
+      "submittedPackageSha256": "ed37d17586e7dbe589ff21522c3ea3819d59a8854298737774b3269246258596",
+      "contentFingerprint": "e337b431e727b5b827e4e9913360659323c2fc59ac2bae6b5a32548f595cec96",
       "platformSignature": "pending",
       "publisherRealNameVerified": true
     },
     "workbuddy": {
       "status": "installed_and_verified",
-      "version": "1.1.11",
-      "installSource": "GitHub v1.1.11 formal package with matching SHA-256",
+      "version": "1.1.12",
+      "installSource": "GitHub v1.1.12 formal package with matching SHA-256",
       "runtime": "ready",
       "smokeTest": "passed"
     }
@@ -81,33 +81,33 @@
     "publicTreeAudit": "passed",
     "publicReleaseTests": 4,
     "releaseRegressionSuite": "passed",
-    "packageFunctionalTests": "18 Python package/module checks and 10 JavaScript collector checks passed",
+    "packageFunctionalTests": "18 Python package/module checks and 11 JavaScript collector checks passed",
     "workbuddyInstalled": "verified",
-    "workbuddyOfflineAcceptance": "35/35 checks passed on the installed v1.1.11 tree",
+    "workbuddyOfflineAcceptance": "35/35 checks passed on the installed v1.1.12 tree",
     "marketplaceSignature": "pending",
-    "liveDknowSharedSession": {
+    "dknowCitationCoverage": {
       "status": "passed",
-      "basis": "One real policy question was submitted once through the current https://yun.dknowc.cn/wlcb/szx/#/ entry. dknowc-chat captured a 2,666-character standard answer with 12 references and dknowc-deep-research captured a separate 6,269-character Deep Trace answer with 34 references in the same conversation. The two platform results produced different screenshot and HTML evidence hashes, and the four-stage analysis, authority verification and scoring semantics were unchanged."
+      "basis": "Replayed against the real captured DOM of a live run on the current DKnow interface. dknowc-chat marker coverage rose from 4 of 7 to 7 of 7, the two references that had resolved to an image URL are gone, and all 7 references now carry evidence text where previously none did. dknowc-deep-research covers markers 1 through 24 on the same page; the previous 29 references held two duplicate markers, four entries with no marker, and were missing marker 17. A new real-DOM regression fails on the previous code with the reported symptom and passes on this version."
     }
   },
   "supplyChain": {
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "6b6e941b00d314c2f2d7ea7f247925adf1a51545a3bfa9e46250afa961ef0e37"
+      "sha256": "0c40fb42fbc15d4397f078966d9f45f31e8b86e0dec804e744c1b9f362aa7a98"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "03cd60cc418aa51a04620f5d231469c914c820f2586d83c83ebdab154305304c"
+      "sha256": "0874bd17953d321664c2d1608829e13a338b9f6a096ef2ae578b42dee3eac6a9"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "3bc3d7ef19503105dbcd90ce2a2302879b6d6a4c9b78e486c61ce8cfb33b2d7a"
+      "sha256": "5dab99f1e8a177d41754af432b9db688289533dee5898baa06c0d0f62c747863"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.11 is published to GitHub and submitted to SkillHub; subsequent changes require a new version."
+    "blockingReason": "v1.1.12 is published to GitHub and submitted to SkillHub; subsequent changes require a new version."
   }
 }
