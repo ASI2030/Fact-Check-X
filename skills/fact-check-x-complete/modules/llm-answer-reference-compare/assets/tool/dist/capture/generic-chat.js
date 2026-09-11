@@ -2350,40 +2350,104 @@ async function extractYuanbaoReferences(page, baseUrl) {
     }, baseUrl);
 }
 export async function extractDknowcReferences(page, baseUrl, question = "") {
-    const references = await page.locator(".chat-jb, .chatsse-note-item").evaluateAll((nodes, base) => {
+    const references = await page.locator(".jb-original-item[data-id], .chatsse-note-item, .chat-jb").evaluateAll((nodes, base) => {
+        const ASSET_URL = /\.(?:png|jpe?g|gif|svg|webp|bmp|ico)(?:[?#]|$)/i;
+        const FOOTNOTE_MARKER = /^\d{1,6}$/;
+        const CARD_ITEM = ".jb-original-item[data-id], .chatsse-note-item";
         const seen = new Set();
         const items = [];
         for (const node of nodes) {
             const element = node;
-            const titleElement = element.querySelector(".chat-jb-title-info, .czkjTitle");
-            const urlElement = element.querySelector("[data-url]");
-            const scoreElement = element.querySelector("[data-id], .chatsse-note-score-id, .hasColor");
-            const snippetElement = element.querySelector(".scoresText, .jb-original-item");
-            const rawUrl = urlElement?.getAttribute("data-url") || "";
-            if (!rawUrl) {
+            if (!element.hasAttribute("data-id") && element.querySelector(CARD_ITEM)) {
                 continue;
             }
-            const normalizedUrl = normalizeInBrowser(rawUrl, base);
-            const marker = scoreElement?.getAttribute("data-id") || scoreElement?.textContent?.trim() || undefined;
+            const card = element.closest(".chat-jb, .chatsse-note-item") || element;
+            const marker = readMarker(element);
+            const rawUrl = readUrl(element, card);
+            if (!rawUrl && !marker) {
+                continue;
+            }
+            const titleElement = card.querySelector(".chat-jb-title-text, .chat-jb-title-info, .czkjTitle");
+            const citeElement = element.querySelector("cite") || card.querySelector("cite");
+            const traceText = (element.getAttribute("data-text") || "").trim();
+            const snippetElement = element.classList.contains("jb-original-item")
+                ? element
+                : card.querySelector(".scoresText, .jb-original-item");
+            const snippet = (traceText || snippetElement?.textContent || "")
+                .trim()
+                .replace(/\s+/g, " ")
+                .slice(0, 500);
+            const normalizedUrl = rawUrl ? normalizeInBrowser(rawUrl, base) : "";
             const key = `${normalizedUrl}#${marker || ""}`;
             if (seen.has(key)) {
                 continue;
             }
             seen.add(key);
+            const title = titleElement?.textContent?.trim()
+                || citeElement?.textContent?.trim()
+                || rawUrl
+                || marker;
             items.push({
-                title: titleElement?.textContent?.trim() || rawUrl,
+                title,
                 url: rawUrl,
                 normalizedUrl,
                 marker,
                 text: titleElement?.textContent?.trim() || undefined,
-                snippet: snippetElement?.textContent?.trim().replace(/\s+/g, " ").slice(0, 500) || undefined
+                snippet: snippet || undefined,
+                sourceSection: citeElement?.textContent?.trim() || undefined,
+                traceabilityText: traceText || undefined,
+                linkStatus: rawUrl ? undefined : "missing_on_page"
             });
         }
         return items;
+        function readMarker(element) {
+            const own = (element.getAttribute("data-id") || "").trim();
+            if (FOOTNOTE_MARKER.test(own)) {
+                return own;
+            }
+            const scoreElement = element.querySelector(".chatsse-note-score-id, .hasColor, [data-id]");
+            const scoped = (scoreElement?.getAttribute("data-id") || scoreElement?.textContent || "").trim();
+            if (FOOTNOTE_MARKER.test(scoped)) {
+                return scoped;
+            }
+            return own || scoped || undefined;
+        }
+        function readUrl(element, card) {
+            const own = pickUrl([element]);
+            if (own) {
+                return own;
+            }
+            const inside = pickUrl(Array.from(element.querySelectorAll("[data-url2], [data-url]")));
+            if (inside) {
+                return inside;
+            }
+            const sameCard = Array.from(card.querySelectorAll("[data-url2], [data-url]"))
+                .filter((candidate) => {
+                    const owner = candidate.closest(".jb-original-item[data-id], .chatsse-note-item, .chat-jb");
+                    return !owner || owner === card || owner === element;
+                });
+            return pickUrl(sameCard);
+        }
+        function pickUrl(elements) {
+            const values = [];
+            for (const element of elements) {
+                const routed = element.getAttribute?.("data-url2");
+                const plain = element.getAttribute?.("data-url");
+                if (routed && routed.trim()) {
+                    values.push(routed.trim());
+                }
+                if (plain && plain.trim()) {
+                    values.push(plain.trim());
+                }
+            }
+            return values.find((value) => !ASSET_URL.test(value)) || "";
+        }
         function normalizeInBrowser(rawUrl, baseUrl) {
             try {
                 const url = new URL(rawUrl, baseUrl);
-                url.hash = "";
+                if (!url.hash.startsWith("#/")) {
+                    url.hash = "";
+                }
                 url.hostname = url.hostname.toLowerCase();
                 if (url.pathname !== "/") {
                     url.pathname = url.pathname.replace(/\/+$/, "");
@@ -2391,7 +2455,8 @@ export async function extractDknowcReferences(page, baseUrl, question = "") {
                 if (url.pathname === "/") {
                     url.pathname = "";
                 }
-                return url.toString().replace(/\/$/, "");
+                const normalized = url.toString();
+                return url.hash ? normalized : normalized.replace(/\/$/, "");
             }
             catch {
                 return rawUrl.trim();

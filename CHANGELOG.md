@@ -4,6 +4,15 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.12] - 2026-09-11
+
+- Read DKnow citation cards from the card itself so every footnote marker in an answer resolves to its own source, instead of dropping a card whose link is absent and borrowing a URL from a neighbouring element.
+- Prefer the current interface's `data-url2` source link over the legacy `data-url`, and never accept an image or other asset URL as a reference source.
+- Keep a cited card that carries no link on the page as an explicit link-missing reference rather than discarding it silently.
+- Retain each card's traceability text and clause path with the reference, so a captured DKnow reference always carries readable evidence.
+- Preserve hash routes when normalizing DKnow source URLs, because the route identifies the policy document.
+- Add a real-DOM regression that fails whenever a cited marker loses its source card.
+
 ## [1.1.11] - 2026-09-10
 
 - Adapt both DKnow platform adapters to the current `https://yun.dknowc.cn/wlcb/szx/#/` product entry and its current input, send, answer and Deep Trace controls.
