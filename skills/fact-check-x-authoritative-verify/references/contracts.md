@@ -43,7 +43,11 @@
 
 ## 单点裁决结果
 
+`fact-check-x/verification@2` 增加 `anchorDowngrades`：比较阶段认定免搜索、核验阶段判锚点无效而改走可信搜索的知识点 ID。期望免搜、实际搜索属保守放行；期望搜索、实际免搜仍按洗白拒绝。
+
 `fact-check-x/authority-result@1` 保留请求、证据、搜索模式、请求次数、权威结论和逐平台类别。服务错误不得写成事实错误；重试后仍失败时不生成裁决结果。证据不足写入 `resolution=insufficient_evidence|partially_resolved` 和 `evidenceGaps`，但结果状态仍为 `completed`。
+
+底层 `unverified` 与 `fabricated` 原始类别继续保留用于审计和复现；第四步对外统一显示为「疑似误导」，表示官方无法查证，可能过期、编造、受信息源误导或检索覆盖不足。此类主张不写入确定答案，并从直接答案明细移入补充参考风险区；若同一知识点所有平台均为 `omitted|unverified`，该知识点整体不进入覆盖率与准确率分母。
 
 ## 汇总结果
 

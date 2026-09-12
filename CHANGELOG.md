@@ -4,6 +4,16 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.13] - 2026-09-12
+
+- Count an answered direct knowledge point as covered independently of evidence sufficiency, and remove a point from coverage and accuracy denominators only when every selected platform omitted it or lacks sufficient evidence.
+- Allow an official-source exemption to downgrade conservatively into an actual Trusted Search request, while continuing to reject the inverse shortcut that would skip required verification.
+- Preserve `fabricated` and `unverified` as internal audit states while combining both into the user-facing “suspected misleading” risk category; move those claims into supplemental references and highlight serious or suspected risks at the top of the evaluation report.
+- Collapse long per-platform evidence in stage four by default and show the complete text on demand.
+- Carry incomplete retrieval and capture actions into every generated stage report as a prominent technical notice whenever the workflow continues.
+- Open Qwen reference URLs and capture their source bodies before treating them as textual evidence, matching the existing DeepSeek and Tencent Yuanbao behavior.
+- Add regression coverage for denominator semantics, conservative anchor downgrade, suspected-misleading presentation, technical notices and Qwen source-body capture.
+
 ## [1.1.12] - 2026-09-11
 
 - Read DKnow citation cards from the card itself so every footnote marker in an answer resolves to its own source, instead of dropping a card whose link is absent and borrowing a URL from a neighbouring element.

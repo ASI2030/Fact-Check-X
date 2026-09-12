@@ -16,8 +16,8 @@ CATEGORY = {
     "indirect_accurate": "间接准确",
     "coincidental": "巧合式幻觉",
     "misleading": "误导式幻觉",
-    "fabricated": "编造式幻觉",
-    "unverified": "证据不足",
+    "fabricated": "疑似误导",
+    "unverified": "疑似误导",
     "omitted": "答案遗漏",
 }
 
@@ -129,9 +129,39 @@ def faithful_label(value: str) -> str:
     return {"supported": "符合", "contradicted": "不符合", "insufficient": "证据不足"}.get(value, "证据不足")
 
 
+UNDECIDED_CATEGORIES = {"omitted", "unverified"}
+
+
+def verdict_category(point: dict, platform_id: str) -> str:
+    verdict = ((point.get("authority") or {}).get("verdicts") or {}).get(platform_id) or {}
+    return str(verdict.get("category") or "omitted")
+
+
+def decidable_direct_point(point: dict, platforms: list[dict]) -> bool:
+    """任一平台既答到该点、裁决又不是证据不足时，该点才算合法直接答案知识点。
+
+    所有平台都是「答案遗漏」或「证据不足」的知识点，不反映任何一家的答题表现，
+    既不进覆盖率分母，也不进准确率分母。
+    """
+    for platform in platforms:
+        platform_id = platform["platform"]
+        claim = (point.get("claims") or {}).get(platform_id) or {}
+        if claim.get("covered") and verdict_category(point, platform_id) not in UNDECIDED_CATEGORIES:
+            return True
+    return False
+
+
 def metrics(points: list[dict], platforms: list[dict]) -> dict:
     output = {}
-    legal_direct = [point for point in points if point.get("role") == "direct"]
+    legal_direct = []
+    excluded_direct = []
+    for point in points:
+        if point.get("role") != "direct":
+            continue
+        if decidable_direct_point(point, platforms):
+            legal_direct.append(point)
+        else:
+            excluded_direct.append(str(point.get("id") or ""))
     for platform in platforms:
         pid = platform["platform"]
         direct_entries = []
@@ -152,8 +182,8 @@ def metrics(points: list[dict], platforms: list[dict]) -> dict:
 
         accurate = count("direct_accurate") + count("indirect_accurate")
         hallucinated = count("coincidental") + count("misleading")
-        fabricated = sum(
-            ((((point.get("authority") or {}).get("verdicts") or {}).get(pid) or {}).get("category") == "fabricated")
+        suspected_misleading = sum(
+            ((((point.get("authority") or {}).get("verdicts") or {}).get(pid) or {}).get("category") in {"fabricated", "unverified"})
             for point in points
         )
         reference_accurate = sum(
@@ -166,9 +196,15 @@ def metrics(points: list[dict], platforms: list[dict]) -> dict:
             and ((((point.get("authority") or {}).get("verdicts") or {}).get(pid) or {}).get("category") in ("coincidental", "misleading"))
             for point in points
         )
+        reference_suspected = sum(
+            point.get("role") == "reference"
+            and ((((point.get("authority") or {}).get("verdicts") or {}).get(pid) or {}).get("category") in ("fabricated", "unverified"))
+            for point in points
+        )
         output[pid] = {
-            "覆盖率": denominator / len(legal_direct) if legal_direct else 0,
-            "遗漏率": (len(legal_direct) - denominator) / len(legal_direct) if legal_direct else 0,
+            "覆盖率": len(covered) / len(legal_direct) if legal_direct else 0,
+            "遗漏率": (len(legal_direct) - len(covered)) / len(legal_direct) if legal_direct else 0,
+            "未计入直接知识点": excluded_direct,
             "准确率": accurate / denominator if denominator else 0,
             "直接准确率": count("direct_accurate") / denominator if denominator else 0,
             "间接准确率": count("indirect_accurate") / denominator if denominator else 0,
@@ -188,17 +224,17 @@ def metrics(points: list[dict], platforms: list[dict]) -> dict:
             "幻觉率": hallucinated / denominator if denominator else 0,
             "巧合式幻觉率": count("coincidental") / denominator if denominator else 0,
             "误导式幻觉率": count("misleading") / denominator if denominator else 0,
-            "编造率": fabricated / max(1, len(points)),
-            "编造数": fabricated,
-            "编造式幻觉率": fabricated / max(1, len(points)),
+            "疑似误导数": suspected_misleading,
+            "疑似误导率": suspected_misleading / max(1, len(points)),
             "参考_有价值正确": reference_accurate,
             "参考_幻觉式提醒": reference_hallucinated,
+            "参考_疑似误导": reference_suspected,
             "_N": len(legal_direct),
             "_covered": len(covered),
             "_resolved": denominator,
             "_evidence_gaps": sum(category == "unverified" for _, category in covered),
             "_claims": len(points),
-            "_fabricated": fabricated,
+            "_suspected_misleading": suspected_misleading,
             "_ref_total": sum(point.get("role") == "reference" for point in points),
         }
     return output
@@ -217,10 +253,13 @@ def platform_verdict_summary(points: list[dict], platform_id: str) -> dict:
 
     if not categories:
         return {"level": "missing", "headline": "未直接回答可核验知识点"}
-    if any(category in {"misleading", "fabricated"} for category in categories):
+    if "misleading" in categories:
         return {"level": "error", "headline": "部分直接答案经官方依据核验有误"}
-    if "unverified" in categories:
-        return {"level": "missing", "headline": "部分直接答案的官方证据仍不足"}
+    if any(category in {"fabricated", "unverified"} for category in categories):
+        return {
+            "level": "suspected",
+            "headline": "部分直接答案官方无法查证，存在过期、编造或信息源误导风险",
+        }
     if "coincidental" in categories:
         return {
             "level": "coincidental",
@@ -312,11 +351,11 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
             category = verdict.get("category")
             if category in category_counts:
                 category_counts[category] += 1
+    suspected_count = category_counts["fabricated"] + category_counts["unverified"]
     summary = (
         f"共核验 {len(points)} 个知识点；直接准确 {category_counts['direct_accurate']} 项，"
         f"间接准确 {category_counts['indirect_accurate']} 项，结果巧合 {category_counts['coincidental']} 项，"
-        f"严重误导 {category_counts['misleading']} 项，凭空编造 {category_counts['fabricated']} 项，"
-        f"证据不足 {category_counts['unverified']} 项。"
+        f"严重误导 {category_counts['misleading']} 项，疑似误导 {suspected_count} 项。"
     )
     reference_analysis = {}
     for platform in platforms:
@@ -324,8 +363,9 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
         metric = metric_data[pid]
         valuable = metric["参考_有价值正确"]
         risky = metric["参考_幻觉式提醒"]
-        reference_analysis[pid] = "参考有价值" if valuable and not risky else ("参考疑似有误导" if risky else "无额外参考")
-        reference_analysis[f"{pid}_note"] = f"有价值正确 {valuable} 项 · 幻觉式提醒 {risky} 项"
+        suspected = metric["参考_疑似误导"]
+        reference_analysis[pid] = "参考有价值" if valuable and not risky and not suspected else ("参考包含风险" if risky or suspected else "无额外参考")
+        reference_analysis[f"{pid}_note"] = f"有价值正确 {valuable} 项 · 严重误导/幻觉 {risky} 项 · 疑似误导 {suspected} 项"
     findings = []
     for point in points[:8]:
         authority = point.get("authority") or {}
@@ -351,6 +391,7 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
             "total": len(points),
             "failed": 0,
             "evidenceGapCount": category_counts["unverified"],
+            "suspectedMisleadingCount": suspected_count,
             "evidenceGaps": verification.get("evidenceGaps") or [],
         },
         "agent_todo": [],

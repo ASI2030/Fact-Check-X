@@ -3,13 +3,13 @@
 Fact-Check-X 各方答案测评报告渲染器。
 
 稳定指标口径：
-  分母 N = 合法直接答案知识点（剔除补充参考 + 剔除编造）
+  分母 N = 合法直接答案知识点（剔除补充参考 + 剔除全平台均未覆盖/无法核验的知识点）
   覆盖率 + 遗漏率 = 100%（分母 N）
   可裁决的覆盖类下：准确率 + 幻觉率 = 100%（分母 = 已有足够证据裁决的直接答案覆盖数）
     准确率 = 直接准确（官方依据，含算术级显然推导 2000×1.4=2800）+ 间接准确（非官方+官方验证通过）
     幻觉率 = 巧合式（无引用依据但与官方依据巧合一致）+ 误导式（结果错）
-  编造（官方查无）独立轴，不计覆盖/准确/幻觉；直接答案与补充参考始终分区呈现
-  直接答案区只有 4 标签 + 灰色未覆盖；补充参考单独保留证据价值与风险
+  官方无法查证的主张统一标为疑似误导，移入补充参考风险区，不混入确定答案
+  直接答案与补充参考始终分区呈现，补充参考风险在页首显著提示
 
 溯源与复现：
   ① 每个知识点判定带「所附依据原文」+「官方验证依据原文」
@@ -88,9 +88,9 @@ def tier_of(k):
 
 # ──────────────── 指标口径（单一事实源：tooltip 和附录共用） ────────────────
 METRIC_DOC = {
-    "覆盖率":   ("合法直接答案知识点 N", "答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少", "只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖"),
+    "覆盖率":   ("合法直接答案知识点 N", "答案合并去重后，先剔除「补充参考（相关但非用户所问）」，再剔除「所有平台都未覆盖或证据不足」的知识点，剩下的就是合法直接答案知识点；该家答到了多少即计入覆盖", "只衡量「直接回答用户所问的点答没答到」；答到但证据不足仍算覆盖，证据是否充分由「证据充分率」单独体现；补充参考答得再多都不抬覆盖"),
     "遗漏率":   ("合法直接答案知识点 N", "该家没答到的合法直接答案知识点占比", "与覆盖率互补，相加=100%"),
-    "准确率":   ("已有足够证据裁决的直接答案覆盖数", "可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确", "证据不足项单独展示，不按错误计分"),
+    "准确率":   ("已有足够证据裁决的直接答案覆盖数", "可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确", "疑似误导作为风险单列，不冒充已证实错误，也不进入准确率分母"),
     "直接准确率": ("已有足够证据裁决的直接答案覆盖数", "声明与其所附官方原站材料或官方来源一致；含算术级显然推导（如正文'2000上增加40%'→答案'2800'）", "最高可信级：主张由官方来源直接支持"),
     "间接准确率": ("已有足够证据裁决的直接答案覆盖数", "声明忠实于其他非官方材料，且事后经官方源独立验证正确", "内容正确，但答案自身所附出处不是官方来源"),
     "证据充分率": ("该家直接答案覆盖数", "已有足够权威证据完成裁决的覆盖项比例", "低于100%表示仍有证据边界，不代表对应回答错误"),
@@ -111,21 +111,19 @@ CAT_STYLE = {
     "间接准确": ("#10b981", "☑", "忠实于其他非官方材料，且经官方源独立验证通过", "间接正确"),
     "巧合式幻觉": ("#f59e0b", "🎲", "无引用依据或与所附材料不符，但经官方核验后与官方依据巧合一致", "无引用依据，但与官方依据巧合一致"),
     "误导式幻觉": ("#dc2626", "⚠", "经官方源验证，结果是错误的（用户照做会被误导）", "幻觉：严重误导"),
-    # 编造（官方查无）→ 仅出现在补充参考分析的③凭空编造（不进直接答案区）
-    "编造式幻觉": ("#b91c1c", "✖", "在官方原站和官方来源中均查不到、无法核验 = 凭空编造", "凭空编造·官方查无"),
-    # 答案遗漏：非判定标签，灰色文本，与 4 个判定标签视觉隔离
-    "证据不足": ("#64748b", "?", "当前权威证据不足，不能据此判定主张真假；该项不进入准确率分母", "证据不足"),
+    "疑似误导": ("#b91c1c", "✖", "官方无法查证，有可能过期、编造或信息源误导；该项移入补充参考风险区，不写入确定答案", "疑似误导"),
+    # 答案遗漏：非判定标签，灰色文本，与判定标签视觉隔离
     "答案遗漏": ("#9ca3af", "·", "该家没有答到这个知识点（状态指示，非判定）", "未覆盖"),
 }
 def cat_norm(c):
     for k in CAT_STYLE:
         if c.startswith(k): return k
-    # 历史标签兜底（旧数据兼容，统归到现行 5 类）
-    if "诚实无规定" in c or "无据造规则" in c or "待核验" in c: return "编造式幻觉"
-    if "证据不足" in c: return "证据不足"
-    if "未核验" in c or "缺依据" in c: return "证据不足"
+    # 历史标签兜底：底层原始裁决可保留，面向用户统一归为疑似误导。
+    if "诚实无规定" in c or "无据造规则" in c or "待核验" in c: return "疑似误导"
+    if "证据不足" in c: return "疑似误导"
+    if "未核验" in c or "缺依据" in c: return "疑似误导"
     if "猜测" in c: return "巧合式幻觉"
-    if "捏造" in c or "疑似" in c: return "编造式幻觉"
+    if "捏造" in c or "编造" in c or "疑似" in c: return "疑似误导"
     if "误导" in c: return "误导式幻觉"
     return "答案遗漏"
 
@@ -237,20 +235,20 @@ def metric_card(sk, sname, color):
     acc_i, hall_i = _lr100([m.get("准确率",0), m.get("幻觉率",0)])
     no_direct = ("_N" in m) and m.get("_N", 0) == 0   # 本题无直接答案知识点
     no_resolved = m.get("_resolved", 0) == 0
-    fab_n = m.get("编造数", 0)
-    ref_val = m.get("参考_有价值正确", 0); ref_hal = m.get("参考_幻觉式提醒", 0)
+    suspected_n = m.get("疑似误导数", 0)
+    ref_val = m.get("参考_有价值正确", 0); ref_hal = m.get("参考_幻觉式提醒", 0); ref_sus = m.get("参考_疑似误导", 0)
     cov_txt = '—' if no_direct else f'{g("覆盖率")}%'
     om_txt = '—' if no_direct else f'{g("遗漏率")}%'
     acc_txt = '—' if no_direct or no_resolved else f'{acc_i}%'
     hall_txt = '—' if no_direct or no_resolved else f'{hall_i}%'
-    fab_block = (
-        f'<div class="{"fabricated-alert" if fab_n else "fabricated-clear"}">'
-        + (f'⚠ 高风险告警：检出编造 <b>{fab_n}</b> 项（官方查无、凭空捏造），详见编造清单'
-           if fab_n else '✓ 未检出编造')
+    suspected_block = (
+        f'<div class="{"suspected-alert" if suspected_n else "suspected-clear"}">'
+        + (f'✖ 疑似误导 <b>{suspected_n}</b> 项：官方无法查证，可能过期、编造或受信息源误导；详见补充参考风险区'
+           if suspected_n else '✓ 未检出疑似误导')
         + '</div>')
     ref_block = (
         f'<div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;'
-        f'background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>{ref_val}</b> 项 · 幻觉式提醒 <b>{ref_hal}</b> 项</div>')
+        f'background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>{ref_val}</b> 项 · 严重误导/幻觉 <b>{ref_hal}</b> 项 · 疑似误导 <b>{ref_sus}</b> 项</div>')
     return f'''
     <div class="mcard">
       <div class="mtitle" style="color:{color}">{sname} <span class="muted small">{escape(size)}</span></div>
@@ -267,7 +265,7 @@ def metric_card(sk, sname, color):
         <tr class="hl"><td class="tt"{tip("巧合式幻觉率")}>· 巧合式幻觉（无引用依据但与官方依据巧合一致）</td><td>{g("巧合式幻觉率")}%</td></tr>
         <tr class="hl"><td class="tt"{tip("误导式幻觉率")}>· 误导式幻觉（结果错）</td><td>{g("误导式幻觉率")}%</td></tr>
       </table>
-      {fab_block}
+      {suspected_block}
       {ref_block}
     </div>'''
 
@@ -277,6 +275,7 @@ VERDICT_STYLE = {
     "supported":          ("#059669", "ti-shield-check", "全部有官方依据支持"),
     "error":         ("#dc2626", "ti-alert-triangle", "经核验有误"),
     "coincidental":  ("#d97706", "ti-dice", "无引用依据，但与官方依据巧合一致"),
+    "suspected":     ("#b91c1c", "ti-alert-triangle", "存在疑似误导"),
     "missing":       ("#6b7280", "ti-minus", "未直接回答"),
 }
 def verdict_block():
@@ -368,7 +367,14 @@ def prov_html(e, shared_exc=""):
             else:
                 body = '<span class="muted small"> （来源正文未取得，未作为正文证据）</span>'
         parts.append(f'<div class="prov"><span class="ptag">所附依据 · {escape(binding)}</span>{link}{govlink}{platform_link}{body}</div>')
-    return "".join(parts) or '<span class="muted small">该家未附依据</span>'
+    if not parts:
+        return '<span class="muted small">该家未附依据</span>'
+    # 依据原文默认收起：逐知识点逐平台全文铺开会把第四步报告撑得过长。
+    return (
+        f'<details class="prov-fold"><summary>所附依据 {len(parts)} 条 · 点击展开</summary>'
+        + "".join(parts)
+        + "</details>"
+    )
 
 
 def official_basis_html(k):
@@ -420,18 +426,27 @@ def _role(k):
     return (k.get("role") or "direct")
 
 
-def locked_knowledge_point_details(role="direct"):
-    """展示第三步 verification.json 已锁定的逐知识点结论，不重新裁决。"""
+def locked_knowledge_point_details(role="direct", mode="regular"):
+    """展示第三步锁定结论；疑似误导仅改变展示分区，不重写原始裁决。"""
     blocks = []
     for k in N_list:
-        if _role(k) != role:
+        if mode == "moved_suspected":
+            if _role(k) != "direct":
+                continue
+        elif _role(k) != role:
             continue
         kid = str(k.get("id") or "?")
         finding = escape(str(k.get("authoritative_finding") or "证据不足"))
         platform_cards = []
+        visible_categories = []
         for sk, sname, color in SIDE:
             entry = (SE.get(sk) or {}).get(kid) or {}
             category = cat_norm(entry.get("category", "答案遗漏"))
+            if mode == "moved_suspected" and category != "疑似误导":
+                continue
+            if mode == "regular" and role == "direct" and category == "疑似误导":
+                continue
+            visible_categories.append(category)
             col, _, category_doc, neutral = CAT_STYLE.get(
                 category, CAT_STYLE["答案遗漏"]
             )
@@ -448,7 +463,17 @@ def locked_knowledge_point_details(role="direct"):
                 f'{prov_html(entry)}'
                 '</article>'
             )
-        role_label = "直接答案" if role == "direct" else "补充参考"
+        if not platform_cards:
+            continue
+        if mode == "regular" and role == "direct" and not any(
+            category != "答案遗漏" for category in visible_categories
+        ):
+            continue
+        role_label = (
+            "补充参考 · 由直接答案移入"
+            if mode == "moved_suspected"
+            else ("直接答案" if role == "direct" else "补充参考")
+        )
         blocks.append(
             f'<section class="locked-point" id="evaluation-{escape(kid)}">'
             f'<div class="locked-point-head"><span class="point-id">{escape(kid)}</span>'
@@ -458,9 +483,7 @@ def locked_knowledge_point_details(role="direct"):
             f'<div class="locked-platforms">{"".join(platform_cards)}</div>'
             '</section>'
         )
-    if blocks:
-        return "".join(blocks)
-    return '<p class="empty-state">本次没有该类知识点。</p>'
+    return "".join(blocks)
 
 
 def locked_role_section(role="direct"):
@@ -471,13 +494,77 @@ def locked_role_section(role="direct"):
         if role == "direct"
         else "平台额外提供的信息；单独保留证据价值与风险，不混入最终答案或直接答案指标。"
     )
+    if role == "direct":
+        body = locked_knowledge_point_details("direct")
+    else:
+        moved = locked_knowledge_point_details("direct", "moved_suspected")
+        native = locked_knowledge_point_details("reference")
+        moved_block = (
+            '<div class="moved-risk"><h4>从直接答案移入的疑似误导</h4>'
+            '<p class="muted small">这些平台主张官方无法查证，不写入确定答案，也不留在直接答案明细中。</p>'
+            f'{moved}</div>'
+            if moved else ""
+        )
+        body = moved_block + native
+    if not body:
+        body = '<p class="empty-state">本次没有该类知识点。</p>'
+    section_id = 'id="supplemental-reference" ' if role == "reference" else ""
     return (
         f'<section class="locked-role locked-role-{role}" '
-        f'data-fcx-locked-role="{role}">'
+        f'{section_id}data-fcx-locked-role="{role}">'
         f'<header class="locked-role-head"><div><p class="locked-role-kicker">{label}</p>'
         f'<h3>{label}</h3><p>{description}</p></div></header>'
-        f'{locked_knowledge_point_details(role)}'
+        f'{body}'
         '</section>'
+    )
+
+
+def supplemental_risk_entries():
+    """收集补充参考中的严重误导，以及由直接答案移入的疑似误导。"""
+    risks = []
+    for k in N_list:
+        role = _role(k)
+        kid = str(k.get("id") or "?")
+        desc = str(k.get("desc") or "")
+        for sk, sname, _ in SIDE:
+            entry = (SE.get(sk) or {}).get(kid) or {}
+            category = cat_norm(entry.get("category", "答案遗漏"))
+            moved_suspected = role == "direct" and category == "疑似误导"
+            native_reference_risk = role == "reference" and category in {
+                "误导式幻觉",
+                "疑似误导",
+            }
+            if moved_suspected or native_reference_risk:
+                risks.append(
+                    {
+                        "platform": sname,
+                        "point": kid,
+                        "description": desc,
+                        "category": category,
+                    }
+                )
+    return risks
+
+
+def risk_notice_block():
+    risks = supplemental_risk_entries()
+    if not risks:
+        return ""
+    severe = sum(item["category"] == "误导式幻觉" for item in risks)
+    suspected = sum(item["category"] == "疑似误导" for item in risks)
+    items = "".join(
+        f'<li><b>{escape(item["platform"])}</b> · {escape(item["point"])} '
+        f'{escape(item["description"])}：'
+        f'{"⚠ 幻觉：严重误导" if item["category"] == "误导式幻觉" else "✖ 疑似误导"}</li>'
+        for item in risks
+    )
+    return (
+        '<aside class="risk-notice" id="supplemental-risk">'
+        '<h2>补充参考风险提醒</h2>'
+        f'<p>本次补充参考包含严重误导 <b>{severe}</b> 项、疑似误导 <b>{suspected}</b> 项。'
+        '疑似误导表示官方无法查证，可能过期、编造或受信息源误导，不应直接用于决策。</p>'
+        f'<ul>{items}</ul><a href="#supplemental-reference">查看补充参考风险明细</a>'
+        '</aside>'
     )
 
 # ──────────────── 原始答案 + 参考文献存证 ────────────────
@@ -520,7 +607,7 @@ def metric_doc_rows():
         f'<tr><td><b>{escape(name)}</b></td><td>{escape(d[0])}</td><td>{escape(d[1])}</td><td class="muted">{escape(d[2])}</td></tr>'
         for name, d in METRIC_DOC.items())
 
-_ACTIVE_CATS = ("直接准确", "间接准确", "巧合式幻觉", "误导式幻觉", "编造式幻觉", "证据不足", "答案遗漏")
+_ACTIVE_CATS = ("直接准确", "间接准确", "巧合式幻觉", "误导式幻觉", "疑似误导", "答案遗漏")
 def cat_doc_rows():
     return "".join(
         f'<tr><td><span class="catpill" style="background:{CAT_STYLE[name][0]}">{CAT_STYLE[name][1]} {escape(CAT_STYLE[name][3])}</span></td>'
@@ -536,11 +623,11 @@ meta_rows = f'''
   <tr><td>评测报告生成时间</td><td>{datetime.now().strftime("%Y-%m-%d %H:%M")}</td></tr>
   <tr><td>原始答案抓取数据</td><td>{escape(Path(a.result).name)}（文件时间 {result_mtime}）· 答案与参考文献已在 ④ 全文存证</td></tr>
   <tr><td>分析载体</td><td>当前承载技能的智能体（知识点拆解 / 忠实性 / 官方验证判定）</td></tr>
-  <tr><td>自动裁决状态</td><td>{HEALTH.get("total","—")} 个知识点 / 证据不足 {HEALTH.get("evidenceGapCount",0)} 项；证据不足项单列且不按错误计分</td></tr>
+  <tr><td>自动裁决状态</td><td>{HEALTH.get("total","—")} 个知识点 / 疑似误导 {HEALTH.get("suspectedMisleadingCount",0)} 项；底层原始裁决保留用于追溯</td></tr>
   <tr><td>语义分析执行方式</td><td>由当前承载技能的智能体直接完成知识点拆解与证据裁决；脚本不调用任何外部模型接口</td></tr>
   <tr><td>真相源构成</td><td>经严格验收的深知晓官方材料、各平台已附的 gov.cn 材料，或必要时逐知识点调用可信搜索所得官方材料；同一知识点的所有参与方共用同一份验证证据</td></tr>
   <tr><td>可直接判定的官方来源</td><td>官方原站，或由深知可信搜索返回的 dknowc / DT_DATA 官方来源；后者统一标为“官方来源”，可注明“由深知可信搜索收录”</td></tr>
-  <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；可信搜索未取得足够材料时统一标记“证据不足”，并从确定答案和准确率分母中排除</td></tr>'''
+  <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；官方无法查证的平台主张统一标记“疑似误导”，移入补充参考风险区且不写入确定答案</td></tr>'''
 if AUTHORITY_VERIFICATION_SHA256:
     meta_rows += (
         '<tr><td>第三步锁定数据摘要</td><td><code>'
@@ -548,16 +635,16 @@ if AUTHORITY_VERIFICATION_SHA256:
         + '</code>；第四步仅展示该锁定数据并计算平台指标，不改变权威结论</td></tr>'
     )
 
-# 申诉声明（中立公信力护栏）：有凭空编造或可申诉项时显示——被评方可提交官方依据复核
+# 复核声明（中立公信力护栏）：有疑似误导或可复核项时显示。
 _appeal_needed = any(
-    (cat_norm(e.get("category","")) == "编造式幻觉" or e.get("appealable"))
+    (cat_norm(e.get("category","")) == "疑似误导" or e.get("appealable"))
     for sk, sn, _ in SIDE
     for e in (SE.get(sk) or {}).values() if isinstance(e, dict)
 )
 appeal_block = ('''
 <div class="appeal">
-  <b>关于「凭空编造」判定的声明（申诉通道）</b>
-  <p class="small">本平台的「凭空编造」判定，表示在官方原站及官方来源范围内<b>未检索到任何支持该知识点的官方材料</b>。它<b>不构成"该答案绝对错误"的断言</b>——可能官方确有规定而本次检索未覆盖。</p>
+  <b>关于「疑似误导」判定的说明（复核通道）</b>
+  <p class="small">「疑似误导」表示在官方原站及官方来源范围内<b>未检索到足以支持该平台主张的材料</b>，可能源于内容过期、编造、信息源误导或本次检索覆盖不足；它不冒充“已经证实错误”。</p>
   <p class="small">如掌握相关官方一手依据，可通过申诉通道提交，平台将复核、更正并留痕（参照征信业异议流程）。</p>
 </div>''' if _appeal_needed else '')
 
@@ -585,8 +672,11 @@ h2{{color:#1e40af;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6p
 .kpi span,.kpi small{{display:block;font-size:11px;color:#64748b}}
 .kpi b{{display:block;font-size:25px;line-height:1.2;margin:3px 0}}
 .kpi-coverage b{{color:#1e40af}} .kpi-accuracy b{{color:#059669}} .kpi-hallucination b{{color:#dc2626}}
-.fabricated-alert{{margin-top:9px;padding:9px 10px;border:2px solid #dc2626;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:13px;font-weight:650}}
-.fabricated-clear{{margin-top:9px;padding:7px 9px;border-radius:7px;background:#f0fdf4;color:#15803d;font-size:12px}}
+.suspected-alert{{margin-top:9px;padding:9px 10px;border:2px solid #dc2626;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:13px;font-weight:650}}
+.suspected-clear{{margin-top:9px;padding:7px 9px;border-radius:7px;background:#f0fdf4;color:#15803d;font-size:12px}}
+.risk-notice{{margin:18px 0;padding:16px 18px;border:2px solid #dc2626;border-radius:8px;background:#fff7ed;color:#7f1d1d}}
+.risk-notice h2{{margin:0 0 8px;color:#991b1b}} .risk-notice p{{margin:0 0 8px}} .risk-notice ul{{margin:8px 0 10px;padding-left:22px}}
+.moved-risk{{margin:0 0 18px;padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff7f7}} .moved-risk h4{{margin:0 0 4px;color:#991b1b}}
 .m2{{font-size:13px;margin:8px 0}}
 .mtab{{width:100%;font-size:12.5px;border-collapse:collapse;margin-top:6px}}
 .mtab td{{padding:3px 4px;border-bottom:1px solid #f3f4f6}}
@@ -608,6 +698,12 @@ table.ap td{{padding:6px 8px;border-bottom:1px solid #f3f4f6;vertical-align:top}
 .claim{{margin:5px 0;color:#374151}}
 .srcline{{font-size:11px;color:#6b7280;margin:3px 0}}
 .prov{{margin:4px 0;font-size:11.5px}}
+.prov-fold{{margin:4px 0}}
+.prov-fold>summary{{cursor:pointer;font-size:11.5px;color:#4338ca;list-style:none;padding:2px 0;user-select:none}}
+.prov-fold>summary::-webkit-details-marker{{display:none}}
+.prov-fold>summary::before{{content:"▸ ";color:#6b7280}}
+.prov-fold[open]>summary::before{{content:"▾ "}}
+.prov-fold>summary:hover{{text-decoration:underline}}
 .ptag{{display:inline-block;background:#eef2ff;color:#4338ca;border-radius:3px;padding:1px 5px;margin-right:5px;font-size:10.5px}}
 .ptag.vtag{{background:#ecfdf5;color:#047857}}
 .ptag.ntag{{background:#ecfeff;color:#0e7490}}
@@ -733,9 +829,11 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
   <div class="mwrap">
     {"".join(metric_card(sk, sn, col) for sk, sn, col in SIDE)}
   </div>
-  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率衡量答没答，准确率衡量已有足够证据裁决的回答是否正确</b>。①覆盖率+遗漏率=100%；②准确率+幻觉率=100%，证据不足项不进入二者分母；③证据充分率单独展示当前可裁决覆盖程度；④官方证据支持率与局部角标覆盖率分开呈现；⑤补充参考在同一核验明细中独立分区，不混入直接答案指标。
+  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率衡量答没答，准确率衡量已有足够证据裁决的回答是否正确</b>。①覆盖率+遗漏率=100%，答到即算覆盖；②准确率+幻觉率=100%，疑似误导单列风险且不冒充已证实错误；③所有平台都未覆盖或官方无法查证的知识点整体退出覆盖率与准确率分母；④证据充分率单独展示当前可裁决覆盖程度；⑤官方证据支持率与局部角标覆盖率分开呈现；⑥补充参考在同一核验明细中独立分区，不混入直接答案指标。
   各指标含义鼠标悬停可见，完整口径见 <a href="#metricdoc">④ 指标口径速查</a>。</p>
 </div>
+
+{risk_notice_block()}
 
 <h2>① 平台表现概览 <span class="muted small">（仅按直接答案范围计算）</span></h2>
 <div class="mwrap">
@@ -782,7 +880,7 @@ table.meta td:first-child{{width:170px;color:#6b7280;font-weight:600}}
 {appeal_block}
 
 <p class="muted small" style="margin-top:36px;border-top:1px solid #eee;padding-top:12px">
-Fact-Check-X · 评测口径：覆盖率衡量平台是否回答直接知识点；准确率与幻觉率仅以已有足够证据裁决的覆盖项为分母；证据不足项单独展示，不按正确或错误计分；全判定可回溯至平台原答案、所附依据和权威证据。</p>
+Fact-Check-X · 评测口径：覆盖率衡量平台是否回答直接知识点，答到即算覆盖；准确率与幻觉率仅以已有足够证据裁决的覆盖项为分母；所有平台都未覆盖或官方无法查证的知识点整体不计入分母；疑似误导移入补充参考风险区，不写入确定答案；全判定可回溯至平台原答案、所附依据和权威证据。</p>
 </main></body></html>'''
 
 ts = datetime.now().strftime("%Y%m%d_%H%M")

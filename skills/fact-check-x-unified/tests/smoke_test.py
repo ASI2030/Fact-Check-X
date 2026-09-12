@@ -55,7 +55,36 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="fact-check-x-unified-") as temp:
         sys.path.insert(0, str(ROOT / "scripts"))
         import fact_check_x
-        from fact_check_x import merge_verification
+        from fact_check_x import (
+            collect_technical_notices,
+            merge_verification,
+            normalize_report_navigation,
+        )
+
+        notice_run = Path(temp) / "technical-notice"
+        (notice_run / "capture").mkdir(parents=True)
+        (notice_run / "capture" / "results.json").write_text(
+            json.dumps({
+                "platforms": [{
+                    "platform": "doubao",
+                    "label": "豆包",
+                    "references": [
+                        {"sourceAcquisitionStatus": "blocked"},
+                        {"contentAcquisition": "failed"},
+                    ],
+                }],
+            }, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        notices = collect_technical_notices(notice_run)
+        assert len(notices) == 1 and "豆包 2 条" in notices[0]
+        notice_html = normalize_report_navigation(
+            b"<html><head><style></style></head><body><main>test</main></body></html>",
+            "01-capture-report.html",
+            notices,
+        ).decode("utf-8")
+        assert 'data-fcx-run-notice="1"' in notice_html
+        assert "受影响且无法核验的主张按“疑似误导”呈现" in notice_html
 
         merge_results = Path(temp) / "merge-results"
         merge_results.mkdir()
@@ -594,6 +623,7 @@ def main() -> int:
                 "report.verified_final_answer_visible",
                 "report.stage2_role_sections",
                 "report.stage4_single_locked_detail",
+                "report.technical_failure_notice",
                 "report.renamed_four_stages",
                 "authority.finalize_transaction_rollback",
             ],

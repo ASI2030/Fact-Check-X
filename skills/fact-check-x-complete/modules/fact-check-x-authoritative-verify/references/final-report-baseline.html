@@ -22,8 +22,11 @@ h2{color:#1e40af;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6px
 .kpi span,.kpi small{display:block;font-size:11px;color:#64748b}
 .kpi b{display:block;font-size:25px;line-height:1.2;margin:3px 0}
 .kpi-coverage b{color:#1e40af} .kpi-accuracy b{color:#059669} .kpi-hallucination b{color:#dc2626}
-.fabricated-alert{margin-top:9px;padding:9px 10px;border:2px solid #dc2626;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:13px;font-weight:650}
-.fabricated-clear{margin-top:9px;padding:7px 9px;border-radius:7px;background:#f0fdf4;color:#15803d;font-size:12px}
+.suspected-alert{margin-top:9px;padding:9px 10px;border:2px solid #dc2626;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:13px;font-weight:650}
+.suspected-clear{margin-top:9px;padding:7px 9px;border-radius:7px;background:#f0fdf4;color:#15803d;font-size:12px}
+.risk-notice{margin:18px 0;padding:16px 18px;border:2px solid #dc2626;border-radius:8px;background:#fff7ed;color:#7f1d1d}
+.risk-notice h2{margin:0 0 8px;color:#991b1b} .risk-notice p{margin:0 0 8px} .risk-notice ul{margin:8px 0 10px;padding-left:22px}
+.moved-risk{margin:0 0 18px;padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff7f7} .moved-risk h4{margin:0 0 4px;color:#991b1b}
 .m2{font-size:13px;margin:8px 0}
 .mtab{width:100%;font-size:12.5px;border-collapse:collapse;margin-top:6px}
 .mtab td{padding:3px 4px;border-bottom:1px solid #f3f4f6}
@@ -172,15 +175,15 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
 
 
 <div class="hero">
-  <p style="margin:0 0 6px"><b>结论：</b>共核验 11 个知识点；直接准确 16 项，间接准确 1 项，结果巧合 0 项，严重误导 0 项，凭空编造 0 项，证据不足 0 项。</p>
+  <p style="margin:0 0 6px"><b>结论：</b>共核验 11 个知识点；直接准确 16 项，间接准确 1 项，结果巧合 0 项，严重误导 0 项，疑似误导 0 项。</p>
   <div class="mwrap">
 
     <div class="mcard">
       <div class="mtitle" style="color:#0891b2">DeepSeek <span class="muted small">当前承载智能体完成语义分析</span></div>
       <div class="kpi-grid">
-        <div class="kpi kpi-coverage"><span class="tt" title="分母：合法直接答案知识点 N。答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少。只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖">覆盖率</span><b>50%</b><small class="tt" title="分母：合法直接答案知识点 N。该家没答到的合法直接答案知识点占比。与覆盖率互补，相加=100%">遗漏率 50%</small></div>
-        <div class="kpi kpi-accuracy"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确。证据不足项单独展示，不按错误计分">准确率</span><b>100%</b><small>有据且正确</small></div>
-        <div class="kpi kpi-hallucination"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）。与准确率互补">幻觉率</span><b>0%</b><small>巧合 + 误导</small></div>
+        <div class="kpi kpi-coverage"><span class="tt" title="分母：合法直接答案知识点 N。答案合并去重后，先剔除「补充参考（相关但非用户所问）」，再剔除「所有平台都未覆盖或证据不足」的知识点，剩下的就是合法直接答案知识点；该家答到了多少即计入覆盖。只衡量「直接回答用户所问的点答没答到」；答到但证据不足仍算覆盖，证据是否充分由「证据充分率」单独体现；补充参考答得再多都不抬覆盖">覆盖率</span><b>50%</b><small class="tt" title="分母：合法直接答案知识点 N。该家没答到的合法直接答案知识点占比。与覆盖率互补，相加=100%">遗漏率 50%</small></div>
+        <div class="kpi kpi-accuracy"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确。疑似误导作为风险单列，不冒充已证实错误，也不进入准确率分母">准确率</span><b>100%</b><small>有据且正确</small></div>
+        <div class="kpi kpi-hallucination"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（疑似误导另列风险）。与准确率互补">幻觉率</span><b>0%</b><small>巧合 + 误导</small></div>
       </div>
 
       <div class="m2">证据状态：<span class="tt" title="分母：该家直接答案覆盖数。已有足够权威证据完成裁决的覆盖项比例。低于100%表示仍有证据边界，不代表对应回答错误">充分</span> <b>100%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。该主张有经原文核对、确实支持它的所附官方材料。可由局部角标或无角标时的回答级参考资料语义匹配建立">官方支持</span> <b>80%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。该主张原答案片段内存在与它相连的可验证脚标。只衡量逐句引用完整性；低于事实准确率不代表答案内容错误">局部角标</span> <b>100%</b></div>
@@ -190,15 +193,15 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
         <tr class="hl"><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。声明无引用依据或与所附材料不符，但经官方源验证后与官方依据巧合一致。结果正确但缺少可核验的引用支持，故不计入准确率">· 巧合式幻觉（无引用依据但与官方依据巧合一致）</td><td>0%</td></tr>
         <tr class="hl"><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。经官方源验证，声明的结果是错误的。最危险的一类：用户照做会被误导">· 误导式幻觉（结果错）</td><td>0%</td></tr>
       </table>
-      <div class="fabricated-clear">✓ 未检出编造</div>
-      <div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>1</b> 项 · 幻觉式提醒 <b>0</b> 项</div>
+      <div class="suspected-clear">✓ 未检出疑似误导</div>
+      <div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>1</b> 项 · 严重误导/幻觉 <b>0</b> 项 · 疑似误导 <b>0</b> 项</div>
     </div>
     <div class="mcard">
       <div class="mtitle" style="color:#0ea5e9">腾讯元宝 <span class="muted small">当前承载智能体完成语义分析</span></div>
       <div class="kpi-grid">
-        <div class="kpi kpi-coverage"><span class="tt" title="分母：合法直接答案知识点 N。答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少。只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖">覆盖率</span><b>100%</b><small class="tt" title="分母：合法直接答案知识点 N。该家没答到的合法直接答案知识点占比。与覆盖率互补，相加=100%">遗漏率 0%</small></div>
-        <div class="kpi kpi-accuracy"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确。证据不足项单独展示，不按错误计分">准确率</span><b>100%</b><small>有据且正确</small></div>
-        <div class="kpi kpi-hallucination"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）。与准确率互补">幻觉率</span><b>0%</b><small>巧合 + 误导</small></div>
+        <div class="kpi kpi-coverage"><span class="tt" title="分母：合法直接答案知识点 N。答案合并去重后，先剔除「补充参考（相关但非用户所问）」，再剔除「所有平台都未覆盖或证据不足」的知识点，剩下的就是合法直接答案知识点；该家答到了多少即计入覆盖。只衡量「直接回答用户所问的点答没答到」；答到但证据不足仍算覆盖，证据是否充分由「证据充分率」单独体现；补充参考答得再多都不抬覆盖">覆盖率</span><b>100%</b><small class="tt" title="分母：合法直接答案知识点 N。该家没答到的合法直接答案知识点占比。与覆盖率互补，相加=100%">遗漏率 0%</small></div>
+        <div class="kpi kpi-accuracy"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确。疑似误导作为风险单列，不冒充已证实错误，也不进入准确率分母">准确率</span><b>100%</b><small>有据且正确</small></div>
+        <div class="kpi kpi-hallucination"><span class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（疑似误导另列风险）。与准确率互补">幻觉率</span><b>0%</b><small>巧合 + 误导</small></div>
       </div>
 
       <div class="m2">证据状态：<span class="tt" title="分母：该家直接答案覆盖数。已有足够权威证据完成裁决的覆盖项比例。低于100%表示仍有证据边界，不代表对应回答错误">充分</span> <b>100%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。该主张有经原文核对、确实支持它的所附官方材料。可由局部角标或无角标时的回答级参考资料语义匹配建立">官方支持</span> <b>100%</b> ｜ <span class="tt" title="分母：该家直接答案覆盖数。该主张原答案片段内存在与它相连的可验证脚标。只衡量逐句引用完整性；低于事实准确率不代表答案内容错误">局部角标</span> <b>20%</b></div>
@@ -208,11 +211,11 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
         <tr class="hl"><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。声明无引用依据或与所附材料不符，但经官方源验证后与官方依据巧合一致。结果正确但缺少可核验的引用支持，故不计入准确率">· 巧合式幻觉（无引用依据但与官方依据巧合一致）</td><td>0%</td></tr>
         <tr class="hl"><td class="tt" title="分母：已有足够证据裁决的直接答案覆盖数。经官方源验证，声明的结果是错误的。最危险的一类：用户照做会被误导">· 误导式幻觉（结果错）</td><td>0%</td></tr>
       </table>
-      <div class="fabricated-clear">✓ 未检出编造</div>
-      <div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>1</b> 项 · 幻觉式提醒 <b>0</b> 项</div>
+      <div class="suspected-clear">✓ 未检出疑似误导</div>
+      <div style="margin-top:5px;padding:5px 8px;border-radius:5px;font-size:12px;background:#f1f5f9;color:#475569">📎 补充参考（不计覆盖）：有价值正确 <b>1</b> 项 · 严重误导/幻觉 <b>0</b> 项 · 疑似误导 <b>0</b> 项</div>
     </div>
   </div>
-  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率衡量答没答，准确率衡量已有足够证据裁决的回答是否正确</b>。①覆盖率+遗漏率=100%；②准确率+幻觉率=100%，证据不足项不进入二者分母；③证据充分率单独展示当前可裁决覆盖程度；④官方证据支持率与局部角标覆盖率分开呈现；⑤补充参考在同一核验明细中独立分区，不混入直接答案指标。
+  <p class="small muted" style="margin:6px 0 0">指标口径：<b>覆盖率衡量答没答，准确率衡量已有足够证据裁决的回答是否正确</b>。①覆盖率+遗漏率=100%，答到即算覆盖；②准确率+幻觉率=100%，疑似误导单列风险且不冒充已证实错误；③所有平台都未覆盖或官方无法查证的知识点整体退出覆盖率与准确率分母；④证据充分率单独展示当前可裁决覆盖程度；⑤官方证据支持率与局部角标覆盖率分开呈现；⑥补充参考在同一核验明细中独立分区，不混入直接答案指标。
   各指标含义鼠标悬停可见，完整口径见 <a href="#metricdoc">④ 指标口径速查</a>。</p>
 </div>
 
@@ -276,12 +279,12 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
 <h2 id="metricdoc">④ 指标口径速查</h2>
 <table class="doc">
   <thead><tr><th style="width:120px">指标</th><th style="width:110px">分母</th><th>定义</th><th style="width:30%">怎么读</th></tr></thead>
-  <tbody><tr><td><b>覆盖率</b></td><td>合法直接答案知识点 N</td><td>答案合并去重后，先剔除「补充参考（相关但非用户所问）」、再剔除「编造（官方查无）」的合法直接答案知识点，该家答到了多少</td><td class="muted">只衡量「直接回答用户所问的点答没答到」；补充参考答得再多、编得再多都不抬覆盖</td></tr><tr><td><b>遗漏率</b></td><td>合法直接答案知识点 N</td><td>该家没答到的合法直接答案知识点占比</td><td class="muted">与覆盖率互补，相加=100%</td></tr><tr><td><b>准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确</td><td class="muted">证据不足项单独展示，不按错误计分</td></tr><tr><td><b>直接准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明与其所附官方原站材料或官方来源一致；含算术级显然推导（如正文&#x27;2000上增加40%&#x27;→答案&#x27;2800&#x27;）</td><td class="muted">最高可信级：主张由官方来源直接支持</td></tr><tr><td><b>间接准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明忠实于其他非官方材料，且事后经官方源独立验证正确</td><td class="muted">内容正确，但答案自身所附出处不是官方来源</td></tr><tr><td><b>证据充分率</b></td><td>该家直接答案覆盖数</td><td>已有足够权威证据完成裁决的覆盖项比例</td><td class="muted">低于100%表示仍有证据边界，不代表对应回答错误</td></tr><tr><td><b>官方证据支持率</b></td><td>该家直接答案覆盖数</td><td>该主张有经原文核对、确实支持它的所附官方材料</td><td class="muted">可由局部角标或无角标时的回答级参考资料语义匹配建立</td></tr><tr><td><b>局部角标覆盖率</b></td><td>该家直接答案覆盖数</td><td>该主张原答案片段内存在与它相连的可验证脚标</td><td class="muted">只衡量逐句引用完整性；低于事实准确率不代表答案内容错误</td></tr><tr><td><b>幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（编造已移出，独立成轴）</td><td class="muted">与准确率互补</td></tr><tr><td><b>巧合式幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明无引用依据或与所附材料不符，但经官方源验证后与官方依据巧合一致</td><td class="muted">结果正确但缺少可核验的引用支持，故不计入准确率</td></tr><tr><td><b>误导式幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>经官方源验证，声明的结果是错误的</td><td class="muted">最危险的一类：用户照做会被误导</td></tr></tbody>
+  <tbody><tr><td><b>覆盖率</b></td><td>合法直接答案知识点 N</td><td>答案合并去重后，先剔除「补充参考（相关但非用户所问）」，再剔除「所有平台都未覆盖或证据不足」的知识点，剩下的就是合法直接答案知识点；该家答到了多少即计入覆盖</td><td class="muted">只衡量「直接回答用户所问的点答没答到」；答到但证据不足仍算覆盖，证据是否充分由「证据充分率」单独体现；补充参考答得再多都不抬覆盖</td></tr><tr><td><b>遗漏率</b></td><td>合法直接答案知识点 N</td><td>该家没答到的合法直接答案知识点占比</td><td class="muted">与覆盖率互补，相加=100%</td></tr><tr><td><b>准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>可裁决答案里「有据且正确」的比例 = 直接准确 + 间接准确</td><td class="muted">疑似误导作为风险单列，不冒充已证实错误，也不进入准确率分母</td></tr><tr><td><b>直接准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明与其所附官方原站材料或官方来源一致；含算术级显然推导（如正文&#x27;2000上增加40%&#x27;→答案&#x27;2800&#x27;）</td><td class="muted">最高可信级：主张由官方来源直接支持</td></tr><tr><td><b>间接准确率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明忠实于其他非官方材料，且事后经官方源独立验证正确</td><td class="muted">内容正确，但答案自身所附出处不是官方来源</td></tr><tr><td><b>证据充分率</b></td><td>该家直接答案覆盖数</td><td>已有足够权威证据完成裁决的覆盖项比例</td><td class="muted">低于100%表示仍有证据边界，不代表对应回答错误</td></tr><tr><td><b>官方证据支持率</b></td><td>该家直接答案覆盖数</td><td>该主张有经原文核对、确实支持它的所附官方材料</td><td class="muted">可由局部角标或无角标时的回答级参考资料语义匹配建立</td></tr><tr><td><b>局部角标覆盖率</b></td><td>该家直接答案覆盖数</td><td>该主张原答案片段内存在与它相连的可验证脚标</td><td class="muted">只衡量逐句引用完整性；低于事实准确率不代表答案内容错误</td></tr><tr><td><b>幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>可裁决答案里非「有据且正确」的比例 = 巧合式 + 误导式（疑似误导另列风险）</td><td class="muted">与准确率互补</td></tr><tr><td><b>巧合式幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>声明无引用依据或与所附材料不符，但经官方源验证后与官方依据巧合一致</td><td class="muted">结果正确但缺少可核验的引用支持，故不计入准确率</td></tr><tr><td><b>误导式幻觉率</b></td><td>已有足够证据裁决的直接答案覆盖数</td><td>经官方源验证，声明的结果是错误的</td><td class="muted">最危险的一类：用户照做会被误导</td></tr></tbody>
 </table>
 <p class="muted small" style="margin-top:10px">知识点判定类别（②中的彩色标签）：外显使用描述性中性文案，标准分类可在鼠标悬停标签时查看。</p>
 <table class="doc">
   <thead><tr><th style="width:150px">外显标签</th><th style="width:96px">标准分类</th><th>判定条件</th></tr></thead>
-  <tbody><tr><td><span class="catpill" style="background:#059669">✅ 直接正确</span></td><td class="muted small">直接准确</td><td>与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定</td></tr><tr><td><span class="catpill" style="background:#10b981">☑ 间接正确</span></td><td class="muted small">间接准确</td><td>忠实于其他非官方材料，且经官方源独立验证通过</td></tr><tr><td><span class="catpill" style="background:#f59e0b">🎲 无引用依据，但与官方依据巧合一致</span></td><td class="muted small">巧合式幻觉</td><td>无引用依据或与所附材料不符，但经官方核验后与官方依据巧合一致</td></tr><tr><td><span class="catpill" style="background:#dc2626">⚠ 幻觉：严重误导</span></td><td class="muted small">误导式幻觉</td><td>经官方源验证，结果是错误的（用户照做会被误导）</td></tr><tr><td><span class="catpill" style="background:#b91c1c">✖ 凭空编造·官方查无</span></td><td class="muted small">编造式幻觉</td><td>在官方原站和官方来源中均查不到、无法核验 = 凭空编造</td></tr><tr><td><span class="catpill" style="background:#64748b">? 证据不足</span></td><td class="muted small">证据不足</td><td>当前权威证据不足，不能据此判定主张真假；该项不进入准确率分母</td></tr><tr><td><span class="catpill" style="background:#9ca3af">· 未覆盖</span></td><td class="muted small">答案遗漏</td><td>该家没有答到这个知识点（状态指示，非判定）</td></tr></tbody>
+  <tbody><tr><td><span class="catpill" style="background:#059669">✅ 直接正确</span></td><td class="muted small">直接准确</td><td>与所附官方原站材料或官方来源一致（含算术级显然推导），可直接判定</td></tr><tr><td><span class="catpill" style="background:#10b981">☑ 间接正确</span></td><td class="muted small">间接准确</td><td>忠实于其他非官方材料，且经官方源独立验证通过</td></tr><tr><td><span class="catpill" style="background:#f59e0b">🎲 无引用依据，但与官方依据巧合一致</span></td><td class="muted small">巧合式幻觉</td><td>无引用依据或与所附材料不符，但经官方核验后与官方依据巧合一致</td></tr><tr><td><span class="catpill" style="background:#dc2626">⚠ 幻觉：严重误导</span></td><td class="muted small">误导式幻觉</td><td>经官方源验证，结果是错误的（用户照做会被误导）</td></tr><tr><td><span class="catpill" style="background:#b91c1c">✖ 疑似误导</span></td><td class="muted small">疑似误导</td><td>官方无法查证，有可能过期、编造或信息源误导；该项移入补充参考风险区，不写入确定答案</td></tr><tr><td><span class="catpill" style="background:#9ca3af">· 未覆盖</span></td><td class="muted small">答案遗漏</td><td>该家没有答到这个知识点（状态指示，非判定）</td></tr></tbody>
 </table>
 
 
@@ -291,13 +294,13 @@ table.meta td:first-child{width:170px;color:#6b7280;font-weight:600}
   <tr><td>评测报告生成时间</td><td>2026-09-01 00:56</td></tr>
   <tr><td>原始答案抓取数据</td><td>legacy-result.json（文件时间 2026-09-01 00:56）· 答案与参考文献已在 ④ 全文存证</td></tr>
   <tr><td>分析载体</td><td>当前承载技能的智能体（知识点拆解 / 忠实性 / 官方验证判定）</td></tr>
-  <tr><td>自动裁决状态</td><td>11 个知识点 / 证据不足 0 项；证据不足项单列且不按错误计分</td></tr>
+  <tr><td>自动裁决状态</td><td>11 个知识点 / 疑似误导 0 项；底层原始裁决保留用于追溯</td></tr>
   <tr><td>语义分析执行方式</td><td>由当前承载技能的智能体直接完成知识点拆解与证据裁决；脚本不调用任何外部模型接口</td></tr>
   <tr><td>真相源构成</td><td>经严格验收的深知晓官方材料、各平台已附的 gov.cn 材料，或必要时逐知识点调用可信搜索所得官方材料；同一知识点的所有参与方共用同一份验证证据</td></tr>
   <tr><td>可直接判定的官方来源</td><td>官方原站，或由深知可信搜索返回的 dknowc / DT_DATA 官方来源；后者统一标为“官方来源”，可注明“由深知可信搜索收录”</td></tr>
-  <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；可信搜索未取得足够材料时统一标记“证据不足”，并从确定答案和准确率分母中排除</td></tr><tr><td>第三步锁定数据摘要</td><td><code>0e02c17828e66317ca35c243d79ddddf657db4d700f16f68958f24531452c91c</code>；第四步仅展示该锁定数据并计算平台指标，不改变权威结论</td></tr></tbody></table>
+  <tr><td>局限性声明</td><td>网页回答与语义分析均为单次执行结果；官方无法查证的平台主张统一标记“疑似误导”，移入补充参考风险区且不写入确定答案</td></tr><tr><td>第三步锁定数据摘要</td><td><code>0e02c17828e66317ca35c243d79ddddf657db4d700f16f68958f24531452c91c</code>；第四步仅展示该锁定数据并计算平台指标，不改变权威结论</td></tr></tbody></table>
 
 
 <p class="muted small" style="margin-top:36px;border-top:1px solid #eee;padding-top:12px">
-Fact-Check-X · 评测口径：覆盖率衡量平台是否回答直接知识点；准确率与幻觉率仅以已有足够证据裁决的覆盖项为分母；证据不足项单独展示，不按正确或错误计分；全判定可回溯至平台原答案、所附依据和权威证据。</p>
+Fact-Check-X · 评测口径：覆盖率衡量平台是否回答直接知识点，答到即算覆盖；准确率与幻觉率仅以已有足够证据裁决的覆盖项为分母；所有平台都未覆盖或官方无法查证的知识点整体不计入分母；疑似误导移入补充参考风险区，不写入确定答案；全判定可回溯至平台原答案、所附依据和权威证据。</p>
 </main></body></html>

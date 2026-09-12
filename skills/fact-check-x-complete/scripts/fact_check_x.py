@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import json
 import os
 import re
@@ -74,6 +75,12 @@ REPORT_NAV_STYLE = """
 .fcx-report-nav a:hover{border-color:#285a9f;color:#173f74}
 .fcx-report-nav span{border:1px solid #187454;background:#e8f5f0;color:#125b42;font-weight:700}
 @media(max-width:760px){.fcx-report-nav{padding:9px 12px;overflow-x:auto;flex-wrap:nowrap}.fcx-report-nav a,.fcx-report-nav span{white-space:nowrap}}
+.fcx-run-notice{max-width:1440px;margin:0 auto 18px;padding:12px 24px;border:1px solid #f0b429;border-left:5px solid #f0b429;border-radius:6px;background:#fffaf0;color:#6b4e07;font-size:13px;line-height:1.6}
+.fcx-run-notice strong{display:block;margin-bottom:6px;font-size:14px;color:#8a5a00}
+.fcx-run-notice ul{margin:0 0 6px;padding-left:20px}
+.fcx-run-notice li{margin:2px 0}
+.fcx-run-notice .fcx-run-notice-tail{color:#7a6320}
+@media(max-width:760px){.fcx-run-notice{padding:11px 12px}}
 """.strip()
 INTERACTION_GATE_FILE = "stage-checkpoints.json"
 INTERACTION_STAGE_ORDER = ("capture", "comparison", "authority", "evaluation")
@@ -501,7 +508,64 @@ def portable_file_bytes(path: Path, run_dir: Path) -> bytes:
     return path.read_bytes()
 
 
-def normalize_report_navigation(content: bytes, current_report: str) -> bytes:
+TECHNICAL_ACQUISITION_STATES = {"blocked", "failed"}
+
+
+def collect_technical_notices(run_dir: Path) -> list[str]:
+    """收集「本该执行但因技术原因没跑成、流程仍继续」的动作。
+
+    这些不是内容层面的证据不足，而是采集或调用本身没完成；判定口径不因此改变，
+    但必须在每一步报告的显著位置统一提示，供阅读者判断证据完整性。
+    """
+    notices: list[str] = []
+    results_path = run_dir / "capture" / "results.json"
+    if results_path.is_file():
+        incomplete: list[str] = []
+        for platform in load_json(results_path).get("platforms") or []:
+            hits = 0
+            for reference in platform.get("references") or []:
+                content_state = str(reference.get("contentAcquisition") or "")
+                source_state = str(reference.get("sourceAcquisitionStatus") or "")
+                if (
+                    content_state in TECHNICAL_ACQUISITION_STATES
+                    or source_state in TECHNICAL_ACQUISITION_STATES
+                ):
+                    hits += 1
+            if hits:
+                label = str(platform.get("label") or platform.get("platform") or "")
+                incomplete.append(f"{label} {hits} 条")
+        if incomplete:
+            notices.append(
+                "来源正文因访问受阻或采集失败未取得：" + "、".join(incomplete)
+                + "。相关主张只依据平台原文和已取得的证据判定。"
+            )
+    recovery_path = run_dir / "capture" / "capture-recovery.json"
+    if recovery_path.is_file():
+        recovery = load_json(recovery_path)
+        failed_platforms = [str(item) for item in (recovery.get("failedPlatforms") or [])]
+        status = str(recovery.get("status") or "")
+        if failed_platforms:
+            notices.append(
+                "采集恢复流程被触发，涉及：" + "、".join(failed_platforms)
+                + f"（状态 {status or '未知'}）。"
+            )
+    return notices
+
+
+def render_run_notices(notices) -> str:
+    items = "".join(f"<li>{html.escape(str(item))}</li>" for item in notices)
+    if not items:
+        return ""
+    return (
+        '<div class="fcx-run-notice" data-fcx-run-notice="1" role="note">'
+        "<strong>本次运行存在未完成的技术动作</strong>"
+        f"<ul>{items}</ul>"
+        '<span class="fcx-run-notice-tail">判定口径不因此改变；'
+        "以上项目可能影响相关结论的证据完整性，受影响且无法核验的主张按“疑似误导”呈现。</span></div>"
+    )
+
+
+def normalize_report_navigation(content: bytes, current_report: str, notices=()) -> bytes:
     html = content.decode("utf-8")
     html = html.replace('href="capture/report.html"', 'href="01-capture-report.html"')
     html = html.replace('href="report.html"', 'href="04-final-report.html"')
@@ -522,6 +586,7 @@ def normalize_report_navigation(content: bytes, current_report: str) -> bytes:
         'aria-label="事实核验四阶段报告导航">'
         + "".join(items)
         + "</nav>"
+        + render_run_notices(notices)
     )
     if REPORT_NAV_STYLE not in html:
         if "</style>" in html:
@@ -535,8 +600,10 @@ def normalize_report_navigation(content: bytes, current_report: str) -> bytes:
     return html.encode("utf-8")
 
 
-def normalize_report_file(path: Path) -> None:
-    path.write_bytes(normalize_report_navigation(path.read_bytes(), path.name))
+def normalize_report_file(path: Path, notices=()) -> None:
+    path.write_bytes(
+        normalize_report_navigation(path.read_bytes(), path.name, notices)
+    )
 
 
 def build_portable_report_package(run_dir: Path) -> dict:
@@ -703,7 +770,7 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     sync_capture_evidence(run_dir, results_path, results)
     capture_deliverable = run_dir / "01-capture-report.html"
     shutil.copyfile(capture_report["report"], capture_deliverable)
-    normalize_report_file(capture_deliverable)
+    normalize_report_file(capture_deliverable, collect_technical_notices(run_dir))
     task = run_dir / "comparison-task.json"
     result = run([sys.executable, str(skills["comparison"] / "scripts" / "knowledge_compare.py"), "--input", str(results_path), "--task-output", str(task)])
     initialize_interaction_gate(run_dir, args.execution_mode)
@@ -770,7 +837,7 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
     run([sys.executable, str(skills["comparison"] / "scripts" / "render_comparison.py"), "--results", str(results_path), "--comparison", str(comparison), "--output", str(comparison_report)])
     comparison_deliverable = run_dir / "02-comparison-report.html"
     shutil.copyfile(comparison_report, comparison_deliverable)
-    normalize_report_file(comparison_deliverable)
+    normalize_report_file(comparison_deliverable, collect_technical_notices(run_dir))
     comparison_data = load_json(comparison)
     comparison_gate = write_comparison_provenance(run_dir, results_path, analysis, comparison)
     result.update({
@@ -1077,7 +1144,7 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
             "--output",
             str(authority_report),
         ])
-        normalize_report_file(authority_report)
+        normalize_report_file(authority_report, collect_technical_notices(run_dir))
         dump_json(authority_gate_path, {
             **authority_gate,
             "status": "finalized",
@@ -1129,6 +1196,7 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
     request_count = 0
     dknow_exempt_count = 0
     gov_exempt_count = 0
+    downgraded_anchor_ids: list[str] = []
     authority_verdicts: dict[tuple[str, str], str] = {}
     for point in comparison.get("knowledgePoints") or []:
         path = results_dir / f"{point['id']}.json"
@@ -1143,10 +1211,24 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             "gov_cn_reference": "gov_exempt",
         }.get(exempt_policy, "trusted_search")
         expected_count = 0 if exempt_policy else 1
-        if (authority.get("searchMode"), authority.get("requestCount")) != (expected_mode, expected_count):
+        actual_mode = str(authority.get("searchMode") or "")
+        actual_count = int(authority.get("requestCount") or 0)
+        # 非对称门禁：比较阶段依据引用池认定「免搜索」，核验阶段可能独立判定该锚点
+        # 撑不住主张而改走可信搜索。多搜一次是保守方向，放行；反过来把本应搜索的
+        # 知识点降级成免搜索属于洗白，必须拦住。
+        if actual_mode == expected_mode:
+            if actual_count != expected_count:
+                raise PipelineError(
+                    f"{point['id']} 权威证据模式为 {actual_mode}，"
+                    f"请求数应为 {expected_count}，实际为 {actual_count}"
+                )
+        elif exempt_policy and actual_mode == "trusted_search" and actual_count >= 1:
+            downgraded_anchor_ids.append(str(point["id"]))
+        else:
             raise PipelineError(
                 f"{point['id']} 权威证据模式应为 {expected_mode}，"
-                f"请求数应为 {expected_count}"
+                f"请求数应为 {expected_count}，"
+                f"实际为 {actual_mode or '未知'}／{actual_count}"
             )
         request_count += int(authority.get("requestCount") or 0)
         dknow_exempt_count += int(authority.get("searchMode") == "dknow_exempt")
@@ -1253,6 +1335,7 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
         "trustedSearchRequestCount": request_count,
         "dknowExemptCount": dknow_exempt_count,
         "govExemptCount": gov_exempt_count,
+        "anchorDowngrades": downgraded_anchor_ids,
         "officialExemptCount": dknow_exempt_count + gov_exempt_count,
         "evidenceGaps": evidence_gaps,
         "evidenceGapCount": len(evidence_gaps),
@@ -1355,7 +1438,7 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
         str(run_dir / "report-input"),
     ])
     shutil.copyfile(report_path, final_deliverable)
-    normalize_report_file(final_deliverable)
+    normalize_report_file(final_deliverable, collect_technical_notices(run_dir))
     checkpoint = record_stage_checkpoint(
         run_dir,
         "evaluation",

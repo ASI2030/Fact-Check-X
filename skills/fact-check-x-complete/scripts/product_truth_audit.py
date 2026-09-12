@@ -783,13 +783,21 @@ def main() -> int:
                         failures.append(
                             f"{point_id}:authority_evidence_{field}_not_in_authority_report"
                         )
-        if verification.get("dknowExemptCount") != len(dknow_anchored_ids):
+        downgraded_ids = {
+            str(item) for item in (verification.get("anchorDowngrades") or [])
+        }
+        if downgraded_ids - {str(item) for item in anchored_ids}:
+            failures.append("anchor_downgrade_not_anchored")
+        exempt_dknow = {str(item) for item in dknow_anchored_ids} - downgraded_ids
+        exempt_gov = {str(item) for item in gov_anchored_ids} - downgraded_ids
+        exempt_all = {str(item) for item in anchored_ids} - downgraded_ids
+        if verification.get("dknowExemptCount") != len(exempt_dknow):
             failures.append("dknow_exempt_count_mismatch")
-        if verification.get("govExemptCount") != len(gov_anchored_ids):
+        if verification.get("govExemptCount") != len(exempt_gov):
             failures.append("gov_exempt_count_mismatch")
-        if verification.get("officialExemptCount") != len(anchored_ids):
+        if verification.get("officialExemptCount") != len(exempt_all):
             failures.append("official_exempt_count_mismatch")
-        expected_searches = len(points) - len(anchored_ids)
+        expected_searches = len(points) - len(exempt_all)
         if verification.get("trustedSearchRequestCount") != expected_searches:
             failures.append("trusted_search_request_count_mismatch")
         if verification.get("status") != "completed":

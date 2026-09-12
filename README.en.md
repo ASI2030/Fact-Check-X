@@ -5,7 +5,7 @@
 Fact-check complete answers and citations from one or more AI services: capture the originals without loss, compare atomic claims, verify authoritative evidence point by point, and evaluate platform performance. The final answer is one deliverable in a fully traceable evidence chain.
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.12" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.13" alt="Fact-Check-X multi-platform fact checking: complete capture, claim comparison, authoritative verification and answer generation, platform evaluation" width="900">
 </p>
 
 ## Quick start
@@ -49,7 +49,7 @@ Platforms: DeepSeek, Qwen and Doubao.
 | `doubao` | Doubao | Complete answer, citations and page evidence |
 | `yuanbao` | Tencent Yuanbao | Complete answer, citations, opened source bodies and page evidence |
 | `deepseek` | DeepSeek | Complete answer, citations, opened source bodies and page evidence |
-| `qianwen` | Qwen | Complete answer, citations and page evidence |
+| `qianwen` | Qwen | Complete answer, citations, opened source bodies and page evidence |
 
 The selected set is dynamic. `N=1` runs a complete single-platform verification. `N≥2` adds agreement, conflict and citation comparison. Platforms not listed here are not part of the current support commitment.
 
@@ -58,7 +58,9 @@ The selected set is dynamic. `N=1` runs a complete single-platform verification.
 1. **Answer collection**: complete answers, references, screenshots and HTML evidence.
 2. **Answer aggregation (unverified)**: atomic facts, claims, agreements, conflicts and source faithfulness, with direct answers and supplemental references separated in both overview and per-point detail sections.
 3. **Authoritatively verified final answer**: direct answers supported by evidence, evidence boundaries, and a compact source index. Supplemental findings are stored separately and never mixed into the final answer.
-4. **Answer performance report**: reads the locked stage-three result without recomputation, uses one per-point verification area with separate direct-answer and supplemental-reference subsections, then shows platform verdicts, accuracy, completeness, source quality and differences.
+4. **Answer performance report**: reads the locked stage-three result without recomputation, separates direct answers from supplemental references, moves claims that cannot be verified from official evidence into a prominent “suspected misleading” risk area, folds long evidence by default, and then shows platform verdicts, accuracy, completeness, source quality and differences.
+
+Coverage measures whether a platform answered a valid direct knowledge point; an answered claim counts as covered, while evidence sufficiency is measured separately. A point leaves both the coverage and accuracy denominators only when every selected platform either omitted it or lacks enough evidence for it. Raw `fabricated` and `unverified` states remain in structured data for audit, but the user-facing report combines them as “suspected misleading” and keeps them out of deterministic answers. If a required retrieval action fails technically yet the workflow continues, every stage report displays that failure prominently and the affected claim remains in the same risk category.
 
 Every run uses machine-enforced acknowledgement tokens and artifact hashes between stages. Each report must be opened and presented before the user chooses whether to continue, revise, or stop; there is no mode that bypasses these confirmations.
 
@@ -175,7 +177,7 @@ The installer rejects traversal paths, symlinks, runtime state and multi-root ar
 
 ## Trusted Search Key
 
-Only knowledge points whose captured official material is insufficient require Trusted Search. Never paste a Key into chat, an issue, a report or shell history.
+Only knowledge points whose captured official material is insufficient require Trusted Search. Never paste a Key into chat, an issue, a report or shell history. A successful search with no adequate evidence is retained internally as `insufficient_evidence` and displayed to users as a suspected-misleading supplemental risk, not as a deterministic conclusion.
 
 ### Getting a Key
 
@@ -346,8 +348,8 @@ See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 | One platform fails | Repair or recapture it; the capture gate must stay closed |
 | `capture-recovery.json` appears | Use Computer Use on the same page or stop at original-answer capture |
 | `configuration_required` | Run the returned configuration command in the foreground |
-| Trusted Search times out | Preserve the Key and retry up to three times; if it still fails, stop with a technical error |
-| `insufficient_evidence` | Keep the evidence boundary explicit, exclude it from deterministic answers and accuracy denominators, and continue to the fourth report |
+| Trusted Search times out | Preserve the Key and retry up to three times; normally stop after the final failure. If the workflow still continues, show the technical failure prominently in every report and keep the affected claim in the suspected-misleading risk category |
+| `insufficient_evidence` | Retain the raw audit state, display it as suspected misleading in the supplemental risk area, exclude it from deterministic answers and accuracy denominators, and continue to the fourth report |
 | Local report link cannot be shared | Upload the report package or individual report files |
 
 ## Validation

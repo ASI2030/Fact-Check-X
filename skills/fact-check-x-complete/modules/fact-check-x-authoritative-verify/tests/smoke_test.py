@@ -710,8 +710,39 @@ def main() -> int:
         fabricated_report = out / "fabricated-report.html"
         run([sys.executable, str(ROOT / "scripts" / "render_final_report.py"), "--results", str(results_path), "--comparison", str(comparison_path), "--verification", str(fabricated_path), "--output", str(fabricated_report)])
         fabricated_html = fabricated_report.read_text(encoding="utf-8")
-        assert 'class="fabricated-alert"' in fabricated_html
-        assert "高风险告警：检出编造" in fabricated_html
+        assert 'class="suspected-alert"' in fabricated_html
+        assert "补充参考风险提醒" in fabricated_html
+        assert "从直接答案移入的疑似误导" in fabricated_html
+        assert "✖ 疑似误导" in fabricated_html
+        assert "凭空编造·官方查无" not in fabricated_html
+        assert 'id="supplemental-reference"' in fabricated_html
+
+        mixed_verification = json.loads(json.dumps(verification, ensure_ascii=False))
+        mixed_verdict = mixed_verification["knowledgePoints"][0]["authority"]["verdicts"]["doubao"]
+        mixed_verdict["category"] = "unverified"
+        mixed_verdict["verdict"] = "insufficient"
+        mixed_verdict["evidenceIds"] = []
+        mixed_verdict["reason"] = "官方来源无法支持该平台主张"
+        mixed_path = out / "mixed-verification.json"
+        mixed_path.write_text(json.dumps(mixed_verification, ensure_ascii=False), encoding="utf-8")
+        mixed_report = out / "mixed-report.html"
+        mixed_intermediate = out / "mixed-report-input"
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "render_final_report.py"),
+            "--results", str(results_path),
+            "--comparison", str(comparison_path),
+            "--verification", str(mixed_path),
+            "--output", str(mixed_report),
+            "--intermediate-dir", str(mixed_intermediate),
+        ])
+        mixed_html = mixed_report.read_text(encoding="utf-8")
+        mixed_analysis = json.loads((mixed_intermediate / "legacy-analysis.json").read_text(encoding="utf-8"))
+        assert mixed_analysis["platform_metrics"]["doubao"]["覆盖率"] == 1
+        assert mixed_analysis["platform_metrics"]["doubao"]["疑似误导数"] == 1
+        assert "豆包</b> · K1" in mixed_html
+        assert "官方无法查证" in mixed_html
+        assert "证据不足</span>" not in mixed_html
 
         evidence_mapping_verification = json.loads(json.dumps(verification, ensure_ascii=False))
         mapped_authority = evidence_mapping_verification["knowledgePoints"][0]["authority"]

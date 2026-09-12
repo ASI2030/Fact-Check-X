@@ -41,6 +41,21 @@ const server = createServer((request, response) => {
         ));
         return;
     }
+    if (url.pathname === "/qianwen") {
+        response.end(chatPage(
+            "qk-markdown qk-markdown-react",
+            `<p>千问回答中引用了来源 5。</p>`,
+            `<div data-c="refer_panel" data-d="card" data-click-extra='${JSON.stringify({
+                ref_url: `${origin}/source/official`,
+                refer_num: "5",
+                title: "官方政策原文"
+            })}'>
+               <div class="source-name">政府网站</div>
+               <div class="source-content">政策来源摘要</div>
+             </div>`
+        ));
+        return;
+    }
     response.statusCode = 404;
     response.end("not found");
 });
@@ -106,6 +121,14 @@ try {
     assert.equal(yuanbao.references[0].sourceAcquisitionStatus, "captured");
     assert.equal(yuanbao.references[0].snippetProvenance, "source_document");
     assert.equal(yuanbao.references[0].content.includes("政策明确规定"), true);
+
+    const qianwen = await capture("qianwen", "通义千问", "/qianwen");
+    assert.equal(qianwen.status, "success");
+    assert.equal(qianwen.references.length, 1);
+    assert.equal(qianwen.references[0].marker, "5");
+    assert.equal(qianwen.references[0].sourceAcquisitionStatus, "captured");
+    assert.equal(qianwen.references[0].snippetProvenance, "source_document");
+    assert.equal(qianwen.references[0].content.includes("政策明确规定"), true);
 } finally {
     server.close();
     await rm(out, { recursive: true, force: true });
@@ -117,9 +140,10 @@ if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
         actualAssertionIds: [
             "capture.deepseek_source_body",
             "capture.yuanbao_source_body",
+            "capture.qianwen_source_body",
             "capture.source_failure_states_distinct"
         ]
     }), "utf8");
 }
 
-console.log("PASS DeepSeek/元宝引用链接逐条打开、正文存证与受阻状态区分");
+console.log("PASS DeepSeek/元宝/千问引用链接逐条打开、正文存证与受阻状态区分");

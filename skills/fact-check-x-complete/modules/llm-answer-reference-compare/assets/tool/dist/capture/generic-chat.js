@@ -928,7 +928,7 @@ async function extractReferences(config, page, question = "") {
             });
         }
     }
-    if (["deepseek", "yuanbao"].includes(config.name)) {
+    if (["deepseek", "yuanbao", "qianwen"].includes(config.name)) {
         await hydrateDirectSourceReferences(page, references, config.url);
     }
     return references;
@@ -1688,7 +1688,7 @@ async function hydrateDoubaoReferenceContent(page, references, question = "") {
     await Promise.all(workers);
 }
 
-async function hydrateDirectSourceReferences(page, references, platformUrl) {
+export async function hydrateDirectSourceReferences(page, references, platformUrl) {
     const queue = references.filter((reference) => /^https?:\/\//i.test(reference.url || ""));
     let cursor = 0;
     const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
