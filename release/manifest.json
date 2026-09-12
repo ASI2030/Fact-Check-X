@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.13",
-  "tag": "v1.1.13",
-  "sourceCommitSha": "36bb7bff033e29e3dac0a20a1faa966a3e4b0386",
-  "publishedAt": "2026-09-12T18:21:10+08:00",
+  "version": "1.1.14",
+  "tag": "v1.1.14",
+  "sourceCommitSha": "fe43dddf27231a34fbffc7427fe70adc075a7bc6",
+  "publishedAt": "2026-09-13T01:41:14+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度溯源）",
@@ -20,59 +20,59 @@
   ],
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 343783,
+    "bytes": 345556,
     "files": 100,
-    "sha256": "075f796e30d1a7080e78dfd149320bc9d8b93218b7ac64a42e5354c3b148d8f1",
-    "skillSourceTreeSha256": "5754d5a2bd0793a1a15b0e242d0ab3b40312513fbdc41538b419dd9a73db85f9"
+    "sha256": "c89c6a8e19afe5a8fcf7aed18a3e51057e588107abfd3701d628ffc6a9075a42",
+    "skillSourceTreeSha256": "31ab6a5c5f91824852f555dfba5f0b2e7551058fef371860d7700eb4413eb6ee"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.13.zip",
-      "sha256": "56a28d459a3a43d7efdb59c5864be0d68ec7f5ac9e984fe0d1c72becd0fb5ee0"
+      "file": "llm-answer-reference-compare-v1.1.14.zip",
+      "sha256": "349d53a075fb3f8ac00686340b6ef670271697db63421f40e0dd01da74ea57bb"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.13.zip",
+      "file": "fact-check-x-knowledge-compare-v1.1.14.zip",
       "sha256": "216e2b36aaaa2d89df387800cd510a1c129dc862e06d06ddd3bc059d46888f52"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.13.zip",
+      "file": "fact-check-x-authoritative-verify-v1.1.14.zip",
       "sha256": "1db4ce34ca9e2879ffea6813d164e42020ea37007280e01a17a60ef3cd904253"
     },
     {
-      "file": "fact-check-x-unified-v1.1.13.zip",
-      "sha256": "034a194c4ffb34e4344f4e212984d48208f865aca28e815a1b15edced089cba0"
+      "file": "fact-check-x-unified-v1.1.14.zip",
+      "sha256": "b80052109a973dfedee262c85b2d714bf019b4f4a5df91ba89f62886fd98b528"
     },
     {
-      "file": "fact-check-x-suite-v1.1.13.zip",
-      "sha256": "2f29cad93fbe9bf3fe53a682b4fd6a06621155fd409c6eb330cd214f761dfc12"
+      "file": "fact-check-x-suite-v1.1.14.zip",
+      "sha256": "6da0e77336a0e2477ff60e08d60403ac106e68ffb7b4d11807b338c9c0ae9172"
     },
     {
-      "file": "fact-check-x-complete-v1.1.13.zip",
-      "sha256": "47c35eb34180634a7b9b48b0caadb062bde5b4d55bd83cb716f22200ef4f1ba4"
+      "file": "fact-check-x-complete-v1.1.14.zip",
+      "sha256": "de0e202525a15870b4808ef6feda1c5db750d0e371820772604fe9818b96c0e3"
     }
   ],
   "distribution": {
     "github": {
       "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.13",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.14",
       "assetCount": 12,
       "downloadAssetsByteVerified": 12
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.13",
-      "versionId": 307816,
-      "submittedPackageSha256": "228c1501cc9957d7679130f0d60495f3ff1af8aebc8537edbb726c9856194dc3",
-      "contentFingerprint": "1f95e684dd4a07f195704af6d7fcd00c89a57491afe6fd8a740b51c41b690fd8",
+      "version": "1.1.14",
+      "versionId": 308465,
+      "submittedPackageSha256": "919d191066cd6de220df671af2293b2405a3dd861f20c945cf63bca58b0d4d19",
+      "contentFingerprint": "51f7ddaf32b447a2e6ac204374253a9845de11544bda4a6f0ce458604704344f",
       "contentAuditStatus": "pending",
       "securityScanStatus": "pending",
       "platformSignature": "pending"
     },
     "workbuddy": {
       "status": "installed_and_verified",
-      "version": "1.1.13",
-      "installSource": "GitHub v1.1.13 formal package with matching SHA-256",
+      "version": "1.1.14",
+      "installSource": "GitHub v1.1.14 formal package with matching SHA-256",
       "runtime": "ready",
       "smokeTest": "passed",
       "installedFiles": 100
@@ -86,7 +86,7 @@
     "releaseRegressionSuite": "passed",
     "packageFunctionalTests": "18 Python package/module checks and 11 JavaScript collector checks passed",
     "workbuddyInstalled": "verified",
-    "workbuddyOfflineAcceptance": "35/35 checks passed on the installed v1.1.13 tree",
+    "workbuddyOfflineAcceptance": "35/35 checks passed on the installed v1.1.14 tree",
     "marketplaceSignature": "pending platform approval",
     "v113ScoringAndReportSemantics": {
       "status": "passed",
@@ -95,26 +95,30 @@
     "v113SourceAndTechnicalEvidence": {
       "status": "passed",
       "basis": "Government-anchor downgrades are conservative and non-symmetric, Qwen direct-source body capture is covered by regression tests, long evidence is folded by default, and technical acquisition failures are displayed in every report stage."
+    },
+    "v114DoubaoSourceCountBoundary": {
+      "status": "passed",
+      "basis": "Doubao platform-declared counts and auditable page links are retained separately. A 21-declared/16-auditable difference is nonblocking after all exposed links are captured, while an unopened source surface and cited PDF without verifiable body remain fail-closed."
     }
   },
   "supplyChain": {
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "10284eaaf0b51883dae7d8dde0e6aa1c3589af5396b7b17c7a026ec8091d218a"
+      "sha256": "4cd4a0d4eec7d0592bd16361eb3c56378497bf55a1e1b95e3cab8059ab096033"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "24727edae4175bcb8587aacd6a1ae1dd633a66b073a1f139afe11d0d8c6216c8"
+      "sha256": "16caf3586b5725ec998037329db9a33288af38eeb19ce56151ea8680e4a0da09"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "09aa2bf2e0e8d5cb379f52a52a6f477140ee97528d6b643dff12550965fdd12b"
+      "sha256": "92f8f386f319448f6f2d83bec7a0ff1e987b7c2834aae4d2c251b15e88c0b07c"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.13 is published on GitHub, installed in WorkBuddy, and submitted to SkillHub for platform review; subsequent changes require a new version."
+    "blockingReason": "v1.1.14 is published on GitHub, installed in WorkBuddy, and submitted to SkillHub for platform review; subsequent changes require a new version."
   }
 }
