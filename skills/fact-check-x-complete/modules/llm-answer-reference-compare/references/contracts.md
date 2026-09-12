@@ -39,6 +39,12 @@
           "occurrenceCount": 2
         }
       ],
+      "sourceCountAudit": {
+        "platformDeclaredCount": 21,
+        "auditableReferenceCount": 16,
+        "status": "declared_count_differs",
+        "note": "豆包页面声明参考 21 篇资料，实际提供 16 条可审计来源；已按页面实际可访问来源完成采集。"
+      },
       "artifacts": {
         "screenshot": "相对路径",
         "html": "相对路径",
@@ -50,6 +56,8 @@
 ```
 
 `citationScope` 取 `inline`、`global`、`inline_and_global`。平台同时提供逐句脚标和全局检索来源时必须完整保留两类，不能因抓到脚标就提前结束。
+
+`sourceCountAudit` 记录平台自述资料数和实际可审计引用数。两者不一致时必须保留原始数值并标记 `declared_count_differs`；只要页面实际可访问的来源已全部采集，该差异不阻断流程。可见来源遗漏、来源浮层无法打开、已绑定 PDF 无可核验正文等真实采集失败仍必须失败关闭。
 
 豆包来源浮层只显示标题时，采集器先用可信搜索 `return_full_content=true` 补全与该标题或 URL 匹配的同一材料全文，再回退到页面或 PDF 直接提取，并以 `contentAcquisition` 记录正文取得方式。这属于引用存证，不得另找材料或替换 URL。已绑定 PDF 仍无法取得正文时必须失败关闭，不得继续产出平台幻觉结论。
 

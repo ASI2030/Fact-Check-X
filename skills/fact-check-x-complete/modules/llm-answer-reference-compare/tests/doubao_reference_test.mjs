@@ -154,8 +154,14 @@ delete process.env.TRUSTED_SEARCH_KEY;
 delete process.env.FACTCHECK_TRUSTED_SEARCH_URL;
 let trustedSearchRequest = null;
 let trustedSourceUrl = "";
+let trustedSearchEnabled = true;
 const pdfServer = createServer((request, response) => {
     if (request.url === "/search" && request.method === "POST") {
+        if (!trustedSearchEnabled) {
+            response.writeHead(503);
+            response.end();
+            return;
+        }
         let raw = "";
         request.setEncoding("utf8");
         request.on("data", (chunk) => {
@@ -235,23 +241,7 @@ assert.match(trustedReferences[0].content, /complete verifiable source body/);
 assert.equal(trustedSearchRequest.return_full_content, true);
 assert.equal(trustedSearchRequest.segmentCount, 10);
 assert.equal(trustedSearchRequest.simplified, false);
-if (savedKey === undefined) {
-    delete process.env.TRUSTED_SEARCH_KEY;
-}
-else {
-    process.env.TRUSTED_SEARCH_KEY = savedKey;
-}
-if (originalTrustedSearchUrl === undefined) {
-    delete process.env.FACTCHECK_TRUSTED_SEARCH_URL;
-}
-else {
-    process.env.FACTCHECK_TRUSTED_SEARCH_URL = originalTrustedSearchUrl;
-}
 await Promise.all([pdfPage.close(), trustedPage.close()]);
-await new Promise((resolve, reject) => {
-    pdfServer.close((error) => error ? reject(error) : resolve());
-    pdfServer.closeAllConnections?.();
-});
 
 const mixedPage = await context.newPage();
 await mixedPage.setContent(`
@@ -322,15 +312,69 @@ await incompletePage.setContent(`
         });
     </script>
 `);
+const incompleteDiagnostics = {};
+const incompleteReferences = await extractDoubaoReferences(
+    incompletePage,
+    "https://www.doubao.com/chat/",
+    "",
+    incompleteDiagnostics
+);
+assert.equal(incompleteReferences.length, 1);
+assert.deepEqual(incompleteDiagnostics.sourceCountAudit, {
+    platformDeclaredCount: 2,
+    auditableReferenceCount: 1,
+    status: "declared_count_differs",
+    note: "豆包页面声明参考 2 篇资料，实际提供 1 条可审计来源；已按页面实际可访问来源完成采集。"
+});
+
+const unopenedSourcePage = await context.newPage();
+await unopenedSourcePage.setContent(`
+    <div class="search-summary"><div>搜索 2 个关键词，参考 2 篇资料</div></div>
+    <div class="md-box-root"><p>已完整生成的回答，但来源浮层未能展开。</p></div>
+`);
 await assert.rejects(
-    () => extractDoubaoReferences(incompletePage, "https://www.doubao.com/chat/"),
+    () => extractDoubaoReferences(unopenedSourcePage, "https://www.doubao.com/chat/"),
     (error) => {
-        assert.match(error.message, /声明参考 2 篇资料，但仅捕获 1 篇/);
+        assert.match(error.message, /未展开出任何可审计来源/);
+        assert.equal(error.captureStatus, "failed");
+        return true;
+    }
+);
+
+const missingPdfBodyPage = await context.newPage();
+trustedSearchEnabled = false;
+await missingPdfBodyPage.setContent(`
+    <div class="md-box-root">
+        <p><a href="${trustedSourceUrl}">无法取得正文的已绑定 PDF</a></p>
+    </div>
+`);
+await assert.rejects(
+    () => extractDoubaoReferences(missingPdfBodyPage, "https://www.doubao.com/chat/"),
+    (error) => {
+        assert.match(error.message, /已绑定 PDF 来源未取得可核验正文/);
         assert.equal(error.captureStatus, "failed");
         assert.equal(error.partialReferences.length, 1);
         return true;
     }
 );
+
+await Promise.all([incompletePage.close(), unopenedSourcePage.close(), missingPdfBodyPage.close()]);
+if (savedKey === undefined) {
+    delete process.env.TRUSTED_SEARCH_KEY;
+}
+else {
+    process.env.TRUSTED_SEARCH_KEY = savedKey;
+}
+if (originalTrustedSearchUrl === undefined) {
+    delete process.env.FACTCHECK_TRUSTED_SEARCH_URL;
+}
+else {
+    process.env.FACTCHECK_TRUSTED_SEARCH_URL = originalTrustedSearchUrl;
+}
+await new Promise((resolve, reject) => {
+    pdfServer.close((error) => error ? reject(error) : resolve());
+    pdfServer.closeAllConnections?.();
+});
 
 await browser.close();
 if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
@@ -342,8 +386,10 @@ if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
             "pdf.trusted_search_hydrate",
             "pdf.fail_closed",
             "citation.doubao_overlap_counted",
-            "capture.partial_reference_evidence_retained"
+            "capture.partial_reference_evidence_retained",
+            "citation.doubao_declared_count_nonblocking",
+            "citation.doubao_source_surface_fail_closed"
         ]
     }));
 }
-console.log("PASS 豆包脚标、全局来源与完整性门禁");
+console.log("PASS 豆包脚标、来源数量口径与完整性门禁");

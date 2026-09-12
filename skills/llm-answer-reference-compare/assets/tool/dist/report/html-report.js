@@ -331,6 +331,15 @@ export function renderHtmlReport(run) {
       background: #f2f4f7;
       color: #344054;
     }
+    .source-count-note {
+      margin-top: 9px;
+      padding: 8px 10px;
+      border-left: 3px solid #d59620;
+      background: var(--amber-soft);
+      color: #6b4f16;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
     .comparison-scroll {
       overflow-x: auto;
       overflow-y: hidden;
@@ -796,6 +805,10 @@ export function renderHtmlReport(run) {
 function renderStatusCard(platform, maxReferences) {
     const coverage = Math.round((platform.references.length / maxReferences) * 100);
     const sourceMentionCount = (platform.sourceMentions || []).length;
+    const sourceCountAudit = platform.sourceCountAudit;
+    const sourceCountNote = sourceCountAudit?.status === "declared_count_differs"
+        ? `<div class="source-count-note">${escapeHtml(sourceCountAudit.note)}</div>`
+        : "";
     return `<article class="status-item" style="${platformStyle(platform.platform)}">
     <div class="platform-title">
       <h3>${escapeHtml(platform.label)}</h3>
@@ -803,6 +816,7 @@ function renderStatusCard(platform, maxReferences) {
     </div>
     <div class="coverage-track"><div class="coverage-fill" style="width: ${coverage}%"></div></div>
     <div class="muted">捕获 ${platform.references.length} 条可回溯来源 / ${platform.references.length} references${sourceMentionCount ? ` · ${sourceMentionCount} 个无链接来源标签` : ""}${platform.durationMs ? ` · ${Math.round(platform.durationMs / 1000)}s` : ""}</div>
+    ${sourceCountNote}
     <div class="platform-url">${escapeHtml(platform.url)}</div>
   </article>`;
 }

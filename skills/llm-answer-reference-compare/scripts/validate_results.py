@@ -36,6 +36,20 @@ def validate(data: object) -> dict:
             successes += 1
             if not str(platform.get("answerMarkdown") or "").strip():
                 fail(f"{pid} 成功但原答案为空")
+        source_count_audit = platform.get("sourceCountAudit")
+        if source_count_audit is not None:
+            if not isinstance(source_count_audit, dict):
+                fail(f"{pid} sourceCountAudit 必须是对象")
+            declared = source_count_audit.get("platformDeclaredCount")
+            auditable = source_count_audit.get("auditableReferenceCount")
+            if not isinstance(declared, int) or isinstance(declared, bool) or declared < 0:
+                fail(f"{pid} platformDeclaredCount 必须是非负整数")
+            if not isinstance(auditable, int) or isinstance(auditable, bool) or auditable < 0:
+                fail(f"{pid} auditableReferenceCount 必须是非负整数")
+            if source_count_audit.get("status") not in {"matched", "declared_count_differs"}:
+                fail(f"{pid} sourceCountAudit status 不合法")
+            if not str(source_count_audit.get("note") or "").strip():
+                fail(f"{pid} sourceCountAudit 缺少 note")
         for ref_index, reference in enumerate(platform.get("references") or [], 1):
             if not isinstance(reference, dict):
                 fail(f"{pid} 第 {ref_index} 条引用不是对象")

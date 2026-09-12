@@ -42,6 +42,7 @@ async function main() {
             ...platform,
             answerMarkdown: String(platform.answerMarkdown || ""),
             sourceMentions: Array.isArray(platform.sourceMentions) ? platform.sourceMentions : [],
+            sourceCountAudit: platform.sourceCountAudit || undefined,
             references: platform.references.map((reference) => ({
                 ...reference,
                 normalizedUrl: reference.normalizedUrl || reference.url,

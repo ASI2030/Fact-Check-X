@@ -49,6 +49,7 @@ export async function captureGenericChat(config, options) {
     let capturedAnswerMarkdown = "";
     let capturedReferences = [];
     let capturedSourceMentions = [];
+    let capturedSourceCountAudit;
     try {
         if (options.headed && options.interactive) {
             console.log(`${config.label}：将打开浏览器。请先完成登录或验证；检测到可提问界面后会自动继续采集。`);
@@ -201,7 +202,8 @@ export async function captureGenericChat(config, options) {
                     await saveArtifacts(page, artifactDir, options.outDir)
                 );
             }
-            const references = await extractReferences(config, page, options.question);
+            const extraction = await extractReferences(config, page, options.question);
+            const references = extraction.references;
             const artifacts = await saveArtifacts(page, artifactDir, options.outDir);
             const ordinaryResult = success(
                 config,
@@ -245,8 +247,10 @@ export async function captureGenericChat(config, options) {
             );
         }
         capturedAnswerMarkdown = answerMarkdown;
-        const references = await extractReferences(config, page, options.question);
+        const extraction = await extractReferences(config, page, options.question);
+        const references = extraction.references;
         capturedReferences = references;
+        capturedSourceCountAudit = extraction.sourceCountAudit;
         const sourceMentions = config.name === "doubao"
             ? (await extractDoubaoSourceMentions(page))
                 .filter((mention) => !references.some((reference) => reference.text === mention.label))
@@ -260,7 +264,15 @@ export async function captureGenericChat(config, options) {
                 artifacts
             };
         }
-        return success(config, started, answerMarkdown, references, sourceMentions, artifacts);
+        return success(
+            config,
+            started,
+            answerMarkdown,
+            references,
+            sourceMentions,
+            artifacts,
+            capturedSourceCountAudit
+        );
     }
     catch (error) {
         const status = error && typeof error === "object" && "captureStatus" in error
@@ -282,7 +294,12 @@ export async function captureGenericChat(config, options) {
             started,
             error instanceof Error ? error.message : String(error),
             page ? await saveArtifacts(page, artifactDir, options.outDir).catch(() => undefined) : undefined,
-            { answerMarkdown, references, sourceMentions }
+            {
+                answerMarkdown,
+                references,
+                sourceMentions,
+                sourceCountAudit: capturedSourceCountAudit
+            }
         );
     }
     finally {
@@ -872,6 +889,7 @@ async function extractReferences(config, page, question = "") {
     const selectors = config.selectors?.references || ["a[href]"];
     const seen = new Set();
     const references = [];
+    let sourceCountAudit;
     if (isDknowcPlatform(config)) {
         references.push(...(await extractDknowcReferences(page, config.url, question)));
         for (const reference of references) {
@@ -879,7 +897,9 @@ async function extractReferences(config, page, question = "") {
         }
     }
     if (config.name === "doubao") {
-        references.push(...(await extractDoubaoReferences(page, config.url, question)));
+        const diagnostics = {};
+        references.push(...(await extractDoubaoReferences(page, config.url, question, diagnostics)));
+        sourceCountAudit = diagnostics.sourceCountAudit;
         for (const reference of references) {
             seen.add(reference.normalizedUrl);
         }
@@ -931,7 +951,7 @@ async function extractReferences(config, page, question = "") {
     if (["deepseek", "yuanbao", "qianwen"].includes(config.name)) {
         await hydrateDirectSourceReferences(page, references, config.url);
     }
-    return references;
+    return { references, sourceCountAudit };
 }
 async function extractQianwenReferences(page, baseUrl) {
     const sourceButton = page.locator("text=/\\d+篇来源/").last();
@@ -1141,7 +1161,7 @@ async function extractQianwenReferences(page, baseUrl) {
         return items;
     }, baseUrl).catch(() => []);
 }
-export async function extractDoubaoReferences(page, baseUrl, question = "") {
+export async function extractDoubaoReferences(page, baseUrl, question = "", diagnostics = {}) {
     const root = page.locator(".md-box-root").last();
     let references = await root.locator("a[href]").evaluateAll((nodes, base) => {
         const seen = new Set();
@@ -1384,6 +1404,13 @@ export async function extractDoubaoReferences(page, baseUrl, question = "") {
         });
     }
     references = normalizeAndMergeDoubaoReferences(references, baseUrl);
+    if (searchSources.expectedCount > 0 && searchSources.references.length === 0) {
+        throw captureStatusError(
+            "failed",
+            `豆包页面声明参考 ${searchSources.expectedCount} 篇资料，但来源入口未展开出任何可审计来源；必须重新采集或由 Computer Use 接管。`,
+            { partialReferences: references }
+        );
+    }
     await hydrateDoubaoReferenceContent(page, references, question);
     const incompleteInlinePdfs = references.filter((reference) => isPdfReference(reference.url)
         && ["inline", "inline_and_global"].includes(reference.citationScope)
@@ -1398,12 +1425,16 @@ export async function extractDoubaoReferences(page, baseUrl, question = "") {
     const capturedSources = references.filter((reference) => [
         "inline", "global", "inline_and_global"
     ].includes(reference.citationScope)).length;
-    if (searchSources.expectedCount > capturedSources) {
-        throw captureStatusError(
-            "failed",
-            `豆包页面声明参考 ${searchSources.expectedCount} 篇资料，但仅捕获 ${capturedSources} 篇可回溯来源；必须重新采集或由 Computer Use 接管。`,
-            { partialReferences: references }
-        );
+    if (searchSources.expectedCount > 0) {
+        const countDiffers = searchSources.expectedCount !== capturedSources;
+        diagnostics.sourceCountAudit = {
+            platformDeclaredCount: searchSources.expectedCount,
+            auditableReferenceCount: capturedSources,
+            status: countDiffers ? "declared_count_differs" : "matched",
+            note: countDiffers
+                ? `豆包页面声明参考 ${searchSources.expectedCount} 篇资料，实际提供 ${capturedSources} 条可审计来源；已按页面实际可访问来源完成采集。`
+                : `豆包页面声明并实际采集 ${capturedSources} 条可审计来源。`
+        };
     }
     return references;
 }
@@ -2736,7 +2767,7 @@ async function captureDknowcDeepCompanion(
                 verificationTimeoutMs: options.loginTimeoutMs || 300000
             }
         );
-        references = await extractReferences(config, page, options.question);
+        references = (await extractReferences(config, page, options.question)).references;
         const artifacts = await saveArtifacts(page, artifactDir, options.outDir);
         const validation = validateCapturedAnswer(config, answerMarkdown);
         if (validation) {
@@ -2781,8 +2812,8 @@ function validateCapturedAnswer(config, answerMarkdown) {
     }
     return undefined;
 }
-function success(config, started, answerMarkdown, references, sourceMentions, artifacts) {
-    return {
+function success(config, started, answerMarkdown, references, sourceMentions, artifacts, sourceCountAudit) {
+    const result = {
         platform: config.name,
         label: config.label,
         url: config.url,
@@ -2793,6 +2824,10 @@ function success(config, started, answerMarkdown, references, sourceMentions, ar
         artifacts,
         durationMs: Date.now() - started
     };
+    if (sourceCountAudit) {
+        result.sourceCountAudit = sourceCountAudit;
+    }
+    return result;
 }
 function failure(config, status, started, error, artifacts, partial = {}) {
     return {
@@ -2803,6 +2838,7 @@ function failure(config, status, started, error, artifacts, partial = {}) {
         answerMarkdown: partial.answerMarkdown || "",
         references: Array.isArray(partial.references) ? partial.references : [],
         sourceMentions: Array.isArray(partial.sourceMentions) ? partial.sourceMentions : [],
+        ...(partial.sourceCountAudit ? { sourceCountAudit: partial.sourceCountAudit } : {}),
         artifacts,
         durationMs: Date.now() - started,
         error

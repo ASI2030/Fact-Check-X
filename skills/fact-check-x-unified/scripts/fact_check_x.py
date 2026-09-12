@@ -783,6 +783,7 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
                 "status": item.get("status"),
                 "referenceCount": len(item.get("references") or []),
                 "sourceMentionCount": len(item.get("sourceMentions") or []),
+                "sourceCountAudit": item.get("sourceCountAudit"),
                 "durationMs": item.get("durationMs"),
             }
             for item in results.get("platforms") or []

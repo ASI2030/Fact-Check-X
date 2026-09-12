@@ -19,6 +19,9 @@ export function renderMarkdownReport(run) {
     lines.push("", "## Answer Comparison", "");
     for (const platform of run.platforms) {
         lines.push(`### ${platform.label}`, "");
+        if (platform.sourceCountAudit?.status === "declared_count_differs") {
+            lines.push(`> 来源数量说明：${platform.sourceCountAudit.note}`, "");
+        }
         if (platform.status === "success") {
             lines.push(platform.answerMarkdown || "_No answer captured._");
         }

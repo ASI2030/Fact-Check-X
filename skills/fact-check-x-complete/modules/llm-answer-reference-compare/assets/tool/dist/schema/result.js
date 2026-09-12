@@ -54,6 +54,12 @@ export const SourceMentionSchema = z.object({
     marker: z.string().optional(),
     occurrenceCount: z.number().int().positive().default(1)
 });
+export const SourceCountAuditSchema = z.object({
+    platformDeclaredCount: z.number().int().nonnegative(),
+    auditableReferenceCount: z.number().int().nonnegative(),
+    status: z.enum(["matched", "declared_count_differs"]),
+    note: z.string().min(1)
+});
 export const ArtifactPathsSchema = z.object({
     screenshot: z.string().optional(),
     html: z.string().optional(),
@@ -75,6 +81,7 @@ export const PlatformResultSchema = z
     answerMarkdown: z.string(),
     references: z.array(ReferenceSchema).default([]),
     sourceMentions: z.array(SourceMentionSchema).default([]),
+    sourceCountAudit: SourceCountAuditSchema.optional(),
     artifacts: ArtifactPathsSchema.optional(),
     durationMs: z.number().int().nonnegative().optional(),
     error: z.string().optional()

@@ -29,6 +29,12 @@ def main() -> int:
         report_input["platforms"][1].update({
             "status": "success",
             "answerMarkdown": "每人每月最高 2000 元【1】",
+            "sourceCountAudit": {
+                "platformDeclaredCount": 21,
+                "auditableReferenceCount": 16,
+                "status": "declared_count_differs",
+                "note": "豆包页面声明参考 21 篇资料，实际提供 16 条可审计来源；已按页面实际可访问来源完成采集。",
+            },
             "sourceMentions": [
                 {"label": "广州住房公积金管理中心", "marker": "1", "occurrenceCount": 2}
             ],
@@ -90,6 +96,7 @@ def main() -> int:
         assert "已返回来源链接" in html
         assert "来源链接待补" not in html
         assert "DeepSeek" in html and "3 个平台" in html
+        assert "豆包页面声明参考 21 篇资料，实际提供 16 条可审计来源" in html
         assert 'platform-layout-compact platform-count-3' in html
         assert 'style="--platform-count:3"' in html
         assert "grid-template-columns: repeat(var(--platform-count), minmax(0, 1fr))" in html
@@ -107,6 +114,7 @@ def main() -> int:
         assert markdown.count("【官方来源】") >= 2
         assert "来源链接待补" not in markdown
         assert "DeepSeek" in markdown
+        assert "来源数量说明：豆包页面声明参考 21 篇资料" in markdown
         assert "可信库来源" not in markdown
         assert "DT库·gov一手收录" not in markdown
         assert (Path(temp) / "results.json").exists() and (Path(temp) / "report.md").exists()

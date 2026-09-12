@@ -4,6 +4,13 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.14] - 2026-09-13
+
+- Separate Doubao's platform-declared source count from the number of source URLs that are actually exposed and auditable on the page.
+- Continue automatically when every accessible Doubao source has been captured, while preserving both counts and the discrepancy in structured data and the stage-one report.
+- Keep fail-closed behavior for real capture defects, including missed visible sources, source panels that cannot be opened and cited PDF sources without verifiable body text.
+- Add deterministic regressions for the observed 21-declared/16-auditable case and the genuine missing-source failure path.
+
 ## [1.1.13] - 2026-09-12
 
 - Count an answered direct knowledge point as covered independently of evidence sufficiency, and remove a point from coverage and accuracy denominators only when every selected platform omitted it or lacks sufficient evidence.
