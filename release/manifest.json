@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.14",
-  "tag": "v1.1.14",
-  "sourceCommitSha": "fe43dddf27231a34fbffc7427fe70adc075a7bc6",
-  "publishedAt": "2026-09-13T01:41:14+08:00",
+  "version": "1.1.15",
+  "tag": "v1.1.15",
+  "sourceCommitSha": "365205308aaa1fd6c357a3d9dfc2445fb990026f",
+  "publishedAt": "2026-09-14T17:54:13+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度溯源）",
@@ -20,51 +20,51 @@
   ],
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 345556,
+    "bytes": 351528,
     "files": 100,
-    "sha256": "c89c6a8e19afe5a8fcf7aed18a3e51057e588107abfd3701d628ffc6a9075a42",
-    "skillSourceTreeSha256": "31ab6a5c5f91824852f555dfba5f0b2e7551058fef371860d7700eb4413eb6ee"
+    "sha256": "707bfad30a0eb49c3a90af39f9927651be2b3407c9384339a410a57508202b3a",
+    "skillSourceTreeSha256": "30f1d1ed8fd6abea4526c5207a0f6f0533ee5beb1119f03d71eebec838b66d69"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.14.zip",
-      "sha256": "349d53a075fb3f8ac00686340b6ef670271697db63421f40e0dd01da74ea57bb"
+      "file": "llm-answer-reference-compare-v1.1.15.zip",
+      "sha256": "a8510be860a559560a09cd1dbf990c47139e8b39a6bb47e9d90e29bae591f71c"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.14.zip",
-      "sha256": "216e2b36aaaa2d89df387800cd510a1c129dc862e06d06ddd3bc059d46888f52"
+      "file": "fact-check-x-knowledge-compare-v1.1.15.zip",
+      "sha256": "a3ffdcc37f86ac47d5b2964163f472ae3f5d2481400e9576e6afdc4e2c197352"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.14.zip",
-      "sha256": "1db4ce34ca9e2879ffea6813d164e42020ea37007280e01a17a60ef3cd904253"
+      "file": "fact-check-x-authoritative-verify-v1.1.15.zip",
+      "sha256": "350ff68cbbe6bfd4a6020816a743fef54e974e1ceff3e92e70d60d6a351e0187"
     },
     {
-      "file": "fact-check-x-unified-v1.1.14.zip",
-      "sha256": "b80052109a973dfedee262c85b2d714bf019b4f4a5df91ba89f62886fd98b528"
+      "file": "fact-check-x-unified-v1.1.15.zip",
+      "sha256": "b63344af585c0ca71d0448134c10784c34560a5682d5923a49a41cc61bd19b36"
     },
     {
-      "file": "fact-check-x-suite-v1.1.14.zip",
-      "sha256": "6da0e77336a0e2477ff60e08d60403ac106e68ffb7b4d11807b338c9c0ae9172"
+      "file": "fact-check-x-suite-v1.1.15.zip",
+      "sha256": "126cd20391e1e5c5634054fd1499e4ec680b63886f8bec693ee382d6ff88bd7e"
     },
     {
-      "file": "fact-check-x-complete-v1.1.14.zip",
-      "sha256": "de0e202525a15870b4808ef6feda1c5db750d0e371820772604fe9818b96c0e3"
+      "file": "fact-check-x-complete-v1.1.15.zip",
+      "sha256": "d18f010a0b3412519254bcef5de2c5ee7a89f2b103c8cf8866566a92a3f28a81"
     }
   ],
   "distribution": {
     "github": {
       "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.14",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.15",
       "assetCount": 12,
       "downloadAssetsByteVerified": 12
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.14",
-      "versionId": 308465,
-      "submittedPackageSha256": "919d191066cd6de220df671af2293b2405a3dd861f20c945cf63bca58b0d4d19",
-      "contentFingerprint": "51f7ddaf32b447a2e6ac204374253a9845de11544bda4a6f0ce458604704344f",
+      "version": "1.1.15",
+      "versionId": 312148,
+      "submittedPackageSha256": "ebc0ff9302be271dd85eff8da1409d3d92e7ffb9e8c5ee374b6c8c07e0e9e118",
+      "contentFingerprint": "4a3a66a67f9188bbe462f5fa432f75c71c7535749156bfa1b0a6141b52efab8d",
       "contentAuditStatus": "pending",
       "securityScanStatus": "pending",
       "platformSignature": "pending"
@@ -84,7 +84,7 @@
     "publicTreeAudit": "passed",
     "publicReleaseTests": 4,
     "releaseRegressionSuite": "passed",
-    "packageFunctionalTests": "18 Python package/module checks and 11 JavaScript collector checks passed",
+    "packageFunctionalTests": "21 Python package/module checks and 11 JavaScript collector checks passed",
     "workbuddyInstalled": "verified",
     "workbuddyOfflineAcceptance": "35/35 checks passed on the installed v1.1.14 tree",
     "marketplaceSignature": "pending platform approval",
@@ -99,26 +99,30 @@
     "v114DoubaoSourceCountBoundary": {
       "status": "passed",
       "basis": "Doubao platform-declared counts and auditable page links are retained separately. A 21-declared/16-auditable difference is nonblocking after all exposed links are captured, while an unopened source surface and cited PDF without verifiable body remain fail-closed."
+    },
+    "v115ArtifactsSourcesAndRecommendations": {
+      "status": "passed",
+      "basis": "Existing stage artifacts expose native paths plus standards-compliant file URIs and Markdown links, portable packages remove host paths, DKnow inline and knowledge-library sources preserve scope without duplicate counting, and recommendation-only points remain outside factual verification metrics."
     }
   },
   "supplyChain": {
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "4cd4a0d4eec7d0592bd16361eb3c56378497bf55a1e1b95e3cab8059ab096033"
+      "sha256": "9f554b594e262b0ab0e309820ac75e031878f78e4ce133fc063d04b48aef06e0"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "16caf3586b5725ec998037329db9a33288af38eeb19ce56151ea8680e4a0da09"
+      "sha256": "08b56e2e84c55e0f016cab08284e0e0e7d12b49047bb3a9e54f6f5c6f54602de"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "92f8f386f319448f6f2d83bec7a0ff1e987b7c2834aae4d2c251b15e88c0b07c"
+      "sha256": "39ced88c16a8b006221c7b01c87695c218f52ed69a25eac7083414dd6429d918"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.14 is published on GitHub, installed in WorkBuddy, and submitted to SkillHub for platform review; subsequent changes require a new version."
+    "blockingReason": "v1.1.15 is published on GitHub and submitted to SkillHub for platform review; WorkBuddy remains on v1.1.14, and subsequent product changes require a new version."
   }
 }
