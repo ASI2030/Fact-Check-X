@@ -60,6 +60,16 @@ def main() -> int:
             merge_verification,
             normalize_report_navigation,
         )
+        assert fact_check_x.file_uri_for_path(
+            r"C:\WorkBuddy\fact-check-x\runs\sample run\02-comparison-report.html"
+        ) == "file:///C:/WorkBuddy/fact-check-x/runs/sample%20run/02-comparison-report.html"
+
+        def assert_deliverable(item: dict, label: str, path: Path) -> None:
+            uri = path.resolve().as_uri()
+            assert item["label"] == label
+            assert item["path"] == str(path.resolve())
+            assert item["fileUri"] == uri
+            assert item["markdownLink"] == f"[打开{label}](<{uri}>)"
 
         notice_run = Path(temp) / "technical-notice"
         (notice_run / "capture").mkdir(parents=True)
@@ -158,6 +168,11 @@ def main() -> int:
         assert capture_stage["stage"] == "capture_completed"
         assert capture_stage["artifacts"]["answerReferenceReport"] == str((run_dir / "capture" / "report.html").resolve())
         assert capture_stage["deliverables"][0]["path"] == str((run_dir / "01-capture-report.html").resolve())
+        assert_deliverable(
+            capture_stage["deliverables"][0],
+            "各方答案汇总",
+            run_dir / "01-capture-report.html",
+        )
         assert capture_stage["checkpoint"]["mustPresentBeforeNextStage"] is True
         assert capture_stage["checkpoint"]["path"] == str(
             (run_dir / "01-capture-report.html").resolve()
@@ -174,6 +189,11 @@ def main() -> int:
         assert (run_dir / "comparison-analysis.json").is_file()
         assert comparison_stage["artifacts"]["comparisonReport"] == str((run_dir / "comparison.html").resolve())
         assert comparison_stage["deliverables"][0]["path"] == str((run_dir / "02-comparison-report.html").resolve())
+        assert_deliverable(
+            comparison_stage["deliverables"][0],
+            "各方答案聚合（未核验）",
+            run_dir / "02-comparison-report.html",
+        )
         assert comparison_stage["checkpoint"]["mustPresentBeforeNextStage"] is True
         assert comparison_stage["checkpoint"]["path"] == str(
             (run_dir / "02-comparison-report.html").resolve()
@@ -221,6 +241,11 @@ def main() -> int:
         assert finalized["deliverables"][0]["path"] == str(
             (run_dir / "03-authority-report.html").resolve()
         )
+        assert_deliverable(
+            finalized["deliverables"][0],
+            "权威核验后的最终答案",
+            run_dir / "03-authority-report.html",
+        )
         assert finalized["checkpoint"]["mustPresentBeforeNextStage"] is True
         assert finalized["checkpoint"]["path"] == str(
             (run_dir / "03-authority-report.html").resolve()
@@ -260,6 +285,11 @@ def main() -> int:
             "capture", "comparison", "authority", "evaluation"
         ]
         assert packaged_checkpoints["stages"]["evaluation"]["status"] == "completed"
+        for packaged_stage in packaged_checkpoints["stages"].values():
+            for packaged_item in packaged_stage.get("deliverables") or []:
+                assert packaged_item["fileUri"].startswith("../")
+                assert "file://" not in packaged_item["markdownLink"]
+                assert "file://" not in packaged_item["message"]
         assert delivered["checkpoint"]["mustPresentBeforeNextStage"] is True
         assert delivered["checkpoint"]["path"] == str(
             (run_dir / "04-final-report.html").resolve()
@@ -268,6 +298,14 @@ def main() -> int:
         assert (run_dir / "verification.json").read_bytes() == locked_verification
         assert (run_dir / "03-authority-report.html").read_bytes() == locked_authority_report
         assert all(Path(item["path"]).exists() for item in delivered["deliverables"])
+        for item, label, path in (
+            (delivered["deliverables"][0], "各方答案汇总", run_dir / "01-capture-report.html"),
+            (delivered["deliverables"][1], "各方答案聚合（未核验）", run_dir / "02-comparison-report.html"),
+            (delivered["deliverables"][2], "权威核验后的最终答案", run_dir / "03-authority-report.html"),
+            (delivered["deliverables"][3], "各方答案测评报告", run_dir / "04-final-report.html"),
+            (delivered["deliverables"][4], "完整可分发报告包", Path(deliverable_paths[4])),
+        ):
+            assert_deliverable(item, label, path)
         manifest = json.loads((run_dir / "pipeline.json").read_text(encoding="utf-8"))
         verification = json.loads((run_dir / "verification.json").read_text(encoding="utf-8"))
         report = (run_dir / "report.html").read_text(encoding="utf-8")

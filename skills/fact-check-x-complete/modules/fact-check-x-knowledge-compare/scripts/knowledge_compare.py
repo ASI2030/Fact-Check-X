@@ -473,6 +473,8 @@ def build_task(question: str, platforms: list[dict]) -> dict:
             "只使用任务包中的原始回答和已捕获来源，不使用可信搜索、网络搜索或外部模型 API",
             "合并所有平台的原子事实；同一事实的不同值放在同一知识点",
             "role=direct 表示缺少该点就没有直接回答用户问题，其余为 reference",
+            "claimType=fact 表示可验证的事实主张，claimType=recommendation 表示纯操作建议",
+            "纯操作建议不因缺少逐句脚标而判为引用不忠实；建议中包含的制度事实、条件、数字或时效必须拆成独立 fact 知识点",
             "每个平台逐点填写 covered、claim、citedReferenceIndexes、faithfulness、reason 和 evidence",
             "covered=true 时必须填写 answerExcerpt；它必须是原回答的连续原文子串，并覆盖当前原子主张",
             "逐句脚标来源只有在脚标实际出现在当前 answerExcerpt 内时才算与该主张局部绑定；不得用答案后段的脚标反向支持前段主张",
@@ -502,6 +504,7 @@ def build_task(question: str, platforms: list[dict]) -> dict:
                 {
                     "description": "一个原子事实",
                     "role": "direct",
+                    "claimType": "fact",
                     "core": True,
                     "claims": {"platform-id": {"covered": True, "claim": "...", "answerExcerpt": "包含当前主张及相连脚标的原回答子串", "citedReferenceIndexes": [1], "answerLevelReferenceIndexes": [], "faithfulness": "supported", "reason": "...", "evidence": [{"referenceIndex": 1, "excerpt": "原文"}]}},
                     "comparison": {"status": "consensus", "summary": "精确说明主张属于一致、基本一致、部分一致还是冲突"},
@@ -533,7 +536,7 @@ def normalize_evidence(items: object, references: list[dict], allowed_indexes: s
     return evidence, invalid
 
 
-def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[dict]) -> dict:
+def normalize_claim(raw: object, platform: dict, kid: str, claim_type: str, analysis_gaps: list[dict]) -> dict:
     item = raw if isinstance(raw, dict) else {}
     references = platform.get("references") or []
     answer = str(platform.get("answerMarkdown") or "")
@@ -648,7 +651,9 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
         evidence = recovered_evidence
         faithfulness = "supported" if evidence else "insufficient"
         effective_indexes = supported_indexes
-    if faithfulness == "insufficient" and covered:
+    if claim_type == "recommendation" and covered and faithfulness == "insufficient":
+        faithfulness = "not_applicable"
+    if faithfulness == "insufficient" and covered and claim_type == "fact":
         analysis_gaps.append({
             "stage": "comparison",
             "knowledgePointId": kid,
@@ -683,7 +688,7 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
     )
     binding_reason = {
         "local": "逐段溯源",
-        "declared_global": "无对应的清单",
+        "declared_global": "回答级来源",
         "answer_level_semantic": "全文语义溯源",
         "none": "未建立溯源",
     }[binding_mode]
@@ -691,9 +696,17 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
         "supported": "来源原文支持当前主张",
         "contradicted": "来源原文与当前主张矛盾",
         "insufficient": "当前来源证据不足",
+        "not_applicable": "纯操作建议，直接引用不适用",
     }[faithfulness]
-    normalized_reason = f"{binding_reason}；{faithfulness_reason}" if covered else ""
+    normalized_reason = (
+        faithfulness_reason
+        if covered and faithfulness == "not_applicable"
+        else f"{binding_reason}；{faithfulness_reason}"
+        if covered
+        else ""
+    )
     return {
+        "claimType": claim_type,
         "covered": covered,
         "claim": clipped(item.get("claim"), 1000) if covered else "",
         "answerExcerpt": clipped(answer_excerpt, 4000) if covered else "",
@@ -709,7 +722,9 @@ def normalize_claim(raw: object, platform: dict, kid: str, analysis_gaps: list[d
     }
 
 
-def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: str, analysis_gaps: list[dict]) -> dict:
+def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: str, claim_type: str, analysis_gaps: list[dict]) -> dict:
+    if claim_type == "recommendation":
+        return {"eligible": False}
     item = raw if isinstance(raw, dict) else {}
     requested_pid = str(item.get("platform") or "")
     candidate_pids = []
@@ -930,6 +945,9 @@ def validate_analysis_contract(raw: dict, platforms: list[dict]) -> None:
             errors.append(f"{path} 必须是对象")
             continue
         claims = point.get("claims")
+        claim_type = str(point.get("claimType") or "fact")
+        if claim_type not in ("fact", "recommendation"):
+            errors.append(f"{path}.claimType 必须是 fact 或 recommendation")
         if not isinstance(claims, dict):
             errors.append(f"{path}.claims 缺失")
             continue
@@ -949,8 +967,10 @@ def validate_analysis_contract(raw: dict, platforms: list[dict]) -> None:
             if not isinstance(claim.get("covered"), bool):
                 errors.append(f"{claim_path}.covered 必须为布尔值")
             faithfulness = claim.get("faithfulness")
-            if faithfulness not in ("supported", "contradicted", "insufficient"):
+            if faithfulness not in ("supported", "contradicted", "insufficient", "not_applicable"):
                 errors.append(f"{claim_path}.faithfulness 非法")
+            if faithfulness == "not_applicable" and claim_type != "recommendation":
+                errors.append(f"{claim_path}.faithfulness 只能在操作建议中为 not_applicable")
             evidence = claim.get("evidence")
             if not isinstance(evidence, list):
                 errors.append(f"{claim_path}.evidence 必须是数组")
@@ -1025,7 +1045,17 @@ def normalize(raw: dict, source: dict, question: str, platforms: list[dict]) -> 
         if not description:
             raise SkillError(f"{kid} 缺少知识点描述")
         role = raw_point.get("role") if raw_point.get("role") in ("direct", "reference") else "direct"
-        claims = {pid: normalize_claim((raw_point.get("claims") or {}).get(pid), platform, kid, analysis_gaps) for pid, platform in platform_map.items()}
+        claim_type = raw_point.get("claimType") if raw_point.get("claimType") in ("fact", "recommendation") else "fact"
+        claims = {
+            pid: normalize_claim(
+                (raw_point.get("claims") or {}).get(pid),
+                platform,
+                kid,
+                claim_type,
+                analysis_gaps,
+            )
+            for pid, platform in platform_map.items()
+        }
         comparison_raw = raw_point.get("comparison") if isinstance(raw_point.get("comparison"), dict) else {}
         covered_count = sum(claim["covered"] for claim in claims.values())
         comparison_summary = clipped(comparison_raw.get("summary"), 500)
@@ -1040,11 +1070,12 @@ def normalize(raw: dict, source: dict, question: str, platforms: list[dict]) -> 
             comparison_summary,
             covered_count,
         )
-        anchor = normalize_anchor(raw_point.get("trustedAnchor"), claims, platform_map, kid, analysis_gaps)
+        anchor = normalize_anchor(raw_point.get("trustedAnchor"), claims, platform_map, kid, claim_type, analysis_gaps)
         points.append({
             "id": kid,
             "description": description,
             "role": role,
+            "claimType": claim_type,
             "core": bool(raw_point.get("core")) and role == "direct",
             "claims": claims,
             "comparison": {"status": status, "summary": comparison_summary},
@@ -1082,6 +1113,7 @@ def canonical_analysis(comparison: dict) -> dict:
                 "id": point.get("id"),
                 "description": point.get("description"),
                 "role": point.get("role"),
+                "claimType": point.get("claimType", "fact"),
                 "core": point.get("core"),
                 "claims": point.get("claims") or {},
                 "comparison": point.get("comparison") or {},

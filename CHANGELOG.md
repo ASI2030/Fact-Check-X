@@ -4,6 +4,13 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.15] - 2026-09-14
+
+- Return existing stage artifacts with a native absolute path, standards-compliant `file://` URI and ready-to-use Markdown link, including correct Windows drive-letter encoding.
+- Keep host paths out of portable report packages by converting packaged stage links to relative paths.
+- Capture DKnow inline citations and knowledge-library sources together, merging duplicate URLs while preserving whether each source is inline, global or both.
+- Separate factual claims from operational recommendations: recommendation-only points skip Trusted Search, display as recommendations with citation not applicable, and stay out of factual accuracy, coverage and hallucination metrics.
+
 ## [1.1.14] - 2026-09-13
 
 - Separate Doubao's platform-declared source count from the number of source URLs that are actually exposed and auditable on the page.

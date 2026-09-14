@@ -2380,8 +2380,9 @@ async function extractYuanbaoReferences(page, baseUrl) {
         }
     }, baseUrl);
 }
-export async function extractDknowcReferences(page, baseUrl, question = "") {
-    const references = await page.locator(".jb-original-item[data-id], .chatsse-note-item, .chat-jb").evaluateAll((nodes, base) => {
+async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sourceSection = "") {
+    return locator.evaluateAll((nodes, options) => {
+        const base = options.baseUrl;
         const ASSET_URL = /\.(?:png|jpe?g|gif|svg|webp|bmp|ico)(?:[?#]|$)/i;
         const FOOTNOTE_MARKER = /^\d{1,6}$/;
         const CARD_ITEM = ".jb-original-item[data-id], .chatsse-note-item";
@@ -2389,13 +2390,16 @@ export async function extractDknowcReferences(page, baseUrl, question = "") {
         const items = [];
         for (const node of nodes) {
             const element = node;
+            if (options.excludeModal && element.closest(".jb-modal")) {
+                continue;
+            }
             if (!element.hasAttribute("data-id") && element.querySelector(CARD_ITEM)) {
                 continue;
             }
-            const card = element.closest(".chat-jb, .chatsse-note-item") || element;
+            const card = element.closest(".chat-jb, .chatsse-note-item, .jb-modal-note") || element;
             const marker = readMarker(element);
             const rawUrl = readUrl(element, card);
-            if (!rawUrl && !marker) {
+            if (!rawUrl) {
                 continue;
             }
             const titleElement = card.querySelector(".chat-jb-title-text, .chat-jb-title-info, .czkjTitle");
@@ -2425,9 +2429,12 @@ export async function extractDknowcReferences(page, baseUrl, question = "") {
                 marker,
                 text: titleElement?.textContent?.trim() || undefined,
                 snippet: snippet || undefined,
-                sourceSection: citeElement?.textContent?.trim() || undefined,
+                snippetProvenance: snippet ? "source_surface" : undefined,
+                citationScope: options.citationScope,
+                sourceSection: options.sourceSection || citeElement?.textContent?.trim() || undefined,
                 traceabilityText: traceText || undefined,
-                linkStatus: rawUrl ? undefined : "missing_on_page"
+                linkStatus: "captured",
+                platformTrustSource: "dknow_reference_capture"
             });
         }
         return items;
@@ -2464,11 +2471,15 @@ export async function extractDknowcReferences(page, baseUrl, question = "") {
             for (const element of elements) {
                 const routed = element.getAttribute?.("data-url2");
                 const plain = element.getAttribute?.("data-url");
+                const href = element.getAttribute?.("href") || element.href;
                 if (routed && routed.trim()) {
                     values.push(routed.trim());
                 }
                 if (plain && plain.trim()) {
                     values.push(plain.trim());
+                }
+                if (href && href.trim()) {
+                    values.push(href.trim());
                 }
             }
             return values.find((value) => !ASSET_URL.test(value)) || "";
@@ -2493,7 +2504,101 @@ export async function extractDknowcReferences(page, baseUrl, question = "") {
                 return rawUrl.trim();
             }
         }
-    }, baseUrl);
+    }, { baseUrl, citationScope, sourceSection, excludeModal: citationScope === "inline" });
+}
+
+function mergeDknowcReference(references, incoming) {
+    const key = String(incoming.normalizedUrl || incoming.url || "").trim();
+    const existing = references.find((reference) => String(reference.normalizedUrl || reference.url || "").trim() === key);
+    if (!existing) {
+        references.push(incoming);
+        return;
+    }
+    existing.title = longerText(existing.title, incoming.title);
+    existing.text = longerText(existing.text, incoming.text);
+    existing.snippet = longerText(existing.snippet, incoming.snippet);
+    existing.content = longerText(existing.content, incoming.content);
+    existing.traceabilityText = longerText(existing.traceabilityText, incoming.traceabilityText);
+    existing.marker = existing.marker || incoming.marker;
+    existing.sourceSection = existing.sourceSection || incoming.sourceSection;
+    existing.linkStatus = existing.linkStatus || incoming.linkStatus;
+    existing.platformTrustSource = existing.platformTrustSource || incoming.platformTrustSource;
+    existing.citationScope = combineCitationScope(existing.citationScope, incoming.citationScope);
+}
+
+async function extractDknowcKnowledgeLibraryReferences(page, baseUrl) {
+    const triggerCandidates = page.locator(".chatsse-data.chatSubBtn, .chatSubBtn");
+    if (typeof triggerCandidates.filter !== "function") {
+        return [];
+    }
+    const trigger = triggerCandidates
+        .filter({ hasText: /\u77e5\u8bc6\u4e13\u5e93/ })
+        .last();
+    if (!(await trigger.isVisible().catch(() => false))) {
+        return [];
+    }
+    if (!(await trigger.click({ timeout: 5000 }).then(() => true).catch(() => false))) {
+        throw new Error("已发现深知晓知识专库入口，但自动点击失败，必须重新采集或由 Computer Use 接管。");
+    }
+    const modal = page.locator(".jb-modal").last();
+    if (!(await modal.waitFor({ state: "visible", timeout: 5000 }).then(() => true).catch(() => false))) {
+        throw new Error("已点击深知晓知识专库，但来源弹层未打开，必须重新采集或由 Computer Use 接管。");
+    }
+    const references = [];
+    const collect = async () => {
+        const cards = modal.locator(".jb-original-item[data-id], .chatsse-note-item, .chat-jb, .jb-modal-note");
+        const current = await extractDknowcReferenceCards(cards, baseUrl, "global", "\u77e5\u8bc6\u4e13\u5e93").catch(() => []);
+        for (const reference of current) {
+            mergeDknowcReference(references, reference);
+        }
+    };
+    try {
+        await page.waitForTimeout(250);
+        await collect();
+        const options = modal.locator(
+            ".jb-knowledge-data [data-id], .jb-knowledge-data li, .jb-knowledge-data button, .jb-knowledge-data [role='button']"
+        );
+        const count = Math.min(await options.count().catch(() => 0), 100);
+        let visibleOptionCount = 0;
+        for (let index = 0; index < count; index += 1) {
+            const option = options.nth(index);
+            if (!(await option.isVisible().catch(() => false))) {
+                continue;
+            }
+            visibleOptionCount += 1;
+            const clicked = await option.click({ timeout: 3000 })
+                .then(() => true)
+                .catch(() => false);
+            if (!clicked) {
+                throw new Error("深知晓知识专库中存在无法打开的来源项，必须重新采集或由 Computer Use 接管。");
+            }
+            await page.waitForTimeout(150);
+            await collect();
+        }
+        if (visibleOptionCount > 0 && references.length === 0) {
+            throw new Error("深知晓知识专库已展开，但未采集到任何可回溯来源，必须重新采集或由 Computer Use 接管。");
+        }
+    }
+    finally {
+        await modal.locator(".jb-modal-close").last().click({ timeout: 2000 }).catch(() => undefined);
+    }
+    return references;
+}
+
+export async function extractDknowcReferences(page, baseUrl, question = "") {
+    const references = [];
+    const inlineReferences = await extractDknowcReferenceCards(
+        page.locator(".jb-original-item[data-id], .chatsse-note-item, .chat-jb"),
+        baseUrl,
+        "inline"
+    );
+    for (const reference of inlineReferences) {
+        mergeDknowcReference(references, reference);
+    }
+    const globalReferences = await extractDknowcKnowledgeLibraryReferences(page, baseUrl);
+    for (const reference of globalReferences) {
+        mergeDknowcReference(references, reference);
+    }
     await hydrateDknowcReferenceContent(references, question);
     return references;
 }

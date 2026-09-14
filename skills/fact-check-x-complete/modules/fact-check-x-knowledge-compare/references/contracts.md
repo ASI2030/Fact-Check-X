@@ -16,6 +16,7 @@
     {
       "description": "一个原子事实",
       "role": "direct",
+      "claimType": "fact",
       "core": true,
       "claims": {
         "dknowc-chat": {
@@ -49,7 +50,9 @@
 - `basisKnowledgePointIds` 非空、无重复，且只能引用当前知识点；
 - 必须保留平台冲突、适用条件和信息缺口，不得写成已获权威证实的最终答案。
 
-`faithfulness`：`supported`、`contradicted`、`insufficient`。
+`claimType`：`fact` 或 `recommendation`，省略时为兼容旧数据按 `fact` 处理。纯操作建议才可使用 `recommendation`；其中包含的制度事实、条件、数字或时效必须拆成独立 `fact`。
+
+`faithfulness`：`supported`、`contradicted`、`insufficient`、`not_applicable`。`not_applicable` 只允许用于纯操作建议，表示直接引用不适用；事实主张不得使用。
 
 每个平台 claim 必须显式提供 `covered`、`claim`、`answerExcerpt`、
 `faithfulness` 和 `evidence`；每个知识点必须显式提供 `comparison` 与
@@ -62,6 +65,7 @@
 - `answerLevelReferenceIndexes`：仅在当前 `answerExcerpt` 没有局部角标时使用，从本次回答明确返回的参考资料中逐主张语义匹配。
 - 局部角标优先；已有局部角标时，程序拒绝回答级来源抬级。
 - 回答级来源必须由 `evidence` 提供对应 `capturedText` 的原文子串，并且该原文实际支持当前原子主张。来源只支持其他补充点时，不能归给核心点。
+- 深知晓“知识专库”中的 `citationScope=global|inline_and_global` 来源属于回答级来源池。它们可逐主张语义匹配，但不得整库自动绑定；纯操作建议没有匹配来源时不产生引用忠实性缺口。
 
 `comparison.status`：
 

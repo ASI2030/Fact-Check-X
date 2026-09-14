@@ -112,6 +112,7 @@ CAT_STYLE = {
     "巧合式幻觉": ("#f59e0b", "🎲", "无引用依据或与所附材料不符，但经官方核验后与官方依据巧合一致", "无引用依据，但与官方依据巧合一致"),
     "误导式幻觉": ("#dc2626", "⚠", "经官方源验证，结果是错误的（用户照做会被误导）", "幻觉：严重误导"),
     "疑似误导": ("#b91c1c", "✖", "官方无法查证，有可能过期、编造或信息源误导；该项移入补充参考风险区，不写入确定答案", "疑似误导"),
+    "操作建议": ("#0f766e", "i", "纯操作建议不属于事实真伪裁决；直接引用不适用，建议中的制度事实另行核验", "操作建议"),
     # 答案遗漏：非判定标签，灰色文本，与判定标签视觉隔离
     "答案遗漏": ("#9ca3af", "·", "该家没有答到这个知识点（状态指示，非判定）", "未覆盖"),
 }
@@ -368,6 +369,8 @@ def prov_html(e, shared_exc=""):
                 body = '<span class="muted small"> （来源正文未取得，未作为正文证据）</span>'
         parts.append(f'<div class="prov"><span class="ptag">所附依据 · {escape(binding)}</span>{link}{govlink}{platform_link}{body}</div>')
     if not parts:
+        if e.get("claim_type") == "recommendation" or cat_norm(e.get("category", "")) == "操作建议":
+            return '<span class="muted small">操作建议；直接引用不适用</span>'
         return '<span class="muted small">该家未附依据</span>'
     # 依据原文默认收起：逐知识点逐平台全文铺开会把第四步报告撑得过长。
     return (
@@ -607,7 +610,7 @@ def metric_doc_rows():
         f'<tr><td><b>{escape(name)}</b></td><td>{escape(d[0])}</td><td>{escape(d[1])}</td><td class="muted">{escape(d[2])}</td></tr>'
         for name, d in METRIC_DOC.items())
 
-_ACTIVE_CATS = ("直接准确", "间接准确", "巧合式幻觉", "误导式幻觉", "疑似误导", "答案遗漏")
+_ACTIVE_CATS = ("直接准确", "间接准确", "巧合式幻觉", "误导式幻觉", "疑似误导", "操作建议", "答案遗漏")
 def cat_doc_rows():
     return "".join(
         f'<tr><td><span class="catpill" style="background:{CAT_STYLE[name][0]}">{CAT_STYLE[name][1]} {escape(CAT_STYLE[name][3])}</span></td>'

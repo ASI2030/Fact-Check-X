@@ -55,7 +55,7 @@
 }
 ```
 
-`citationScope` 取 `inline`、`global`、`inline_and_global`。平台同时提供逐句脚标和全局检索来源时必须完整保留两类，不能因抓到脚标就提前结束。
+`citationScope` 取 `inline`、`global`、`inline_and_global`。平台同时提供逐句脚标和全局检索来源时必须完整保留两类，不能因抓到脚标就提前结束。深知晓的“知识专库”属于回答级来源池：采集器必须打开入口并逐项提取；与脚标同 URL 的材料合并为 `inline_and_global`，仅在专库出现的材料标为 `global`，并以 `sourceSection=知识专库` 保留来源区域。
 
 `sourceCountAudit` 记录平台自述资料数和实际可审计引用数。两者不一致时必须保留原始数值并标记 `declared_count_differs`；只要页面实际可访问的来源已全部采集，该差异不阻断流程。可见来源遗漏、来源浮层无法打开、已绑定 PDF 无可核验正文等真实采集失败仍必须失败关闭。
 

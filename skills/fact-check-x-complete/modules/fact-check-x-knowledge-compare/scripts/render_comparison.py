@@ -20,7 +20,13 @@ STATUS = {
     "single": "单方覆盖",
 }
 ROLE = {"direct": "直接答案", "reference": "补充参考"}
-FAITH = {"supported": "忠实", "contradicted": "不忠实", "insufficient": "依据不足"}
+CLAIM_TYPE = {"fact": "事实主张", "recommendation": "操作建议"}
+FAITH = {
+    "supported": "忠实",
+    "contradicted": "不忠实",
+    "insufficient": "依据不足",
+    "not_applicable": "不适用（操作建议）",
+}
 SOURCE_LEVEL = {
     "official": "官方原站",
     "dknow_trusted_search_official": "官方来源",
@@ -113,7 +119,8 @@ def render_overview_group(
         )
         anchor = point.get("trustedAnchor") or {}
         anchor_text = " · 深知晓权威锚点" if anchor.get("eligible") else ""
-        rows.append(f'<li class="role-{esc(role)}"><b>{esc(point.get("id"))}</b><span class="role-badge">{esc(ROLE.get(role, role))}</span><span class="state {esc(status)}">{esc(status_label)}</span><p>{esc(point.get("description"))}</p><small>{anchor_text.lstrip(" ·") or "原子知识点"}<br>{esc((point.get("comparison") or {}).get("summary"))}</small></li>')
+        claim_type = str(point.get("claimType") or "fact")
+        rows.append(f'<li class="role-{esc(role)}"><b>{esc(point.get("id"))}</b><span class="role-badge">{esc(ROLE.get(role, role))}</span><span class="role-badge">{esc(CLAIM_TYPE.get(claim_type, claim_type))}</span><span class="state {esc(status)}">{esc(status_label)}</span><p>{esc(point.get("description"))}</p><small>{anchor_text.lstrip(" ·") or "原子知识点"}<br>{esc((point.get("comparison") or {}).get("summary"))}</small></li>')
     label = ROLE[role]
     description = (
         "直接回应用户问题，进入第三步权威答案候选。"
@@ -176,7 +183,7 @@ def render_detail(
         }.get(claim.get("citationMode"), claim.get("citationMode") or "未展示")
         binding_label = {
             "local": "逐段溯源",
-            "declared_global": "无对应的清单",
+            "declared_global": "回答级来源",
             "answer_level_semantic": "全文语义溯源",
             "none": "未建立溯源",
         }.get(claim.get("referenceBinding"), claim.get("referenceBinding") or "未建立溯源")
@@ -191,7 +198,8 @@ def render_detail(
             f'<p>{esc((point.get("comparison") or {}).get("summary"))}</p></td>'
         )
     role = str(point.get("role") or "reference")
-    return f'<tr class="role-{esc(role)}"><th><b>{esc(point.get("id"))}</b><span class="role-badge">{esc(ROLE.get(role, role))}</span><p>{esc(point.get("description"))}</p></th>{"".join(cells)}{comparison_cell}</tr>'
+    claim_type = str(point.get("claimType") or "fact")
+    return f'<tr class="role-{esc(role)}"><th><b>{esc(point.get("id"))}</b><span class="role-badge">{esc(ROLE.get(role, role))}</span><span class="role-badge">{esc(CLAIM_TYPE.get(claim_type, claim_type))}</span><p>{esc(point.get("description"))}</p></th>{"".join(cells)}{comparison_cell}</tr>'
 
 
 def render_detail_group(

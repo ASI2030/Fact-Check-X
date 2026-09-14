@@ -13,9 +13,10 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 sys.path.insert(0, str(ROOT / "scripts"))
-from authority_verify import acquire, trusted_search, trusted_search_timeout_seconds
+from authority_verify import acquire, finalize, normalize_verdict, trusted_search, trusted_search_timeout_seconds
 from render_final_report import (
     attached_provenance,
+    metrics,
     platform_verdict_summary,
     reference_primary_url,
 )
@@ -62,6 +63,74 @@ def main() -> int:
         "level": "coincidental",
         "headline": "无引用依据，但与官方依据巧合一致",
     }
+    recommendation_claim = {
+        "claimType": "recommendation",
+        "covered": True,
+        "faithfulness": "not_applicable",
+        "sourceLevel": "none",
+    }
+    recommendation_verdict = normalize_verdict(
+        {
+            "verdict": "supported",
+            "reason": "该建议可执行。",
+            "evidenceIds": ["E1"],
+        },
+        recommendation_claim,
+        {"E1"},
+    )
+    assert recommendation_verdict["category"] == "recommendation"
+    recommendation_point = {
+        "role": "direct",
+        "claimType": "recommendation",
+        "claims": {"sample": recommendation_claim},
+        "authority": {"verdicts": {"sample": recommendation_verdict}},
+    }
+    assert platform_verdict_summary([recommendation_point], "sample") == {
+        "level": "recommendation",
+        "headline": "已给出操作建议；建议项不进入事实准确率",
+    }
+    recommendation_metrics = metrics(
+        [verdict_point("direct_accurate"), recommendation_point],
+        [{"platform": "sample"}],
+    )["sample"]
+    assert recommendation_metrics["_N"] == 1
+    assert recommendation_metrics["_claims"] == 1
+    assert recommendation_metrics["准确率"] == 1
+    recommendation_request = {
+        "schemaVersion": "fact-check-x/authority-request@1",
+        "requestId": "K-ADVICE",
+        "title": "如何办理这项业务？",
+        "comparisonStatus": "single",
+        "knowledgePoint": {
+            "id": "K-ADVICE",
+            "description": "建议提前准备材料并到窗口咨询",
+            "claimType": "recommendation",
+            "role": "supplementary",
+            "core": False,
+        },
+        "claims": {"sample": recommendation_claim | {"claim": "建议提前准备材料并到窗口咨询"}},
+        "cloudPayload": {
+            "title": "如何办理这项业务？",
+            "knowledgePoint": {
+                "id": "K-ADVICE",
+                "description": "建议提前准备材料并到窗口咨询",
+                "claimType": "recommendation",
+            },
+        },
+        "trustedAnchor": {"eligible": False},
+    }
+    recommendation_evidence = acquire(recommendation_request)
+    assert recommendation_evidence["searchMode"] == "recommendation_not_applicable"
+    assert recommendation_evidence["requestCount"] == 0
+    recommendation_result = finalize(
+        recommendation_request,
+        recommendation_evidence,
+        {},
+    )
+    assert recommendation_result["resolution"] == "resolved"
+    assert recommendation_result["evidenceGaps"] == []
+    assert recommendation_result["verdicts"]["sample"]["category"] == "recommendation"
+    assert "不属于事实真伪裁决" in recommendation_result["authoritativeFinding"]
     traced_reference = {
         "title": "官方材料",
         "url": "https://yun.dknowc.cn/wlcb/policy/1",

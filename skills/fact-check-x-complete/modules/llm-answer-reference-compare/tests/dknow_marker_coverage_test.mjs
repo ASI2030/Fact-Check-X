@@ -11,6 +11,7 @@ const GUIDE_URL = "https://yun.dknowc.cn/wlcb/ShenZhi-policy/#/guideDetails?id=1
 const POLICY_URL = "https://yun.dknowc.cn/wlcb/ShenZhi-policy/#/policyDetails?id=349961";
 const EXTERNAL_URL = "https://www.sz.gov.cn/hdjl/ywzsk/gaj/hz/content/post_11149765.html";
 const LEGACY_URL = "https://yun.dknowc.cn/baike/policyDetails?id=legacy-12";
+const LIBRARY_URL = "https://yun.dknowc.cn/wlcb/ShenZhi-policy/#/policyDetails?id=library-300";
 const ASSET_URL = "https://gdldrk.gdga.gd.gov.cn/dttp/SZAppoint.png";
 
 const fixture = `<!doctype html><meta charset="utf-8"><div class="czkj-robot"><div class="czkj-msg">
@@ -51,7 +52,32 @@ const fixture = `<!doctype html><meta charset="utf-8"><div class="czkj-robot"><d
     <span class="scoresText">旧版来源卡片必须继续被采集。</span>
   </div>
 </p>
-</div></div>`;
+</div></div>
+<button class="chatsse-data chatSubBtn" onclick="openLibrary()">已创建本问题知识专库（2条知识点）</button>
+<div class="jb-modal" style="display:none">
+  <button class="jb-modal-close" onclick="this.parentElement.style.display='none'">关闭</button>
+  <div class="jb-knowledge-data">
+    <button data-id="library-1" onclick="showLibrarySource('inline')">已用脚标来源</button>
+    <button data-id="library-2" onclick="showLibrarySource('global')">仅知识专库来源</button>
+  </div>
+  <div class="jb-modal-note"></div>
+</div>
+<script>
+function showLibrarySource(kind) {
+  const note = document.querySelector('.jb-modal-note');
+  const url = kind === 'inline' ? ${JSON.stringify(GUIDE_URL)} : ${JSON.stringify(LIBRARY_URL)};
+  const text = kind === 'inline'
+    ? '受理条件：被投靠一方属于市、县户口，其配偶可以申请户口迁移与被投靠一方合成一户。'
+    : '办理建议：申请前向公安窗口确认材料原件和预约要求。';
+  note.innerHTML = '<div class="jb-original-item" data-id="' + (kind === 'inline' ? '105' : '300')
+    + '" data-url2="' + url + '" data-text="' + text + '"><cite>'
+    + (kind === 'inline' ? '受理条件' : '办理建议') + '</cite></div>';
+}
+function openLibrary() {
+  document.querySelector('.jb-modal').style.display = 'block';
+  showLibrarySource('inline');
+}
+</script>`;
 
 const profileDir = await mkdtemp(join(tmpdir(), "fcx-dknow-marker-"));
 const session = await openBrowserSession(profileDir, "about:blank", {});
@@ -72,8 +98,8 @@ finally {
 const byMarker = new Map(references.map((reference) => [reference.marker, reference]));
 assert.deepEqual(
     [...byMarker.keys()].sort(),
-    ["105", "106", "12", "202"].sort(),
-    "回答中出现的每个脚标都必须有对应来源"
+    ["105", "106", "12", "202", "300"].sort(),
+    "回答脚标与知识专库来源都必须完整采集"
 );
 
 // 图片等资源链接不得作为来源，脚标与 URL 必须来自同一张卡片
@@ -103,5 +129,14 @@ for (const reference of references) {
 assert.match(byMarker.get("106").traceabilityText || "", /分居时间满2年/);
 assert.equal(byMarker.get("105").sourceSection, "受理条件");
 assert.match(byMarker.get("12").title, /校外培训管理规定/);
+assert.equal(byMarker.get("105").citationScope, "inline_and_global");
+assert.equal(byMarker.get("300").citationScope, "global");
+assert.equal(byMarker.get("300").sourceSection, "知识专库");
+assert.equal(byMarker.get("300").url, LIBRARY_URL);
+assert.equal(
+    references.filter((reference) => reference.normalizedUrl === byMarker.get("105").normalizedUrl).length,
+    1,
+    "脚标与知识专库的同一 URL 必须合并"
+);
 
-console.log("PASS 深知晓引用脚标全覆盖、来源同卡片、溯源原文保留");
+console.log("PASS 深知晓脚标与知识专库来源合并、溯源原文保留");

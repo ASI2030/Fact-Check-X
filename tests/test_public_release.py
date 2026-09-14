@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-VERSION = "1.1.14"
+VERSION = "1.1.15"
 PUBLISHED_VERSION = "1.1.14"
 WORKBUDDY_VERSION = "1.1.14"
 OFFICIAL_SHA = "c89c6a8e19afe5a8fcf7aed18a3e51057e588107abfd3701d628ffc6a9075a42"

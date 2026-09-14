@@ -12,7 +12,8 @@ import shutil
 import subprocess
 import sys
 import zipfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from urllib.parse import quote
 
 from common import PipelineError, dump_json, load_json, now_iso
 from trusted_search_config import (
@@ -124,12 +125,14 @@ def record_stage_checkpoint(
     resolved = path.resolve()
     if not resolved.is_file():
         raise PipelineError(f"阶段产物不存在：{resolved}")
+    artifact = deliverable_descriptor(label, resolved)
     status = "completed" if not next_stage else "awaiting_user"
     token = f"fcx_{secrets.token_urlsafe(18)}" if status == "awaiting_user" else None
     entry = {
         "stage": stage,
         "label": label,
         "path": str(resolved),
+        "fileUri": artifact["fileUri"],
         "sha256": capture_digest(resolved),
         "status": status,
         "nextStage": next_stage,
@@ -145,7 +148,9 @@ def record_stage_checkpoint(
         "status": status,
         "label": label,
         "path": str(resolved),
-        "message": f"[打开{label}](<{resolved}>)",
+        "fileUri": artifact["fileUri"],
+        "markdownLink": artifact["markdownLink"],
+        "message": artifact["markdownLink"],
         "gate": str(interaction_gate_path(run_dir).resolve()),
     }
     if next_stage:
@@ -208,6 +213,7 @@ def acknowledge_stage(args: argparse.Namespace) -> dict:
         "decision": args.decision,
         "nextStageAllowed": args.decision == "continue",
         "artifact": str(path.resolve()),
+        "fileUri": file_uri_for_path(path.resolve()),
     }
 
 
@@ -362,6 +368,30 @@ def capture_digest(path: Path) -> str:
     return digest.hexdigest()
 
 
+def file_uri_for_path(path: Path | str) -> str:
+    """Return a standards-compliant file URI without guessing path separators."""
+    raw = str(path)
+    if re.match(r"^[A-Za-z]:[\\/]", raw) or raw.startswith("\\\\"):
+        posix_path = PureWindowsPath(raw).as_posix()
+        encoded = quote(posix_path, safe="/:")
+        return f"file:{encoded}" if posix_path.startswith("//") else f"file:///{encoded}"
+    return Path(raw).resolve().as_uri()
+
+
+def deliverable_descriptor(label: str, path: Path | str, **extra) -> dict:
+    resolved = Path(path).resolve()
+    if not resolved.is_file():
+        raise PipelineError(f"阶段产物不存在：{resolved}")
+    file_uri = file_uri_for_path(resolved)
+    return {
+        "label": label,
+        "path": str(resolved),
+        "fileUri": file_uri,
+        "markdownLink": f"[打开{label}](<{file_uri}>)",
+        **extra,
+    }
+
+
 def referenced_capture_artifacts(results_path: Path, results: dict) -> dict[str, Path]:
     source_root = results_path.parent.resolve()
     referenced: dict[str, Path] = {}
@@ -488,6 +518,13 @@ def scrub_portable_paths(value, run_dir: Path):
     if isinstance(value, list):
         return [scrub_portable_paths(item, run_dir) for item in value]
     if isinstance(value, str):
+        run_uri = file_uri_for_path(run_dir.resolve()).rstrip("/")
+        if value == run_uri:
+            return "."
+        if value.startswith(run_uri + "/"):
+            return "../" + value[len(run_uri) + 1 :]
+        if run_uri + "/" in value:
+            return value.replace(run_uri + "/", "../")
         path = Path(value)
         if path.is_absolute():
             try:
@@ -796,12 +833,7 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
             "captureGate": str((run_dir / "capture-gate.json").resolve()),
             "comparisonTask": str(task.resolve()),
         },
-        "deliverables": [
-            {
-                "label": "各方答案汇总",
-                "path": str(capture_deliverable.resolve()),
-            }
-        ],
+        "deliverables": [deliverable_descriptor("各方答案汇总", capture_deliverable)],
         "checkpoint": record_stage_checkpoint(
             run_dir, "capture", "各方答案汇总", capture_deliverable, "comparison"
         ),
@@ -852,12 +884,7 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
             "comparisonDeliverable": str(comparison_deliverable.resolve()),
             "comparisonGate": str(comparison_gate.resolve()),
         },
-        "deliverables": [
-            {
-                "label": "各方答案聚合（未核验）",
-                "path": str(comparison_deliverable.resolve()),
-            }
-        ],
+        "deliverables": [deliverable_descriptor("各方答案聚合（未核验）", comparison_deliverable)],
         "checkpoint": record_stage_checkpoint(
             run_dir,
             "comparison",
@@ -912,7 +939,10 @@ def build_requests(comparison: dict, requests_dir: Path) -> dict:
         raise PipelineError(f"请求目录存在不属于本次任务的旧文件：{stale}")
     entries = []
     for point in points:
-        knowledge_point = {key: point.get(key) for key in ("id", "description", "role", "core")}
+        knowledge_point = {
+            key: point.get(key)
+            for key in ("id", "description", "role", "claimType", "core")
+        }
         payload = {"title": comparison.get("question"), "knowledgePoint": knowledge_point}
         differences = differing_claims(point)
         if differences:
@@ -1175,12 +1205,7 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
             "authorityReport": str(authority_report.resolve()),
             "authorityGate": str(authority_gate_path.resolve()),
         },
-        "deliverables": [
-            {
-                "label": "权威核验后的最终答案",
-                "path": str(authority_report.resolve()),
-            }
-        ],
+        "deliverables": [deliverable_descriptor("权威核验后的最终答案", authority_report)],
         "checkpoint": record_stage_checkpoint(
             run_dir,
             "authority",
@@ -1273,7 +1298,10 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
         verdicts = authority.get("verdicts") or {}
         resolved = any(
             claims.get(platform, {}).get("covered")
-            and verdict.get("verdict") in {"supported", "contradicted"}
+            and (
+                verdict.get("verdict") in {"supported", "contradicted"}
+                or verdict.get("category") == "recommendation"
+            )
             for platform, verdict in verdicts.items()
         )
         point_id = str(point.get("id") or "")
@@ -1499,16 +1527,16 @@ def deliver(args: argparse.Namespace, skills: dict[str, Path]) -> dict:
         "comparisonReport": manifest["artifacts"]["comparisonReport"],
         "report": str(report_path.resolve()),
         "deliverables": [
-            {"label": "各方答案汇总", "path": str(capture_deliverable.resolve())},
-            {"label": "各方答案聚合（未核验）", "path": str(comparison_deliverable.resolve())},
-            {"label": "权威核验后的最终答案", "path": str(authority_deliverable.resolve())},
-            {"label": "各方答案测评报告", "path": str(final_deliverable.resolve())},
-            {
-                "label": "完整可分发报告包",
-                "path": package["path"],
-                "sha256": package["sha256"],
-                "portable": True,
-            },
+            deliverable_descriptor("各方答案汇总", capture_deliverable),
+            deliverable_descriptor("各方答案聚合（未核验）", comparison_deliverable),
+            deliverable_descriptor("权威核验后的最终答案", authority_deliverable),
+            deliverable_descriptor("各方答案测评报告", final_deliverable),
+            deliverable_descriptor(
+                "完整可分发报告包",
+                package["path"],
+                sha256=package["sha256"],
+                portable=True,
+            ),
         ],
         "checkpoint": checkpoint,
         "trustedSearchRequestCount": manifest["trustedSearchRequestCount"],

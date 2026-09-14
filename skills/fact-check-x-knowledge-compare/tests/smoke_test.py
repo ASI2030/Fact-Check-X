@@ -63,10 +63,91 @@ def main() -> int:
         assert 'href="01-capture-report.html"' in html
         assert 'href="03-authority-report.html"' in html
         assert 'href="04-final-report.html"' in html
-        for current_term in ("依据展示", "溯源方式", "直接展示", "逐段溯源", "无对应的清单"):
+        for current_term in ("依据展示", "溯源方式", "直接展示", "逐段溯源", "回答级来源"):
             assert current_term in html
-        for retired_term in ("页面模式", "绑定方式", "显式标记", "局部角标绑定", "平台声明全局来源"):
+        for retired_term in ("页面模式", "绑定方式", "显式标记", "局部角标绑定", "平台声明全局来源", "无对应的清单"):
             assert retired_term not in html
+
+        recommendation_results = {
+            "schemaVersion": "1",
+            "question": "医保结算有疑问时怎么办？",
+            "platforms": [{
+                "platform": "dknowc-chat",
+                "label": "深知晓",
+                "status": "success",
+                "answerMarkdown": "建议向就诊医院医保办或结算窗口确认费用类别。",
+                "references": [],
+            }],
+        }
+        recommendation_analysis = {
+            "schemaVersion": "fact-check-x/comparison-analysis@1",
+            "coreQuestion": recommendation_results["question"],
+            "synthesisDraft": {
+                "status": "unverified",
+                "answer": "建议向就诊医院医保办或结算窗口确认费用类别。",
+                "basisKnowledgePointIds": ["K1"],
+            },
+            "knowledgePoints": [{
+                "id": "K1",
+                "description": "向医院医保办或结算窗口确认费用类别",
+                "role": "direct",
+                "claimType": "recommendation",
+                "core": True,
+                "claims": {"dknowc-chat": {
+                    "covered": True,
+                    "claim": "向就诊医院医保办或结算窗口确认费用类别",
+                    "answerExcerpt": "建议向就诊医院医保办或结算窗口确认费用类别。",
+                    "citedReferenceIndexes": [],
+                    "answerLevelReferenceIndexes": [],
+                    "faithfulness": "insufficient",
+                    "reason": "",
+                    "evidence": [],
+                }},
+                "comparison": {"status": "single", "summary": "单平台给出操作建议"},
+                "trustedAnchor": {"eligible": False},
+            }],
+        }
+        recommendation_results_path = out / "recommendation-results.json"
+        recommendation_analysis_path = out / "recommendation-analysis.json"
+        recommendation_output_path = out / "recommendation-comparison.json"
+        recommendation_report_path = out / "recommendation-comparison.html"
+        recommendation_results_path.write_text(
+            json.dumps(recommendation_results, ensure_ascii=False), encoding="utf-8"
+        )
+        recommendation_analysis_path.write_text(
+            json.dumps(recommendation_analysis, ensure_ascii=False), encoding="utf-8"
+        )
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(recommendation_results_path),
+            "--analysis",
+            str(recommendation_analysis_path),
+            "--output",
+            str(recommendation_output_path),
+        ])
+        recommendation_data = json.loads(
+            recommendation_output_path.read_text(encoding="utf-8")
+        )
+        recommendation_claim = recommendation_data["knowledgePoints"][0]["claims"]["dknowc-chat"]
+        assert recommendation_data["knowledgePoints"][0]["claimType"] == "recommendation"
+        assert recommendation_claim["faithfulness"] == "not_applicable"
+        assert recommendation_data["analysisGaps"] == []
+        assert recommendation_data["knowledgePoints"][0]["trustedAnchor"] == {"eligible": False}
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "render_comparison.py"),
+            "--results",
+            str(recommendation_results_path),
+            "--comparison",
+            str(recommendation_output_path),
+            "--output",
+            str(recommendation_report_path),
+        ])
+        recommendation_html = recommendation_report_path.read_text(encoding="utf-8")
+        assert "操作建议" in recommendation_html
+        assert "不适用（操作建议）" in recommendation_html
 
         official_results = {
             "schemaVersion": "1",

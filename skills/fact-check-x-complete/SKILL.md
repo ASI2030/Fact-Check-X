@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.14"
+  version: "1.1.15"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.14)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.15)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，官方无法查证的内容统一标为“疑似误导”，移入补充参考风险区且不写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -186,19 +186,20 @@ python3 scripts/fact_check_x.py acknowledge-stage \
 - `capture/report.md`：可迁移文本报告；
 - `capture-gate.json`：全部平台采集成功证明。
 
-必须原样展示命令返回的 `checkpoint.message`；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 生成真正的 Markdown 文件链接，例如 `[打开各方答案汇总](<返回路径>)`；禁止仅用反引号显示路径。该检查点必须在开始知识点对比前对用户可见。必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；用户最初要求完整执行也不能替代本阶段确认。不得只把路径藏在“运行命令”、折叠执行详情或最终总结中。
+必须原样展示命令返回的 `checkpoint.message` 或 `deliverables[0].markdownLink`；二者都使用命令生成的标准 `fileUri`，并已在返回前校验产物存在。`mustPresentBeforeNextStage=true` 时，未向用户展示该链接不得调用下一阶段。禁止自行把 `deliverables[0].path` 拼成 Markdown，尤其不得重写 Windows 盘符、反斜杠或用户目录。该检查点必须在开始知识点对比前对用户可见。必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；用户最初要求完整执行也不能替代本阶段确认。不得只把路径藏在“运行命令”、折叠执行详情或最终总结中。
 
 豆包等页面可能只显示来源名称而不暴露原文 URL。采集器会先尝试展开来源标签获取真实链接；仍无链接时写入 `sourceMentions`。此时必须表述为“0 条可回溯参考文献，N 个无 URL 来源标签”，不得说“页面没有来源”，也不得把标签伪造成参考文献。
 
 读取 `comparison-task.json`，由当前承载智能体直接写 `comparison-analysis.json`。每个知识点只表达一个可核验事实变量；同一事实的不同数值必须对齐在同一点；只能使用原始答案采集阶段已经保存的来源判断来源忠实性，禁止联网补证。顶层必须填写 `synthesisDraft`，其 `status` 固定为 `unverified`，正文综合所有相关知识点并保留冲突、条件和缺口，`basisKnowledgePointIds` 只能引用当前知识点；它是“综合草案（未核验）”，不得写成权威最终答案。
 
-原子性必须落实到每个平台的 `claim`，不能只把知识点标题写得宽泛。原回答一句话同时包含多个可独立判真的义务、条件、对象、数值或后果时，必须拆成多个知识点；各点的 `claim` 只保留当前事实，`answerExcerpt` 可以复用同一段原文。仅个别平台增加的实质事实也要单独成点，其他平台标为未覆盖，禁止把新增事实并入宽泛知识点后借用官方材料锚点免查。`trustedAnchor` 只能覆盖已有官方材料实际支持的单一事实变量；超出该变量的主张必须成为无锚点知识点，交给后续一次可信搜索。
+原子性必须落实到每个平台的 `claim`，不能只把知识点标题写得宽泛。原回答一句话同时包含多个可独立判真的义务、条件、对象、数值或后果时，必须拆成多个知识点；各点的 `claim` 只保留当前事实，`answerExcerpt` 可以复用同一段原文。知识点必须标明 `claimType=fact|recommendation`：纯操作建议使用 `recommendation`，不因没有逐句脚标而判为引用不忠实；其中夹带的制度事实、条件、数字或时效必须拆成独立 `fact`。仅个别平台增加的实质事实也要单独成点，其他平台标为未覆盖，禁止把新增事实并入宽泛知识点后借用官方材料锚点免查。`trustedAnchor` 只能覆盖已有官方材料实际支持的单一事实变量；超出该变量的主张必须成为无锚点知识点，交给后续一次可信搜索。
 
 每个 `covered=true` 的 claim 必须填写 `answerExcerpt`：它必须是原始 `answerMarkdown` 的连续子串，并覆盖当前原子主张。载体负责知识点、主张和原回答片段的语义判断；程序负责从已捕获来源中校验脚标、重建可定位证据摘录、归一化引用方式，并自动生成合格的深知晓官方材料锚点或其他平台 `gov.cn` 材料锚点。
 
 - 局部角标优先：脚标实际出现在 `answerExcerpt` 内时列入 `citedReferenceIndexes`；当前主张已有局部脚标后，答案后段或回答级官方来源不得反向抬高它。
 - 没有局部角标时，可把平台为该主张返回的来源索引写入 `citedReferenceIndexes` 或 `answerLevelReferenceIndexes`。程序会在对应 `capturedText` 中定位支持当前主张的原文，并归一化为回答级语义溯源；定位失败时标记为分析信息不足，继续交给权威证据阶段裁决。
 - 回答级语义匹配不等于整篇自动继承来源。证据必须实际支持当前主张；只支持补充点的官方来源不得抬高核心点。
+- 深知晓的逐句脚标与“知识专库”回答级来源都必须采集；同一 URL 合并为 `inline_and_global`。知识专库入口或任一可见来源项打不开时，仍属于采集失败，重试后转 Computer Use，不得带残缺来源进入下一步。
 - 溯源方式会标准化为 `local`、`declared_global`、`answer_level_semantic` 或 `none`，最终报告分别外显为“逐段溯源 / 无对应的清单 / 全文语义溯源 / 未建立溯源”。缺少可定位证据时保守降级，不得默认为官方依据。
 
 ```bash
@@ -212,7 +213,7 @@ python3 scripts/fact_check_x.py complete-comparison \
 `complete-comparison`，最多自动修复 2 次。两次后仍失败则明确报告知识点对比
 阻断及缺失字段，禁止进入 `prepare-authority`，也禁止静默结束任务。
 
-命令成功后，必须立刻向用户发送一条独立的 **各方答案聚合完成检查点**，展示知识点数量、分析信息不足数量和“综合草案（未核验）”。必须原样展示命令返回的 `checkpoint.message`；`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。也可使用 `deliverables[0].path` 发送 `[打开各方答案聚合（未核验）](<返回路径>)`，不能只写 `comparison.html` 或把表格补在最终答复中。必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；用户最初要求完整执行也不能替代本阶段确认。
+命令成功后，必须立刻向用户发送一条独立的 **各方答案聚合完成检查点**，展示知识点数量、分析信息不足数量和“综合草案（未核验）”。必须原样展示命令返回的 `checkpoint.message` 或 `deliverables[0].markdownLink`；不得自行拼接路径。`mustPresentBeforeNextStage=true` 时，未向用户展示该消息不得调用下一阶段。不能只写 `comparison.html` 或把表格补在最终答复中。必须询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”，并等待选择；用户最初要求完整执行也不能替代本阶段确认。
 
 ### 第三步：权威核验后的最终答案（可选增强）
 
@@ -235,11 +236,11 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run目录> --max-wor
 
 `comparison-gate.json` 会锁定采集结果、`comparison-analysis.json` 与 `comparison.json` 的摘要；`authority-gate.json` 会继续锁定 request、evidence、assessment 和 result 的精确文件集合及摘要。后续发现文件被修改、ID 不一致、额外/陈旧 result、缺失 assessment（已取得证据的知识点）或手工结果时必须拒绝继续。只有 `search-authority` 正常完成并把门禁更新为 `searched` 后，才能写 assessment、运行 `finalize-authority` 或生成最终报告。禁止手工伪造 evidence、result，禁止通过修改中间 JSON 消除证据不足记录，禁止在缺钥时宣称“核心事实核验已完成”。
 
-逐个读取 `authority/requests` 和 `authority/evidence`，由当前运行载体直接把裁决写入 `authority/assessments/<知识点ID>.json`。已有合格深知晓官方材料锚点或其他平台 `gov.cn` 材料锚点时必须免查；否则每个知识点只调用一次可信搜索。多个知识点独立并发，不上传无关回答全文。
+逐个读取 `authority/requests` 和 `authority/evidence`，由当前运行载体直接把裁决写入 `authority/assessments/<知识点ID>.json`。已有合格深知晓官方材料锚点或其他平台 `gov.cn` 材料锚点时必须免查；纯操作建议使用 `recommendation_not_applicable`，同样不调用可信搜索；其余每个事实知识点只调用一次可信搜索。多个知识点独立并发，不上传无关回答全文。
 
 免查模式下，`trustedAnchor.officialAnswer` 是当前知识点的权威结论，锚点证据列表用于来源追溯，不要求每条标题或截断摘录逐字复述该结论。平台主张与 `officialAnswer` 语义一致，或可由其直接推出时，必须裁决为 `supported` 并引用当前锚点中的有效证据 ID。只有平台主张增加了 `officialAnswer` 和锚点均不能支持的实质事实，或者事实确实无法判定时，才使用 `insufficient`。不得仅因锚点摘录较短，就把与 `officialAnswer` 同义的主张判为证据不足。
 
-知识点对比阶段的引用忠实性和本阶段的事实正确性必须分别保留：平台自己的引用不支持其主张时，继续记录 `faithfulness=insufficient`；若该主张经权威结论证实，本阶段仍裁决为 `supported`，最终分类由程序据此形成 `coincidental`，不能用引用缺口代替事实裁决。
+知识点对比阶段的引用忠实性和本阶段的事实正确性必须分别保留：事实主张自己的引用不支持时，继续记录 `faithfulness=insufficient`；若该事实经权威结论证实，本阶段仍裁决为 `supported`，最终分类由程序据此形成 `coincidental`，不能用引用缺口代替事实裁决。纯操作建议使用 `claimType=recommendation` 和 `faithfulness=not_applicable`，对外显示“操作建议，直接引用不适用”，并从事实准确率、覆盖率、幻觉率中排除；若建议包含事实前提，必须拆成独立事实点照常核验。
 
 每个裁决文件必须严格使用以下结构；平台键必须与 request 中已覆盖的平台 ID 一致，`evidenceIds` 只能引用当前 evidence 文件中的证据 ID：
 
@@ -301,7 +302,7 @@ python3 scripts/fact_check_x.py deliver \
 - `verification.json`、`report.html`、`pipeline.json`：权威核验数据、最终平台表现报告和全链路清单；
 - 每个知识点的 request、evidence、assessment 和 result。
 
-最终对话必须使用 `deliverables` 返回路径，按“完整可分发报告包、各方答案汇总、各方答案聚合（未核验）、权威核验后的最终答案、各方答案测评报告、全链路清单”给出实际状态。即使最终报告已经生成，也不得省略三个阶段报告。
+最终对话必须原样使用 `deliverables[].markdownLink`，按“完整可分发报告包、各方答案汇总、各方答案聚合（未核验）、权威核验后的最终答案、各方答案测评报告、全链路清单”给出实际状态。`path` 只用于本机文件操作，不得由载体重新拼成链接。即使最终报告已经生成，也不得省略三个阶段报告。
 
 本机文件链接只用于当前运行会话内查看，禁止把 macOS 用户目录、Windows 本地盘符路径或本机文件协议地址描述成群成员、客户或共享链接访问者可以打开的对外交付地址。需要对外发送或转交时：
 

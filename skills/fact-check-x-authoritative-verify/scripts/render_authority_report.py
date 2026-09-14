@@ -17,6 +17,7 @@ CATEGORY_LABELS = {
     "fabricated": "官方查无",
     "misleading": "严重误导",
     "unverified": "无法核验",
+    "recommendation": "操作建议",
     "omitted": "未覆盖",
 }
 
@@ -27,6 +28,7 @@ CATEGORY_CLASSES = {
     "fabricated": "bad",
     "misleading": "bad",
     "unverified": "muted",
+    "recommendation": "info",
     "omitted": "muted",
 }
 

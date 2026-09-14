@@ -284,7 +284,20 @@ def acquire(request: dict, service_area: str = "", limit: int = 6, fixture: obje
     validate_request(request)
     anchor = request.get("trustedAnchor") or {}
     query = build_query(request["cloudPayload"])
-    if valid_official_anchor(request):
+    covered_claims = [
+        claim
+        for claim in (request.get("claims") or {}).values()
+        if claim.get("covered")
+    ]
+    recommendation_only = bool(covered_claims) and all(
+        claim.get("claimType") == "recommendation" for claim in covered_claims
+    )
+    if recommendation_only:
+        result = {"status": "no_evidence", "error": "", "evidence": []}
+        mode = "recommendation_not_applicable"
+        count = 0
+        attempt_count = 0
+    elif valid_official_anchor(request):
         result = {"status": "verified", "error": "", "evidence": anchor_evidence(anchor)}
         mode = (
             "dknow_exempt"
@@ -328,7 +341,9 @@ def normalize_verdict(item: dict, claim: dict, evidence_ids: set[str]) -> dict:
     ids = [evidence_id for evidence_id in item.get("evidenceIds") or [] if evidence_id in evidence_ids]
     if verdict in ("supported", "contradicted") and not ids:
         verdict = "insufficient"
-    if verdict == "supported":
+    if claim.get("claimType") == "recommendation" and verdict != "contradicted":
+        category = "recommendation"
+    elif verdict == "supported":
         if claim.get("faithfulness") == "supported" and claim.get("sourceLevel") in (
             "official",
             "dknow_trusted_search_official",
@@ -488,6 +503,14 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
     for pid, claim in (request.get("claims") or {}).items():
         if not claim.get("covered"):
             verdicts[pid] = {"verdict": "omitted", "category": "omitted", "reason": "该平台未覆盖此知识点。", "evidenceIds": []}
+        elif status == "no_evidence" and claim.get("claimType") == "recommendation":
+            verdicts[pid] = {
+                "verdict": "insufficient",
+                "category": "recommendation",
+                "reason": "这是纯操作建议，不属于事实真伪裁决；直接引用不适用，相关制度事实需另列知识点核验。",
+                "evidenceIds": [],
+            }
+            resolved_count += 1
         elif status == "no_evidence":
             verdicts[pid] = {
                 "verdict": "insufficient",
@@ -501,7 +524,7 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
             })
         elif status == "verified":
             verdicts[pid] = normalize_verdict(((assessment.get("verdicts") or {}).get(pid) or {}), claim, evidence_ids)
-            if pid == anchor_platform:
+            if pid == anchor_platform and claim.get("claimType") != "recommendation":
                 verdicts[pid]["verdict"] = "supported"
                 verdicts[pid]["category"] = "direct_accurate"
             if verdicts[pid]["category"] == "unverified":
@@ -513,9 +536,19 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
                 resolved_count += 1
         else:
             raise SkillError(f"未知证据状态: {status}")
+    covered_claims = [
+        claim
+        for claim in (request.get("claims") or {}).values()
+        if claim.get("covered")
+    ]
+    recommendation_only = bool(covered_claims) and all(
+        claim.get("claimType") == "recommendation" for claim in covered_claims
+    )
     finding = (
         clipped(assessment.get("authoritativeFinding"), 1200)
         if status == "verified"
+        else "该知识点为纯操作建议，不属于事实真伪裁决；直接引用和可信搜索均不适用。"
+        if recommendation_only
         else "本次可信搜索未取得可用于裁决该知识点的权威证据；相关主张保持证据不足。"
     )
     resolution = (

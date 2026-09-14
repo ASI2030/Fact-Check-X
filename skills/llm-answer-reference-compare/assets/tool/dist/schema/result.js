@@ -47,7 +47,12 @@ export const ReferenceSchema = z.object({
         "failed"
     ]).optional(),
     sourceAcquisitionError: z.string().optional(),
-    citationScope: z.enum(["inline", "global", "inline_and_global"]).optional()
+    citationScope: z.enum(["inline", "global", "inline_and_global"]).optional(),
+    sourceSection: z.string().optional(),
+    traceabilityText: z.string().optional(),
+    linkStatus: z.string().optional(),
+    platformTrustSource: z.string().optional(),
+    zone: z.string().optional()
 });
 export const SourceMentionSchema = z.object({
     label: z.string().min(1),

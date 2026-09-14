@@ -8,8 +8,8 @@
   "requestId": "K1",
   "title": "用户问题或总标题",
   "comparisonStatus": "conflict",
-  "knowledgePoint": {"id": "K1", "description": "原子事实", "role": "direct", "core": true},
-  "claims": {"doubao": {"covered": true, "claim": "...", "sourceLevel": "nonofficial", "faithfulness": "supported"}},
+  "knowledgePoint": {"id": "K1", "description": "原子事实", "role": "direct", "claimType": "fact", "core": true},
+  "claims": {"doubao": {"claimType": "fact", "covered": true, "claim": "...", "sourceLevel": "nonofficial", "faithfulness": "supported"}},
   "cloudPayload": {
     "title": "用户问题或总标题",
     "knowledgePoint": {"id": "K1", "description": "原子事实"},
@@ -22,6 +22,8 @@
 `differingClaims` 只在 `comparisonStatus=conflict|partial|mostly_consensus` 且至少两家主张确实不同时允许出现。一致、单方覆盖时必须省略。`cloudPayload` 不得包含完整原答案或无关知识点。
 
 `sourceLevel=official|dknow_trusted_search_official` 且所附正文忠实时可进入直接准确；其中 `dknow_trusted_search_official` 表示深知晓或深知晓（深度溯源）的可信搜索官方材料，不以 `.gov` 域名或外链是否返回作为降级条件。深度溯源不继承普通深知晓结果，但自身材料满足锚点条件时可独立使用 `dknow_exempt`。`sourceLevel=nonofficial` 即使内容忠实，也必须由独立权威证据验证后进入间接准确。最终报告的官方验证依据严格按各平台 `verdict.evidenceIds` 映射，不得默认取证据列表第一项。
+
+`claimType=recommendation` 表示纯操作建议。它对外归为“操作建议”，直接引用不适用，不进入事实准确率、覆盖率或幻觉率；若建议中包含制度事实、条件、数字或时效，必须拆成独立 `fact` 请求照常核验。权威证据明确证明建议会误导时仍可裁决为 `contradicted`。
 
 ## 取证结果
 
@@ -39,13 +41,13 @@
 }
 ```
 
-`searchMode`：`trusted_search`、`dknow_exempt` 或 `gov_exempt`。深知晓/深知晓（深度溯源）已返回且原文支持当前主张的官方材料使用 `dknow_exempt`；其他平台已返回且原文支持当前主张的 `gov.cn` 材料使用 `gov_exempt`。两类免查均为 `requestCount=0`、`attemptCount=0`；其余知识点的逻辑搜索任务 `requestCount=1`，技术故障自动重试时由 `attemptCount` 记录实际尝试次数，最多 3 次。
+`searchMode`：`trusted_search`、`dknow_exempt`、`gov_exempt` 或 `recommendation_not_applicable`。深知晓/深知晓（深度溯源）已返回且原文支持当前主张的官方材料使用 `dknow_exempt`；其他平台已返回且原文支持当前主张的 `gov.cn` 材料使用 `gov_exempt`。纯操作建议使用 `recommendation_not_applicable`。三类免查均为 `requestCount=0`、`attemptCount=0`；其余事实知识点的逻辑搜索任务 `requestCount=1`，技术故障自动重试时由 `attemptCount` 记录实际尝试次数，最多 3 次。
 
 ## 单点裁决结果
 
 `fact-check-x/verification@2` 增加 `anchorDowngrades`：比较阶段认定免搜索、核验阶段判锚点无效而改走可信搜索的知识点 ID。期望免搜、实际搜索属保守放行；期望搜索、实际免搜仍按洗白拒绝。
 
-`fact-check-x/authority-result@1` 保留请求、证据、搜索模式、请求次数、权威结论和逐平台类别。服务错误不得写成事实错误；重试后仍失败时不生成裁决结果。证据不足写入 `resolution=insufficient_evidence|partially_resolved` 和 `evidenceGaps`，但结果状态仍为 `completed`。
+`fact-check-x/authority-result@1` 保留请求、证据、搜索模式、请求次数、权威结论和逐平台类别。事实类逐平台类别之外，纯操作建议使用 `category=recommendation`。服务错误不得写成事实错误；重试后仍失败时不生成裁决结果。事实证据不足写入 `resolution=insufficient_evidence|partially_resolved` 和 `evidenceGaps`，但结果状态仍为 `completed`。
 
 底层 `unverified` 与 `fabricated` 原始类别继续保留用于审计和复现；第四步对外统一显示为「疑似误导」，表示官方无法查证，可能过期、编造、受信息源误导或检索覆盖不足。此类主张不写入确定答案，并从直接答案明细移入补充参考风险区；若同一知识点所有平台均为 `omitted|unverified`，该知识点整体不进入覆盖率与准确率分母。
 

@@ -38,7 +38,7 @@ python3 scripts/fact_check_x.py prepare-comparison \
   --run-dir <run>
 ```
 
-命令会同步生成“各方答案汇总”，在运行目录顶层生成 `01-capture-report.html`，并通过 `deliverables` 返回用户可见路径。调用方必须先用该路径发送真正的 Markdown 文件链接，再继续知识点对比；禁止只显示反引号路径。
+命令会同步生成“各方答案汇总”，在运行目录顶层生成 `01-capture-report.html`。每个 `deliverables` 条目同时返回已验证存在的本机 `path`、标准 `fileUri` 和可直接展示的 `markdownLink`。调用方必须原样展示 `markdownLink`，不得自行拼接 Windows 路径或把 `path` 直接塞进 Markdown；产物不存在时命令会在当前阶段失败。
 
 默认交互模式下，程序会把阶段状态写入 `stage-checkpoints.json`。调用方发送本阶段产物并收到用户“继续下一步”后，必须使用 `checkpoint.acknowledgement.token` 执行：
 
@@ -52,7 +52,7 @@ python3 scripts/fact_check_x.py acknowledge-stage \
 
 当前智能体读取 `<run>/comparison-task.json`，写入 `<run>/comparison-analysis.json`，再执行：
 
-拆解时，原子性同时约束知识点和各平台 `claim`。一个原句包含多个独立义务、条件、对象、数值或后果时必须拆点，每个 `claim` 只保留当前事实；平台独有的实质新增事实也要另起无锚点知识点，不能并入宽泛知识点后复用深知晓锚点免查。
+拆解时，原子性同时约束知识点和各平台 `claim`。一个原句包含多个独立义务、条件、对象、数值或后果时必须拆点，每个 `claim` 只保留当前事实；平台独有的实质新增事实也要另起无锚点知识点，不能并入宽泛知识点后复用深知晓锚点免查。每个知识点同时标明 `claimType=fact|recommendation`：纯操作建议可标为 `recommendation`，不因缺少逐句脚标而判引用不忠实；建议中包含的制度事实、条件、数字或时效必须拆成独立 `fact`。
 
 ```bash
 python3 scripts/fact_check_x.py complete-comparison \
@@ -60,7 +60,7 @@ python3 scripts/fact_check_x.py complete-comparison \
   --run-dir <run>
 ```
 
-命令会在运行目录顶层生成 `02-comparison-report.html`，并通过 `deliverables` 返回路径；调用方必须把它作为独立可点击文件展示给用户。报告必须包含明确标为“未核验”的综合草案。默认交互模式下，用户确认继续后才能进入权威核验。
+命令会在运行目录顶层生成 `02-comparison-report.html`，并通过 `deliverables[].markdownLink` 返回可点击链接；调用方必须原样展示。报告必须包含明确标为“未核验”的综合草案。默认交互模式下，用户确认继续后才能进入权威核验。
 
 生成每个知识点的独立云端请求并并发取证：
 
@@ -69,7 +69,7 @@ python3 scripts/fact_check_x.py prepare-authority --run-dir <run>
 python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 12
 ```
 
-知识点已有深知晓/深知晓（深度溯源）本次回答所附的官方材料，或其他平台本次回答所附的 `gov.cn` 材料，且原文确实支持当前主张时，直接复用为官方证据，不调用可信搜索。只有不属于上述情形或已有材料不足以裁决时，才是非免查知识点。
+深知晓采集同时保留回答内逐句脚标和“知识专库”中的回答级来源；相同 URL 合并为 `inline_and_global`。回答级来源只有经当前知识点逐条语义匹配且原文可定位时才可支持该事实，不得整库继承。知识点已有深知晓/深知晓（深度溯源）本次回答所附的官方材料，或其他平台本次回答所附的 `gov.cn` 材料，且原文确实支持当前事实主张时，直接复用为官方证据，不调用可信搜索。纯操作建议同样不调用可信搜索；除此之外，已有材料不足以裁决的事实知识点才是非免查知识点。
 
 若存在非免查知识点但本机尚无可信搜索配置，`prepare-authority` 和 `search-authority` 会返回 `status=configuration_required`、`userPrompt` 与 `configuration.command` 并以非零状态退出。调用方先展示登录提示，再前台执行该命令。用户只需在自动打开的深知 MaaS 页面完成登录；组件会自动复用已有完整 Key，没有时创建 `Fact-Check-X` 专用 Key，验证后保存到 `~/.fact-check-x/credentials/trusted-search-key`。Codex、Claude Code、WorkBuddy 等载体共享该配置，检测到已有 Key 时直接跳过登录。配置成功后调用方自动重跑 `prepare-authority`，不得要求用户复制 Key、编辑 shell 配置、回复“已配置”，也不得改用深知晓来源或普通搜索绕过。
 
@@ -79,7 +79,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 
 当前智能体逐个读取 `authority/requests` 与 `authority/evidence`，把裁决写入 `authority/assessments/<知识点ID>.json`，然后：
 
-免查模式下，`trustedAnchor.officialAnswer` 是当前知识点的权威结论；锚点证据列表用于来源追溯。无论来自深知晓还是 `gov.cn`，都必须确认已捕获正文实际支持该结论，不得仅凭官方属性自动判定。平台主张与 `officialAnswer` 语义一致或可由其直接推出时，裁决为 `supported` 并引用有效锚点证据 ID。仅当平台主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。知识点对比阶段的引用忠实性与本阶段的事实正确性分别保留，不能因平台自身引用不足而拒绝判断已经被权威结论证实的主张。
+免查模式下，`trustedAnchor.officialAnswer` 是当前事实知识点的权威结论；锚点证据列表用于来源追溯。无论来自深知晓还是 `gov.cn`，都必须确认已捕获正文实际支持该结论，不得仅凭官方属性自动判定。平台主张与 `officialAnswer` 语义一致或可由其直接推出时，裁决为 `supported` 并引用有效锚点证据 ID。仅当平台主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。知识点对比阶段的引用忠实性与本阶段的事实正确性分别保留，不能因平台自身引用不足而拒绝判断已经被权威结论证实的主张。`recommendation` 作为“操作建议”单独展示，不进入事实准确率或幻觉率；若权威证据证明建议会误导，仍可判为 `contradicted`。
 
 ```json
 {
@@ -103,7 +103,7 @@ python3 scripts/fact_check_x.py finalize-authority --run-dir <run>
 `finalize-authority` 生成“权威核验后的最终答案”，只将证据充分的直接知识点纳入 `finalAnswer`，将补充参考单独写入 `supplementalFindings`，将证据不足项写入 `evidenceGaps`。第三步只展示直接答案、证据边界和简洁来源索引；逐知识点裁决与评分只在第四步展示。
 
 `finalize-authority` 完成裁决后会独立生成 `03-authority-report.html`，并通过
-`deliverables` 返回路径。调用方必须先展示这份权威报告；默认交互模式下，
+`deliverables` 返回已验证的路径、文件 URI 和 `markdownLink`。调用方必须原样展示 `markdownLink`；默认交互模式下，
 只有状态为 `completed` 且用户确认继续后才执行：
 
 ```bash
