@@ -5,7 +5,7 @@
 对一个或多个 AI 的完整回答与引用进行事实核验：无损采集原回答，结构化比较关键事实，逐点核验权威证据，再评估各平台表现。最终答案只是核验产物之一，原始证据、冲突和证据边界全程可追溯。
 
 <p align="center">
-  <img src="assets/fact-check-x-overview.png?v=1.1.18" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
+  <img src="assets/fact-check-x-overview.png?v=1.1.19" alt="Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估" width="900">
 </p>
 
 ## 三分钟开始
@@ -481,11 +481,11 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js login \
 
 1. 暂停流水线。
 2. 保持原页面和持久化 profile。
-3. 有 Computer Use 的宿主接管同一平台页面。
+3. 优先由宿主自带的浏览器或 Computer Use 接管同一平台页面；`agent-browser` 只作可选诊断，不是依赖。
 4. 直接复用 `capture-recovery.json.question`。
 5. 用户本人处理登录和验证。
 6. 等待回答完全停止生成。
-7. 重新执行采集并复核 `capture-gate.json`。
+7. 读取 `captureLifecycle`：已尝试提交或已出现回答时只恢复原会话并继续提取，禁止重新提问；仅 `resubmissionAllowed=true` 时允许提交一次。选择器候选必须由程序验证后采用。
 
 禁止用以下动作替代恢复：
 
@@ -592,6 +592,16 @@ python3 scripts/fact_check_x.py search-authority \
 python3 scripts/fact_check_x.py finalize-authority \
   --run-dir "$FCX_RUN_DIR"
 ```
+
+第三步完成后若需修正 assessment，先受控归档并重开，禁止手工清空结果或篡改门禁：
+
+```bash
+python3 scripts/fact_check_x.py reopen-authority \
+  --run-dir "$FCX_RUN_DIR" \
+  --reason "<具体修订原因>"
+```
+
+修改 assessment 后重新执行 `finalize-authority`，并重新确认新的第三步产物。
 
 ### 7. 生成最终交付
 

@@ -159,7 +159,7 @@ async function runCommand(options) {
     const incomplete = platforms.filter((platform) => platform.status !== "success");
     if (incomplete.length > 0) {
         await writeJsonFile(join(options.out, "capture-recovery.json"), {
-            schemaVersion: "fact-check-x/capture-recovery@1",
+            schemaVersion: "fact-check-x/capture-recovery@2",
             status: "required",
             action: "computer_use",
             createdAt: new Date().toISOString(),
@@ -170,18 +170,20 @@ async function runCommand(options) {
                 url: normalizeUrl(platform.url),
                 loginUrl: normalizeUrl(platform.url),
                 status: platform.status,
-                error: platform.error
+                error: platform.error,
+                captureLifecycle: platform.captureLifecycle,
+                selectorRecovery: platform.selectorRecovery
             })),
             instructions: [
-                "运行载体具备 Computer Use 时用它恢复同一平台；否则停止在原始答案采集阶段。",
+                "优先使用当前运行载体自带的浏览器或 Computer Use 诊断同一页面；agent-browser 仅是可选诊断工具，不是运行依赖。",
                 "需要用户本人处理账号、密码、验证码或人机验证。",
                 "仅使用 failedPlatforms[].loginUrl 打开平台；该字段是已清洗的纯 URL，不得拼接说明文字或展示层追踪参数。",
-                "直接读取本文件 question 字段并复用原始问题；不得要求用户回滚会话复制问题。",
-                "接管后保持当前页面；等待人工验证时不得关闭、重复打开浏览器或机械重采。",
-                "告诉用户完成后可回复“验证已完成”或“答案已生成”；继续检测当前回答并自动采集，无需暂停或取消任务。",
-                "完成登录、地区选择、问题提交并等待回答停止生成。",
-                "随后重新运行原始答案采集；全部平台成功前禁止进入知识点对比。",
-                "failedPlatforms[].status 为 input_not_found 时不是登录问题：页面未显示登录入口但找不到提问输入框，说明平台界面已变化，需更新该平台适配器的输入框选择器后重跑，重新登录无法解决。"
+                "captureLifecycle.submissionAttempted 或 answerObserved 为 true 时，禁止重新提交、重输或重问；只能恢复原会话并继续等待、定位或提取现有回答。",
+                "仅在 captureLifecycle.resubmissionAllowed 为 true 时允许提交一次原始问题；提交后立即转为只读恢复。",
+                "selectorRecovery 中的候选只是建议，必须通过程序的唯一、可见、可编辑或非进度文本门禁后才能采用；模型或浏览器工具不得直接改写适配器。",
+                "接管后保持当前会话；等待人工验证时不得关闭、重复打开浏览器或机械重采。",
+                "全部平台成功前禁止进入知识点对比。",
+                "failedPlatforms[].status 为 input_not_found 时不是登录问题：应先由恢复层寻找并验证新输入框；验证失败后再更新适配器。"
             ]
         });
         const details = incomplete
@@ -190,7 +192,7 @@ async function runCommand(options) {
         throw new Error(`采集未完成，已停止流水线并请求 Computer Use 恢复，禁止进入知识点对比：${details}`);
     }
     await writeJsonFile(join(options.out, "capture-recovery.json"), {
-        schemaVersion: "fact-check-x/capture-recovery@1",
+        schemaVersion: "fact-check-x/capture-recovery@2",
         status: "not_required",
         action: "none",
         createdAt: new Date().toISOString(),
@@ -234,6 +236,11 @@ export async function captureWithRetries(config, options, capture = capturePlatf
             console.log(`${failedResult.label || config.label} 需要人工接管。已停止机械重采并保留原始问题；请根据 capture-recovery.json 继续。`);
             break;
         }
+        const lifecycle = failedResult.captureLifecycle || result.captureLifecycle || {};
+        if (lifecycle.submissionAttempted || lifecycle.submissionConfirmed || lifecycle.answerObserved) {
+            console.log(`${failedResult.label || config.label} 已尝试提交或已出现回答；为防止重复提问，停止整轮重采，只允许在原会话恢复选择器、等待或提取。`);
+            break;
+        }
         if (attempt < maxAttempts) {
             console.log(`${Math.round(options.retryDelayMs / 1000)} 秒后重新采集 ${config.label}。`);
             await wait(options.retryDelayMs);
@@ -250,6 +257,8 @@ function dependentCaptureFailure(config, primaryResult) {
         answerMarkdown: "",
         references: [],
         sourceMentions: [],
+        captureLifecycle: primaryResult.captureLifecycle,
+        selectorRecovery: primaryResult.selectorRecovery,
         durationMs: primaryResult.durationMs,
         error: `普通深知晓未成功，未启动深度溯源：${primaryResult.error || "采集未完成"}`
     };

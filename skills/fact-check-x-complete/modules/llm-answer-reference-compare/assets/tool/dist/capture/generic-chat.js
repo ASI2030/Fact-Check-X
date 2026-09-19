@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join, relative, win32 } from "node:path";
@@ -8,6 +9,7 @@ import { openBrowserSession } from "./browser-session.js";
 import { ensureDir, writeTextFile } from "../utils/filesystem.js";
 import { normalizeUrl } from "../utils/urls.js";
 import { profileDirectory } from "../utils/profile.js";
+import { recoverSelector, selectorRecoveryContract } from "./selector-recovery.js";
 const execFileAsync = promisify(execFile);
 const trustedSearchContentCache = new Map();
 let localTrustedSearchKey;
@@ -40,6 +42,21 @@ async function trustedSearchKey() {
 
 export async function captureGenericChat(config, options) {
     const started = Date.now();
+    const lifecycle = options.captureLifecycle || {
+        schemaVersion: "fact-check-x/capture-lifecycle@1",
+        questionSha256: createHash("sha256").update(String(options.question || "")).digest("hex"),
+        attempts: 0,
+        submissionAttempted: false,
+        submissionCount: 0,
+        submissionConfirmed: false,
+        answerObserved: false,
+        resubmissionAllowed: true
+    };
+    options.captureLifecycle = lifecycle;
+    lifecycle.attempts += 1;
+    config._activeCaptureLifecycle = lifecycle;
+    config._selectorRecoveries = [];
+    config._currentQuestion = String(options.question || "");
     const profileDir = profileDirectory(config.profile);
     const artifactDir = join(options.outDir, "artifacts", config.name);
     await ensureDir(artifactDir);
@@ -109,8 +126,15 @@ export async function captureGenericChat(config, options) {
             "input[type='text']"
         ];
         const readySelectors = chatReadySelectors(inputSelectors);
-        let input = await waitForFirstVisible(page, readySelectors, Math.min(options.timeoutMs, 20000));
+        let input = await waitForFirstVisible(page, readySelectors, Math.min(options.timeoutMs, 3000));
         const gated = await pageLooksLikeGate(page);
+        if (!input && !gated) {
+            const recovered = await recoverSelector(page, "input", { question: options.question });
+            if (recovered) {
+                input = recovered.locator;
+                recordSelectorRecovery(config, recovered.proposal);
+            }
+        }
         if (!input && !gated) {
             input = await waitForFirstVisible(page, inputSelectors, Math.min(options.timeoutMs, 5000));
         }
@@ -162,6 +186,7 @@ export async function captureGenericChat(config, options) {
             await dismissYuanbaoGuides(page);
         }
         const previousAnswer = await extractAnswer(config, page);
+        config._previousAnswer = previousAnswer;
         await input.click();
         await fillPrompt(input, options.question);
         let submission = await submitPromptAndConfirm(config, activePage, input, options.question, previousAnswer, options);
@@ -171,7 +196,16 @@ export async function captureGenericChat(config, options) {
                 return failure(config, "verification_required", started, "Page requires captcha, image verification, or other human verification.", await saveArtifacts(page, artifactDir, options.outDir));
             }
             input = await waitForFirstVisible(page, readySelectors, Math.min(options.timeoutMs, 10000)) || input;
-            submission = await submitPromptAndConfirm(config, activePage, input, options.question, previousAnswer, options);
+            submission = lifecycle.submissionAttempted
+                ? await confirmPromptSubmission(
+                    config,
+                    activePage,
+                    input,
+                    options.question,
+                    previousAnswer,
+                    options.loginTimeoutMs || 300000
+                )
+                : await submitPromptAndConfirm(config, activePage, input, options.question, previousAnswer, options);
         }
         if (submission === "verification_required") {
             return failure(config, "verification_required", started, "Page still requires captcha, image verification, or other human verification.", await saveArtifacts(page, artifactDir, options.outDir));
@@ -179,6 +213,8 @@ export async function captureGenericChat(config, options) {
         if (submission !== "submitted") {
             return failure(config, "failed", started, "已执行发送操作，但页面未出现输入清空、生成状态或新回答，拒绝把点击成功误判为问题已提交。", await saveArtifacts(page, artifactDir, options.outDir));
         }
+        lifecycle.submissionConfirmed = true;
+        lifecycle.resubmissionAllowed = false;
         if (config.name === "doubao") {
             await activateDoubaoSubmittedConversation(
                 page,
@@ -191,6 +227,9 @@ export async function captureGenericChat(config, options) {
             interactive: Boolean(options.headed && options.interactive),
             verificationTimeoutMs: options.loginTimeoutMs || 300000
         });
+        if (answerMarkdown) {
+            lifecycle.answerObserved = true;
+        }
         if (config.name === "dknowc-chat" && options.deepCompanionConfig) {
             const ordinaryValidation = validateCapturedAnswer(config, answerMarkdown);
             if (ordinaryValidation) {
@@ -245,6 +284,9 @@ export async function captureGenericChat(config, options) {
                     verificationTimeoutMs: options.loginTimeoutMs || 300000
                 }
             );
+            if (answerMarkdown) {
+                lifecycle.answerObserved = true;
+            }
         }
         capturedAnswerMarkdown = answerMarkdown;
         const extraction = await extractReferences(config, page, options.question);
@@ -383,6 +425,7 @@ async function clickInputContainerBottomRight(page, input) {
     return true;
 }
 export async function submitPromptAndConfirm(config, page, input, question, previousAnswer, options = {}) {
+    const lifecycle = options.captureLifecycle || {};
     const initial = await confirmPromptSubmission(config, page, input, question, previousAnswer, 500);
     if (initial !== "unconfirmed") {
         return initial;
@@ -394,7 +437,10 @@ export async function submitPromptAndConfirm(config, page, input, question, prev
         "button:has-text('发送')",
         "button"
     ]);
-    if (send) {
+    const sendEnabled = send && typeof send.isEnabled === "function"
+        ? await send.isEnabled().catch(() => true)
+        : Boolean(send);
+    if (send && sendEnabled) {
         strategies.push(() => send.click().then(() => true).catch(() => false));
     }
     if (config.sendFallback === "input-container-bottom-right") {
@@ -403,17 +449,35 @@ export async function submitPromptAndConfirm(config, page, input, question, prev
     strategies.push(() => page.keyboard.press("Enter").then(() => true).catch(() => false));
     const transitionTimeoutMs = Number(options.submissionTimeoutMs) || 5000;
     for (const strategy of strategies) {
+        lifecycle.submissionAttempted = true;
+        lifecycle.submissionCount = Number(lifecycle.submissionCount || 0) + 1;
+        lifecycle.resubmissionAllowed = false;
         const attempted = await strategy();
         if (!attempted) {
-            continue;
+            return "unconfirmed";
         }
         const state = await confirmPromptSubmission(config, page, input, question, previousAnswer, transitionTimeoutMs);
         if (state !== "unconfirmed") {
             return state;
         }
+        if (options.headed && options.interactive) {
+            console.log(`${config.label} 已执行一次发送，但尚未确认页面状态。请只处理当前页面的验证或等待当前回答，禁止再次提交同一问题。`);
+            return confirmPromptSubmission(
+                config,
+                page,
+                input,
+                question,
+                previousAnswer,
+                options.loginTimeoutMs || 300000
+            );
+        }
+        return "unconfirmed";
     }
     if (options.headed && options.interactive) {
-        console.log(`${config.label} 尚未确认问题已送出。请在当前 Playwright 页面完成验证或手工发送；无需回滚会话复制问题，也不要暂停或取消任务。检测到生成状态或答案后会自动继续采集。`);
+        lifecycle.submissionAttempted = true;
+        lifecycle.submissionCount = Number(lifecycle.submissionCount || 0) + 1;
+        lifecycle.resubmissionAllowed = false;
+        console.log(`${config.label} 自动发送动作未执行。请在当前 Playwright 页面只发送一次；此后仅等待或采集当前回答，禁止再次提交同一问题。`);
         return confirmPromptSubmission(
             config,
             page,
@@ -459,7 +523,7 @@ async function readInputValue(input) {
         return node.textContent || "";
     }).catch(() => null);
 }
-async function extractAnswer(config, page) {
+export async function extractAnswer(config, page) {
     if (config.name === "deepseek") {
         const answer = await extractDeepSeekAnswer(page);
         if (answer) {
@@ -479,10 +543,16 @@ async function extractAnswer(config, page) {
         }
     }
     if (isDknowcPlatform(config)) {
-        return extractDknowcAnswer(page);
+        const answer = await extractDknowcAnswer(page);
+        if (answer) {
+            return answer;
+        }
     }
     if (config.name === "kimi") {
-        return extractKimiAnswer(page);
+        const answer = await extractKimiAnswer(page);
+        if (answer) {
+            return answer;
+        }
     }
     const selectors = config.selectors?.answer || [
         "[data-message-author-role='assistant']",
@@ -498,6 +568,17 @@ async function extractAnswer(config, page) {
             if (text && !looksLikeLoadingText(text)) {
                 return normalizeAnswerText(text);
             }
+        }
+    }
+    const recovered = await recoverSelector(page, "answer", {
+        question: config._currentQuestion,
+        previousAnswer: config._previousAnswer
+    });
+    if (recovered) {
+        recordSelectorRecovery(config, recovered.proposal);
+        const text = String(await recovered.locator.innerText().catch(() => "")).trim();
+        if (text && !looksLikeLoadingText(text)) {
+            return normalizeAnswerText(text);
         }
     }
     return "";
@@ -856,6 +937,10 @@ export async function waitForAnswer(config, page, timeoutMs, previousAnswer = ""
             await page.waitForTimeout(1500);
             continue;
         }
+        if (config.name === "doubao" && looksLikeDoubaoInterimAnswer(text)) {
+            await page.waitForTimeout(1500);
+            continue;
+        }
         if (text && text !== lastText) {
             lastText = text;
             stableSince = Date.now();
@@ -928,7 +1013,7 @@ function looksLikeQuestionEcho(text, question) {
 function normalizeComparableText(value) {
     return value.replace(/\s+/g, "").trim();
 }
-async function extractReferences(config, page, question = "") {
+export async function extractReferences(config, page, question = "") {
     const selectors = config.selectors?.references || ["a[href]"];
     const seen = new Set();
     const references = [];
@@ -2853,6 +2938,15 @@ export function looksLikeYuanbaoInterimAnswer(value) {
         "正在检索"
     ].some((marker) => text.includes(marker));
 }
+export function looksLikeDoubaoInterimAnswer(value) {
+    const text = String(value || "")
+        .replace(/\s+/g, "")
+        .replace(/[\u3002\uff0c,\uff01!\u2026.]+$/g, "");
+    if (!text || text.length > 80) {
+        return false;
+    }
+    return /^(?:我(?:来|正在)?|正在)?(?:为你|为您)?(?:查证|核实|检索|搜索|分析|思考|生成|整理)(?:中|资料|相关资料|内容|信息|答案)?(?:请稍候)?$/.test(text);
+}
 export async function dismissYuanbaoGuides(page) {
     const selectors = [
         ".t-dialog__position .auto-search-guide-popup__button:has-text('我知道了')",
@@ -3011,6 +3105,12 @@ async function captureDknowcDeepCompanion(
     }
 }
 export function validateCapturedAnswer(config, answerMarkdown) {
+    if (config.name === "doubao" && looksLikeDoubaoInterimAnswer(answerMarkdown)) {
+        return {
+            status: "failed",
+            error: "豆包捕获内容仍是查证进度提示，不是完整回答。"
+        };
+    }
     if (looksLikeLoginOnlyText(answerMarkdown)
         || looksLikeNonAnswerPrompt(answerMarkdown)
         || (config.name === "yuanbao" && looksLikeYuanbaoInterimAnswer(answerMarkdown))) {
@@ -3049,6 +3149,8 @@ function success(config, started, answerMarkdown, references, sourceMentions, ar
         references,
         sourceMentions,
         artifacts,
+        captureLifecycle: captureLifecycleSnapshot(config),
+        selectorRecovery: selectorRecoveryContract(config._selectorRecoveries),
         durationMs: Date.now() - started
     };
     if (sourceCountAudit) {
@@ -3067,8 +3169,35 @@ function failure(config, status, started, error, artifacts, partial = {}) {
         sourceMentions: Array.isArray(partial.sourceMentions) ? partial.sourceMentions : [],
         ...(partial.sourceCountAudit ? { sourceCountAudit: partial.sourceCountAudit } : {}),
         artifacts,
+        captureLifecycle: captureLifecycleSnapshot(config),
+        selectorRecovery: selectorRecoveryContract(config._selectorRecoveries),
         durationMs: Date.now() - started,
         error
+    };
+}
+function recordSelectorRecovery(config, proposal) {
+    if (!proposal) {
+        return;
+    }
+    const recoveries = Array.isArray(config._selectorRecoveries)
+        ? config._selectorRecoveries
+        : [];
+    if (!recoveries.some((item) => item.operation === proposal.operation && item.selector === proposal.selector)) {
+        recoveries.push(proposal);
+    }
+    config._selectorRecoveries = recoveries;
+}
+function captureLifecycleSnapshot(config) {
+    const lifecycle = config._activeCaptureLifecycle || {};
+    return {
+        schemaVersion: "fact-check-x/capture-lifecycle@1",
+        questionSha256: String(lifecycle.questionSha256 || ""),
+        attempts: Number(lifecycle.attempts || 0),
+        submissionAttempted: Boolean(lifecycle.submissionAttempted),
+        submissionCount: Number(lifecycle.submissionCount || 0),
+        submissionConfirmed: Boolean(lifecycle.submissionConfirmed),
+        answerObserved: Boolean(lifecycle.answerObserved),
+        resubmissionAllowed: !lifecycle.submissionAttempted && !lifecycle.answerObserved
     };
 }
 async function saveArtifacts(page, artifactDir, outDir) {

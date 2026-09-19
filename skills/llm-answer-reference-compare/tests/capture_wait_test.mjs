@@ -9,9 +9,12 @@ import {
     extractDknowcAnswer,
     extractDoubaoSourceMentions,
     isPdfReference,
+    looksLikeDoubaoInterimAnswer,
     looksLikeLoginOnlyText,
     looksLikeNonAnswerPrompt,
     looksLikeYuanbaoInterimAnswer,
+    submitPromptAndConfirm,
+    validateCapturedAnswer,
     waitForAnswer
 } from "../assets/tool/dist/capture/generic-chat.js";
 import { builtInPlatforms } from "../assets/tool/dist/capture/platform-registry.js";
@@ -146,6 +149,8 @@ assert.equal(
 );
 assert.equal(looksLikeYuanbaoInterimAnswer("我来查一下深圳夫妻投靠入户的最新政策要求。"), true);
 assert.equal(looksLikeYuanbaoInterimAnswer("我来查一下。经核验，以下是完整政策条件。".repeat(12)), false);
+assert.equal(looksLikeDoubaoInterimAnswer("正在查证"), true);
+assert.equal(validateCapturedAnswer({ name: "doubao" }, "正在查证")?.status, "failed");
 assert.equal(
     looksLikeLoginOnlyText("完整政策回答中要求考生登录北京教育考试院网站填报信息。".repeat(8)),
     false
@@ -312,22 +317,56 @@ const paired = await captureWithRetries(
             status: "success",
             answerMarkdown: "普通回答",
             references: [],
+            captureLifecycle: {
+                submissionAttempted: true,
+                submissionConfirmed: true,
+                answerObserved: true,
+                resubmissionAllowed: false
+            },
             companionResult: {
                 platform: "dknowc-deep-research",
                 label: "深知晓（深度溯源）",
                 url: config.url,
-                status: pairedAttempts === 1 ? "failed" : "success",
-                answerMarkdown: pairedAttempts === 1 ? "" : "深度溯源回答",
+                status: "failed",
+                answerMarkdown: "",
                 references: [],
-                error: pairedAttempts === 1 ? "深度溯源尚未完成" : undefined
+                error: "深度溯源尚未完成"
             }
         };
     },
     async () => undefined
 );
-assert.equal(pairedAttempts, 2);
+assert.equal(pairedAttempts, 1);
 assert.equal(paired.status, "success");
-assert.equal(paired.companionResult.status, "success");
+assert.equal(paired.companionResult.status, "failed");
+
+let postSubmissionAttempts = 0;
+const postSubmissionFailure = await captureWithRetries(
+    { name: "post-submit-test", label: "已提交恢复测试", url: "https://example.invalid" },
+    { timeoutMs: 1000, retryCount: 2, retryDelayMs: 0 },
+    async (config) => {
+        postSubmissionAttempts += 1;
+        return {
+            platform: config.name,
+            label: config.label,
+            url: config.url,
+            status: "failed",
+            answerMarkdown: "",
+            references: [],
+            error: "回答选择器失效",
+            captureLifecycle: {
+                submissionAttempted: true,
+                submissionCount: 1,
+                submissionConfirmed: true,
+                answerObserved: false,
+                resubmissionAllowed: false
+            }
+        };
+    },
+    async () => undefined
+);
+assert.equal(postSubmissionAttempts, 1);
+assert.equal(postSubmissionFailure.captureLifecycle.submissionCount, 1);
 
 const replayQuestion = "页面关闭后必须重新提交的原问题";
 let replayAttempts = 0;
@@ -435,6 +474,40 @@ assert.equal(
     await confirmPromptSubmission(promptConfig, promptPage, promptInput, promptQuestion, "", 100),
     "verification_required"
 );
+
+let sendClicks = 0;
+let enterPresses = 0;
+const singleActionInput = {
+    async evaluate() { return promptQuestion; }
+};
+const singleActionPage = {
+    locator(selector) {
+        return {
+            last() { return this; },
+            nth() { return this; },
+            async count() { return selector === "#send" ? 1 : 0; },
+            async isVisible() { return selector === "#send"; },
+            async click() { sendClicks += 1; },
+            async innerText() { return ""; }
+        };
+    },
+    keyboard: { async press() { enterPresses += 1; } },
+    async waitForTimeout(milliseconds) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(milliseconds, 5)));
+    }
+};
+const singleActionLifecycle = { submissionCount: 0 };
+assert.equal(await submitPromptAndConfirm(
+    { name: "single-action", label: "单次提交", selectors: { send: ["#send"], answer: ["#missing"] } },
+    singleActionPage,
+    singleActionInput,
+    promptQuestion,
+    "",
+    { submissionTimeoutMs: 20, captureLifecycle: singleActionLifecycle }
+), "unconfirmed");
+assert.equal(sendClicks, 1);
+assert.equal(enterPresses, 0);
+assert.equal(singleActionLifecycle.submissionCount, 1);
 
 const lateGateStarted = Date.now();
 const lateGatePage = {

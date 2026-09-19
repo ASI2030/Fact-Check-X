@@ -12,7 +12,7 @@ const recovery = buildLoginRecovery(
   new Error("browserContext.newPage: Target page, context or browser has been closed"),
 );
 
-assert.equal(recovery.schemaVersion, "fact-check-x/capture-recovery@1");
+assert.equal(recovery.schemaVersion, "fact-check-x/capture-recovery@2");
 assert.equal(recovery.status, "required");
 assert.equal(recovery.action, "computer_use");
 assert.equal(recovery.phase, "login");
@@ -24,5 +24,7 @@ assert.equal(new URL(recovery.failedPlatforms[0].loginUrl).hash, "");
 assert.match(recovery.failedPlatforms[0].error, /Target page/);
 assert.ok(recovery.instructions.some((item) => item.includes("禁止测试或改用 headless")));
 assert.ok(recovery.instructions.some((item) => item.includes("没有 Computer Use 能力")));
+assert.ok(recovery.instructions.some((item) => item.includes("只允许提交一次")));
+assert.ok(recovery.instructions.some((item) => item.includes("agent-browser")));
 
 console.log("PASS 登录失败生成唯一 Computer Use 恢复指令");

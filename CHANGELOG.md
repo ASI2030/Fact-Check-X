@@ -4,6 +4,14 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.19] - 2026-09-19
+
+- Add a selector recovery and validation layer that may accept proposals from the host browser or optional `agent-browser`, while keeping Playwright as the driver and requiring deterministic visibility, uniqueness and content checks before use.
+- Track capture submission lifecycle and forbid all automatic resubmission after a send attempt or observed answer; pre-submission page recovery remains retryable.
+- Reject Doubao progress text such as “正在查证” as an answer and wait for complete output.
+- Add `reopen-authority` to archive an immutable finalized revision before assessment correction and refinalization.
+- Preserve `authoritativeFinding` verbatim so findings that begin with the knowledge-point title are not truncated into sentence fragments.
+
 ## [1.1.18] - 2026-09-19
 
 - Decode percent-encoded DKnow evidence text so deep-trace source excerpts are stored as readable text instead of escape sequences; a truncated trailing sequence no longer discards the whole excerpt, and plain text containing a literal percent sign is left untouched.

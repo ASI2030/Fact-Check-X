@@ -100,6 +100,8 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 python3 scripts/fact_check_x.py finalize-authority --run-dir <run>
 ```
 
+第三步完成后如需修正 assessment，禁止手工清空结果或修改 gate。先执行 `python3 scripts/fact_check_x.py reopen-authority --run-dir <run> --reason "<原因>"`；程序校验锁定摘要并归档旧裁决后回退到 `searched`，再修改 assessment、重新 `finalize-authority` 并重新确认第三步产物。
+
 `finalize-authority` 生成“权威核验后的最终答案”，只将证据充分的直接知识点纳入 `finalAnswer`，将补充参考单独写入 `supplementalFindings`，将证据不足项写入 `evidenceGaps`。第三步只展示直接答案、证据边界和简洁来源索引；逐知识点裁决与评分只在第四步展示。
 
 `finalize-authority` 完成裁决后会独立生成 `03-authority-report.html`，并通过

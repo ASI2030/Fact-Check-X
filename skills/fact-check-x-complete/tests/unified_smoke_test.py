@@ -151,6 +151,7 @@ def main() -> int:
         assert merged["evidenceGaps"] == []
         assert merged["finalAnswer"]["knowledgePointIds"] == ["K1"]
         assert merged["supplementalFindings"]["knowledgePointIds"] == ["K2"]
+        assert merged["finalAnswer"]["answer"] == "直接问题权威结论。"
         assert "补充参考权威结论" not in merged["finalAnswer"]["answer"]
 
         run_dir = Path(temp) / "run"
@@ -253,6 +254,34 @@ def main() -> int:
         assert "打开权威核验后的最终答案" in finalized["checkpoint"]["message"]
         assert (run_dir / "03-authority-report.html").exists()
         assert json.loads((run_dir / "authority-gate.json").read_text(encoding="utf-8"))["status"] == "finalized"
+        reopened = run(command(
+            "reopen-authority",
+            "--run-dir", str(run_dir),
+            "--reason", "修正被截断的权威结论",
+        ))
+        assert reopened["stage"] == "authority_reopened"
+        assert reopened["revision"] == 1
+        revision_dir = run_dir / "authority" / "revisions" / "revision-001"
+        assert (revision_dir / "revision.json").is_file()
+        assert (revision_dir / "verification.json").is_file()
+        assert (revision_dir / "authority" / "results" / "K1.json").is_file()
+        assert not list((run_dir / "authority" / "results").glob("*.json"))
+        assert not (run_dir / "verification.json").exists()
+        assert not (run_dir / "03-authority-report.html").exists()
+        reopened_gate = json.loads((run_dir / "authority-gate.json").read_text(encoding="utf-8"))
+        assert reopened_gate["status"] == "searched"
+        comparison_data = json.loads((run_dir / "comparison.json").read_text(encoding="utf-8"))
+        exact_title = comparison_data["knowledgePoints"][0]["description"]
+        assessment["authoritativeFinding"] = f"{exact_title}：每人每月最高提取1400元。"
+        (assessments / "K1.json").write_text(
+            json.dumps(assessment, ensure_ascii=False), encoding="utf-8"
+        )
+        refinalized = run(command("finalize-authority", "--run-dir", str(run_dir)))
+        assert refinalized["status"] == "completed"
+        reopened_verification = json.loads(
+            (run_dir / "verification.json").read_text(encoding="utf-8")
+        )
+        assert reopened_verification["finalAnswer"]["items"][0]["answer"] == assessment["authoritativeFinding"]
         locked_verification = (run_dir / "verification.json").read_bytes()
         locked_authority_report = (run_dir / "03-authority-report.html").read_bytes()
         (run_dir / "verification.json").write_bytes(locked_verification + b"\n")
@@ -392,7 +421,7 @@ def main() -> int:
         )
         (artifact_source / "capture-recovery.json").write_text(
             json.dumps({
-                "schemaVersion": "fact-check-x/capture-recovery@1",
+                "schemaVersion": "fact-check-x/capture-recovery@2",
                 "status": "completed",
             }, ensure_ascii=False),
             encoding="utf-8",
@@ -634,7 +663,7 @@ def main() -> int:
         recovery_results.write_text(results.read_text(encoding="utf-8"), encoding="utf-8")
         (recovery_capture / "capture-recovery.json").write_text(
             json.dumps({
-                "schemaVersion": "fact-check-x/capture-recovery@1",
+                "schemaVersion": "fact-check-x/capture-recovery@2",
                 "status": "required",
                 "action": "computer_use",
             }, ensure_ascii=False),

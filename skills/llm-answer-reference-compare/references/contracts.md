@@ -89,10 +89,11 @@ Chromium。系统没有受支持浏览器时生成 Computer Use 恢复状态并�
 Chrome for Testing 默认仅用于无头/CI 回归。
 
 `login` 或 `run` 在可见交互链路失败时必须写出
-`schemaVersion=fact-check-x/capture-recovery@1`、`status=required`、
+`schemaVersion=fact-check-x/capture-recovery@2`、`status=required`、
 `action=computer_use`。运行载体具备 Computer Use 时用它恢复同一平台；不得
 以无头浏览器、另一套 Chrome、锁文件清理、显示会话检查或启动参数诊断作为
-恢复动作。载体缺少 Computer Use 时必须停止在 1.0。
+恢复动作。`captureLifecycle` 已记录提交尝试或回答时禁止重新提问；选择器恢复候选
+必须经程序验证。载体缺少 Computer Use 时必须停止在 1.0。
 
 两个命令必须前台直接执行并保留真实退出码；执行工具返回可轮询运行会话时
 持续轮询，不得使用 shell 后台任务，亦不得通过 `tail`、`tee` 等管道把非零退出

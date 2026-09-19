@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.18"
+  version: "1.1.19"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.18)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.19)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，官方无法查证的内容统一标为“疑似误导”，移入补充参考风险区且不写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -49,13 +49,13 @@ metadata:
 ## 强制执行门禁（任何动作前先读）
 
 1. **语言硬门禁**：读取本技能后的第一句话、过程更新、命令说明、阶段检查点、错误说明和最终答复全部只使用简体中文；不得输出英文句子。命令、路径、平台 ID 和数据字段名可以保留原文。第一条回复直接使用“我会核验这个问题：先采集您选择的平台原回答和引用，再比较共识与分歧；如需权威结论，最后用可信搜索逐点核验。每一步都会给您一份可打开的报告。”，不得先用英文介绍技能或内部流程编号。
-2. 执行任何命令前先检查当前会话可调用的工具。完整在线采集优先由包内 Playwright 直接启动并控制系统 Chrome、Microsoft Edge、Brave 或 Chromium；Computer Use 不是正常采集的前置条件，只是自动化失败后的恢复手段。只有命令工具时可以前台执行一次 `login` 验证可见浏览器，但没有真实成功输出前不得声称浏览器已启动。
-3. 所有流水线命令必须前台直接执行并等待真实退出状态，包括 `login`、`run`、`prepare-comparison`、`complete-comparison`、`prepare-authority`、`search-authority`、`finalize-authority` 和 `deliver`。执行工具因等待用户操作而返回可轮询的运行会话 ID 时，应保留并轮询该会话；禁止使用 shell 后台任务，禁止给任何流水线命令添加 `| tail`、`| tee`、`|| true` 或其他会掩盖退出码的包装。
+2. 执行任何命令前先检查当前会话可调用的工具。完整在线采集优先由包内 Playwright 直接启动并控制系统 Chrome、Microsoft Edge、Brave 或 Chromium；Computer Use 不是正常采集的前置条件。页面结构变化时先运行选择器恢复与验证层；当前载体自带的浏览器或 Computer Use 是首选诊断手段，`agent-browser` 只可作为失败后的可选诊断工具，不是依赖，也不得直接交付答案或改写适配器。只有命令工具时可以前台执行一次 `login` 验证可见浏览器，但没有真实成功输出前不得声称浏览器已启动。
+3. 所有流水线命令必须前台直接执行并等待真实退出状态，包括 `login`、`run`、`prepare-comparison`、`complete-comparison`、`prepare-authority`、`search-authority`、`finalize-authority`、`reopen-authority` 和 `deliver`。执行工具因等待用户操作而返回可轮询的运行会话 ID 时，应保留并轮询该会话；禁止使用 shell 后台任务，禁止给任何流水线命令添加 `| tail`、`| tee`、`|| true` 或其他会掩盖退出码的包装。
 4. `login` 是可见浏览器命令，必须严格按本技能给出的参数执行，不得添加 `--headed` 或其他未列出的参数。精确命令尚未失败时，不得先检查 CLI 帮助、源码或浏览器环境；精确命令失败后只按错误与 `capture-recovery.json` 恢复。
 5. 未看到 `login` 成功、可提问页面已建立或 `results.json` 全平台成功证据前，禁止告诉用户“浏览器已启动”“采集已在后台运行”或“将自动进入后续流程”。
 6. `login` 或 `run` 运行期间出现登录、短信验证码、人机验证或 CAPTCHA 时，保持命令和当前 Playwright 页面运行，立即提示用户本人处理；检测到处理完成后自动继续，不得关闭页面、重输问题或提前结束任务。
 7. `login` 或 `run` 非零退出、浏览器意外关闭、人工处理超时或采集失败时，立即读取 `capture-recovery.json`。运行载体有 Computer Use 时调用它恢复；没有时明确说明“当前载体无法调用 Computer Use，原始答案采集已停止”，停在原始答案采集阶段。
-8. 进入 Computer Use 恢复后，禁止改用 headless/无头浏览器、清理锁文件、修改启动参数或用命令行诊断规避接管。允许使用原持久化配置重新打开同一平台，并直接复用 `capture-recovery.json.question`。
+8. 进入恢复后，禁止改用 headless/无头浏览器、清理锁文件或修改启动参数规避接管。先读取 `captureLifecycle`：只要 `submissionAttempted`、`submissionConfirmed` 或 `answerObserved` 为真，就禁止重新填入、提交或询问同一问题，只能恢复原会话并继续等待、定位或提取现有回答。只有 `resubmissionAllowed=true` 时才可提交一次。选择器候选必须经过程序的唯一、可见、可编辑或非进度文本门禁；模型、Computer Use 和 `agent-browser` 都只能提议，不能直接采用或写回适配器。
 9. `capture-gate.json` 未证明所有指定平台均成功前，禁止进入知识点对比和后续流程。不得用已有材料、搜索结果、空回答或部分成功结果替代失败平台。
 10. **分阶段交付门禁**：原始答案采集、知识点对比和权威证据核验各自完成后，必须先向用户发送本阶段真实可打开的独立产物，再询问用户选择“继续下一步”“修正当前结果”或“到此结束并保留产物”。程序会在 `stage-checkpoints.json` 记录产物摘要和一次性确认令牌；收到用户“继续下一步”后，必须用 `acknowledge-stage --decision continue` 提交该令牌，否则下一阶段命令会直接失败。即使用户最初要求完整连续执行，也不能跳过阶段产物展示和用户确认。内部证据不足状态属于可交付边界，面向用户统一显示为“疑似误导”，不阻断后续报告。
 
@@ -274,6 +274,16 @@ python3 scripts/fact_check_x.py finalize-authority --run-dir <run目录>
 
 `finalize-authority` 完成裁决后会独立生成 `verification.json` 和
 `03-authority-report.html`。只有证据充分的直接答案知识点进入 `finalAnswer`；补充参考单独进入 `supplementalFindings`，不得混入最终答案；证据不足的知识点进入 `evidenceGaps`。必须立即发送 **权威证据核验检查点** 和 `[打开权威核验后的最终答案](<返回路径>)`。本报告只展示直接答案、证据边界和简洁来源索引，不展示逐平台裁决或评分。用户确认继续后必须执行 `acknowledge-stage`。
+
+若第三步完成后发现 assessment 或结论表述需要修正，禁止手工清空 `authority/results`、篡改 gate 或覆盖已锁定产物。必须执行：
+
+```bash
+python3 scripts/fact_check_x.py reopen-authority \
+  --run-dir <run目录> \
+  --reason "<具体修订原因>"
+```
+
+命令会先校验当前 request、evidence、assessment、result、verification 和第三步报告摘要，把旧版本完整归档到 `authority/revisions/revision-NNN/`，再安全回退到 `searched`。修改 assessment 后重新执行 `finalize-authority`，并重新展示、确认新的第三步产物；旧结果不可覆盖或冒充新结果。
 
 ### 第四步：各方答案测评报告
 

@@ -65,6 +65,31 @@ try {
     assert.deepEqual(result.references.map((item) => item.marker), ["12"]);
     assert.deepEqual(submitted, [question]);
     assert.ok(pageLoads >= 2);
+    const recoveryQuestion = "选择器变化后只提交一次的问题";
+    const recoveryConfig = {
+        name: "selector-recovery-test",
+        label: "选择器恢复测试",
+        adapter: "generic-chat",
+        url: `http://127.0.0.1:${address.port}/`,
+        profile: `selector-recovery-${Date.now()}`,
+        requiresLogin: false,
+        completionStableMs: 100,
+        selectors: { input: ["#old-input"], submit: ["#send"], answer: ["#old-answer"] }
+    };
+    const recovered = await captureWithRetries(recoveryConfig, {
+        question: recoveryQuestion, outDir: out, headed: false, interactive: false,
+        executablePath: resolveVisibleBrowserExecutable(),
+        launchTimeoutMs: 120000,
+        timeoutMs: 10000, loginTimeoutMs: 10000, retryCount: 2, retryDelayMs: 0
+    }, captureGenericChat, async () => undefined);
+    assert.equal(recovered.status, "success");
+    assert.equal(recovered.captureLifecycle.submissionCount, 1);
+    assert.equal(recovered.captureLifecycle.answerObserved, true);
+    assert.deepEqual(
+        recovered.selectorRecovery.proposals.map((item) => item.operation).sort(),
+        ["answer", "input"]
+    );
+    assert.deepEqual(submitted, [question, recoveryQuestion]);
     if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
         const { writeFile } = await import("node:fs/promises");
         await writeFile(process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT, JSON.stringify({
@@ -72,6 +97,8 @@ try {
             actualAssertionIds: [
                 "browser.question_replayed",
                 "browser.retry_submitted",
+                "browser.selector_recovery_validated",
+                "browser.post_submit_no_resubmit",
                 "capture.dknow_sup_preserved",
                 "capture.dknow_source_cards_removed"
             ]

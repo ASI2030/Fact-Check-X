@@ -1247,6 +1247,144 @@ def finalize_authority(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     }
 
 
+def reopen_authority(args: argparse.Namespace) -> dict:
+    run_dir = require_run(args.run_dir)
+    authority_gate_path = run_dir / "authority-gate.json"
+    if not authority_gate_path.is_file():
+        raise PipelineError("缺少已完成的权威核验门禁，无法重开")
+    authority_gate = load_json(authority_gate_path)
+    if (
+        authority_gate.get("schemaVersion") != "fact-check-x/authority-gate@1"
+        or authority_gate.get("status") != "finalized"
+        or authority_gate.get("finalizeStatus") != "completed"
+    ):
+        raise PipelineError("只有已完成且未被修改的权威核验可以受控重开")
+    requests_dir = run_dir / "authority" / "requests"
+    evidence_dir = run_dir / "authority" / "evidence"
+    results_dir = run_dir / "authority" / "results"
+    assessments_dir = run_dir / "authority" / "assessments"
+    manifest = load_json(requests_dir / "manifest.json")
+    request_ids = expected_request_ids(manifest)
+    if json_file_manifest(
+        requests_dir,
+        {f"{request_id}.json" for request_id in request_ids} | {"manifest.json"},
+    ) != authority_gate.get("requestHashes"):
+        raise PipelineError("请求文件已被修改，禁止重开")
+    if json_file_manifest(
+        evidence_dir,
+        {f"{request_id}.json" for request_id in request_ids} | {"batch.json"},
+    ) != authority_gate.get("evidenceHashes"):
+        raise PipelineError("证据文件已被修改，禁止重开")
+    if json_file_manifest(
+        results_dir,
+        {f"{request_id}.json" for request_id in request_ids},
+    ) != authority_gate.get("resultHashes"):
+        raise PipelineError("裁决结果已被修改或混入陈旧文件，禁止重开")
+    if json_file_manifest(
+        assessments_dir,
+        set((authority_gate.get("assessmentHashes") or {}).keys()),
+    ) != authority_gate.get("assessmentHashes"):
+        raise PipelineError("assessment 已被修改；请先恢复到锁定版本再重开")
+    verification_path = run_dir / "verification.json"
+    authority_report = run_dir / "03-authority-report.html"
+    if (
+        not verification_path.is_file()
+        or capture_digest(verification_path) != authority_gate.get("verificationSha256")
+        or not authority_report.is_file()
+        or capture_digest(authority_report) != authority_gate.get("authorityReportSha256")
+    ):
+        raise PipelineError("第三步锁定产物已缺失或被修改，禁止重开")
+
+    revisions_root = run_dir / "authority" / "revisions"
+    revisions_root.mkdir(parents=True, exist_ok=True)
+    revision_number = len([path for path in revisions_root.iterdir() if path.is_dir()]) + 1
+    revision_dir = revisions_root / f"revision-{revision_number:03d}"
+    revision_dir.mkdir()
+    archive_paths = (
+        Path("authority-gate.json"),
+        Path(INTERACTION_GATE_FILE),
+        Path("verification.json"),
+        Path("03-authority-report.html"),
+        Path("04-final-report.html"),
+        Path("report.html"),
+        Path("pipeline.json"),
+        Path(PORTABLE_REPORT_PACKAGE),
+        Path("report-input"),
+        Path("authority/results"),
+        Path("authority/assessments"),
+    )
+    archived = []
+    for relative_path in archive_paths:
+        source = run_dir / relative_path
+        if not source.exists():
+            continue
+        destination = revision_dir / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if source.is_dir():
+            shutil.copytree(source, destination)
+        else:
+            shutil.copy2(source, destination)
+        archived.append(str(relative_path).replace("\\", "/"))
+    dump_json(revision_dir / "revision.json", {
+        "schemaVersion": "fact-check-x/authority-revision@1",
+        "revision": revision_number,
+        "createdAt": now_iso(),
+        "reason": str(args.reason).strip(),
+        "archived": archived,
+        "priorFinalizedAt": authority_gate.get("finalizedAt"),
+        "priorVerificationSha256": authority_gate.get("verificationSha256"),
+        "priorAuthorityReportSha256": authority_gate.get("authorityReportSha256"),
+    })
+
+    for result_path in results_dir.glob("*.json"):
+        result_path.unlink()
+    for stale in (
+        verification_path,
+        authority_report,
+        run_dir / "04-final-report.html",
+        run_dir / "report.html",
+        run_dir / "pipeline.json",
+        run_dir / PORTABLE_REPORT_PACKAGE,
+    ):
+        stale.unlink(missing_ok=True)
+    shutil.rmtree(run_dir / "report-input", ignore_errors=True)
+    interaction_gate = load_interaction_gate(run_dir)
+    stages = interaction_gate.setdefault("stages", {})
+    stages.pop("authority", None)
+    stages.pop("evaluation", None)
+    dump_json(interaction_gate_path(run_dir), interaction_gate)
+    reopened_at = now_iso()
+    reopen_history = list(authority_gate.get("reopenHistory") or [])
+    reopen_history.append({
+        "revision": revision_number,
+        "reopenedAt": reopened_at,
+        "reason": str(args.reason).strip(),
+        "archive": str(revision_dir.resolve()),
+    })
+    reset_gate = {
+        key: value for key, value in authority_gate.items()
+        if key not in {
+            "finalizedAt", "finalizeStatus", "results", "assessmentHashes",
+            "resultHashes", "verificationSha256", "authorityReportSha256"
+        }
+    }
+    reset_gate.update({
+        "status": "searched",
+        "reopenedAt": reopened_at,
+        "reopenReason": str(args.reason).strip(),
+        "reopenHistory": reopen_history,
+    })
+    dump_json(authority_gate_path, reset_gate)
+    return {
+        "status": "completed",
+        "stage": "authority_reopened",
+        "revision": revision_number,
+        "archive": str(revision_dir.resolve()),
+        "nextCommand": "finalize-authority",
+        "message": "旧裁决已完整归档；可修改 assessment 后重新 finalize，新的第三步报告仍需重新确认。",
+    }
+
+
 def merge_verification(comparison: dict, results_dir: Path) -> dict:
     points = []
     evidence_gaps = []
@@ -1347,12 +1485,7 @@ def merge_verification(comparison: dict, results_dir: Path) -> dict:
             (authority.get("authoritativeFinding") or "")
         ).strip()
         title = str(point.get("description") or point.get("id") or "").strip()
-        answer = re.sub(
-            rf"^{re.escape(title)}\s*[：:，,。\-]?\s*",
-            "",
-            finding,
-            count=1,
-        ).strip() or finding
+        answer = finding
         item = {
             "knowledgePointId": point_id,
             "title": title,
@@ -1619,6 +1752,9 @@ def parser() -> argparse.ArgumentParser:
     final = commands.add_parser("finalize-authority")
     final.add_argument("--run-dir", required=True)
     final.add_argument("--assessments-dir")
+    reopen = commands.add_parser("reopen-authority")
+    reopen.add_argument("--run-dir", required=True)
+    reopen.add_argument("--reason", required=True)
     delivery = commands.add_parser("deliver")
     delivery.add_argument("--results", required=True)
     delivery.add_argument("--run-dir", required=True)
@@ -1646,6 +1782,8 @@ def main() -> int:
             result = search_authority(args, skills)
         elif args.command == "finalize-authority":
             result = finalize_authority(args, skills)
+        elif args.command == "reopen-authority":
+            result = reopen_authority(args)
         else:
             result = deliver(args, skills)
         print(json.dumps(result, ensure_ascii=False))
