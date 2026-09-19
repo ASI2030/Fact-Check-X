@@ -14,9 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 VERSION = "1.1.16"
-PUBLISHED_VERSION = "1.1.15"
+PUBLISHED_VERSION = "1.1.16"
 WORKBUDDY_VERSION = "1.1.14"
-OFFICIAL_SHA = "707bfad30a0eb49c3a90af39f9927651be2b3407c9384339a410a57508202b3a"
+OFFICIAL_SHA = "0a01584d4642de62643ac3645b7d35566d93a131b0c6f9ae61aeb32b20b6bde4"
 
 
 def load_module(name: str, path: Path):
