@@ -671,22 +671,41 @@ export async function extractDknowcAnswer(page) {
         return "";
     }
     return page.locator(".czkj-robot:not(.chat-load-text) .czkj-msg").evaluateAll((nodes) => {
+        // 元素是否真正渲染：checkVisibility/getClientRects 会沿祖先链判断，
+        // 只看元素自身 computed style 会漏掉“祖先 display:none”的隐藏面板。
+        const isRendered = (element) => {
+            if (!element || typeof element !== "object") {
+                return true;
+            }
+            if (element.hidden) {
+                return false;
+            }
+            if (typeof element.checkVisibility === "function") {
+                return element.checkVisibility();
+            }
+            if (typeof element.getClientRects === "function") {
+                return element.getClientRects().length > 0;
+            }
+            return true;
+        };
         const texts = nodes
             .filter((node) => !node.closest?.(".czkj-welcome-msg, .zhipu-hot, .czkj-recommend-group"))
+            // 隐藏的进度面板（如 .load-deep-search 里的“[检索完成]”）不是回答，不进入候选，
+            // 否则正文尚未流出时会回退到它并被当作最终答案。
+            .filter((node) => isRendered(node))
             .map((node) => {
             if (typeof node.cloneNode !== "function") {
                 return node.innerText?.trim() || "";
             }
             const clone = node.cloneNode(true);
             // 克隆节点脱离文档后 innerText 不再应用 display:none，
-            // 必须按原节点的实际渲染状态剔除隐藏元素（如折叠的推理面板）。
-            if (typeof window !== "undefined" && typeof window.getComputedStyle === "function") {
+            // 必须按原节点（含祖先链）的实际渲染状态剔除隐藏元素（如折叠的推理面板）。
+            {
                 const liveElements = Array.from(node.querySelectorAll("*"));
                 const cloneElements = Array.from(clone.querySelectorAll("*"));
                 if (liveElements.length === cloneElements.length) {
                     liveElements.forEach((element, index) => {
-                        const style = window.getComputedStyle(element);
-                        if (element.hidden || style.display === "none" || style.visibility === "hidden") {
+                        if (!isRendered(element)) {
                             cloneElements[index].remove();
                         }
                     });
@@ -734,7 +753,14 @@ async function isDknowcStillLoading(page) {
 }
 function looksLikeDknowcDeepResearchProgress(value) {
     const text = String(value || "").replace(/\s+/g, "");
-    return text.startsWith("[查询]") && text.length < 500;
+    if (!text) {
+        return false;
+    }
+    if (/^\[(?:查询|检索中|检索完成|思考中|分析中|正在[^\]]*)\]/.test(text) && text.length < 500) {
+        return true;
+    }
+    // 仅由方括号占位符构成的短文本（如“[检索完成]”）是进度状态，不是回答。
+    return /^(?:\[[^\]]{1,20}\])+$/.test(text) && text.length < 80;
 }
 export async function waitForAnswer(config, page, timeoutMs, previousAnswer = "", question = "", control = {}) {
     let deadline = Date.now() + timeoutMs;
@@ -2525,11 +2551,49 @@ async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sour
 }
 
 function mergeDknowcReference(references, incoming) {
-    const key = String(incoming.normalizedUrl || incoming.url || "").trim();
-    const existing = references.find((reference) => String(reference.normalizedUrl || reference.url || "").trim() === key);
+    // 合并键必须同时包含来源 URL 与脚标：一份文件常常支撑多个脚标（如同一份办事指南
+    // 被【103】【105】分别引用），只按 URL 合并会把后出现的脚标整条丢掉，导致这些脚标
+    // 在回答里无法解析、相关主张被判证据不足。脚标缺失的条目（如无编号的知识专库来源）
+    // 仍按 URL 与任意同源条目合并，保持“同一来源正文+知识专库只记一次”的原意。
+    const urlOf = (reference) => String(reference.normalizedUrl || reference.url || "").trim();
+    const markerOf = (reference) => String(reference.marker ?? "").trim();
+    const titleOf = (reference) => String(reference.title || "").trim();
+    const incomingUrl = urlOf(incoming);
+    const incomingMarker = markerOf(incoming);
+    const existing = references.find((reference) => {
+        const sameUrl = urlOf(reference) === incomingUrl;
+        const existingMarker = markerOf(reference);
+        if (!incomingMarker || !existingMarker) {
+            // 无脚标条目（如无编号的知识专库来源）仍按 URL 合并。
+            return sameUrl;
+        }
+        if (existingMarker !== incomingMarker) {
+            // 不同脚标即便指向同一份文件也必须各自保留，否则这些脚标无法解析。
+            return false;
+        }
+        // 同一脚标同时给出原始政务网址与深知晓内部镜像时，是同一条引用的两个地址；
+        // 镜像标题往往是原文标题去掉发布单位前缀后的子串，故按包含关系判定同源。
+        if (sameUrl) {
+            return true;
+        }
+        const existingTitle = titleOf(reference);
+        const incomingTitle = titleOf(incoming);
+        if (!existingTitle || !incomingTitle) {
+            return false;
+        }
+        return existingTitle === incomingTitle
+            || existingTitle.includes(incomingTitle)
+            || incomingTitle.includes(existingTitle);
+    });
     if (!existing) {
         references.push(incoming);
         return;
+    }
+    // 同一引用有多个地址时，保留可独立核验的外部来源，而不是平台内部镜像。
+    const isPlatformMirror = (value) => /^https?:\/\/[^/]*dknowc\.cn\//i.test(String(value || ""));
+    if (incoming.url && isPlatformMirror(existing.url) && !isPlatformMirror(incoming.url)) {
+        existing.url = incoming.url;
+        existing.normalizedUrl = incoming.normalizedUrl || incoming.url;
     }
     existing.title = longerText(existing.title, incoming.title);
     existing.text = longerText(existing.text, incoming.text);
@@ -2917,7 +2981,7 @@ async function captureDknowcDeepCompanion(
         );
     }
 }
-function validateCapturedAnswer(config, answerMarkdown) {
+export function validateCapturedAnswer(config, answerMarkdown) {
     if (looksLikeLoginOnlyText(answerMarkdown)
         || looksLikeNonAnswerPrompt(answerMarkdown)
         || (config.name === "yuanbao" && looksLikeYuanbaoInterimAnswer(answerMarkdown))) {
@@ -2931,6 +2995,18 @@ function validateCapturedAnswer(config, answerMarkdown) {
             status: "failed",
             error: "No answer text detected."
         };
+    }
+    if (isDknowcPlatform(config)) {
+        // 采集健全性门禁：占位符或过短文本不得以 success 落盘（深度溯源曾把“[检索完成]”记为成功）。
+        const compact = answerMarkdown.replace(/\s+/g, "");
+        // 仅剩固定提示语（正文尚未流出）同样不算回答。
+        const withoutTips = compact.replace(/^AI综合所有相关权威材料后[，,]?参考性解读如下[，,]?(?:建议点击角标查看所依据的材料原文)?[。.]?/, "");
+        if (looksLikeDknowcDeepResearchProgress(compact) || compact.length < 30 || !withoutTips) {
+            return {
+                status: "failed",
+                error: `深知晓回答仅为进度占位或过短文本（${compact.slice(0, 30)}），判定采集未完成，不记为成功；请重新采集。`
+            };
+        }
     }
     return undefined;
 }

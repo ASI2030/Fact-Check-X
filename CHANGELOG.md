@@ -4,6 +4,14 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.17] - 2026-09-19
+
+- Keep every DKnow footnote resolvable when one source document backs several markers: references merge on citation identity instead of URL alone, so markers are no longer dropped and the claims citing them are no longer reported as evidence-insufficient.
+- Merge a marker's platform mirror and its originating government URL into one reference and keep the externally verifiable address.
+- Stop returning a hidden deep-trace progress placeholder as the answer when the response body has not yet streamed, and never record a placeholder or near-empty DKnow answer as a successful capture.
+- Determine whether an element is rendered from its ancestor chain rather than its own computed style.
+- Add real-browser regressions for shared-source markers, mirror/origin merging and the deep-trace placeholder window.
+
 ## [1.1.16] - 2026-09-19
 
 - Locate Doubao's TipTap/ProseMirror composer after the platform replaced its text box, with a visible `contenteditable` fallback for future layouts.
