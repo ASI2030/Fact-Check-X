@@ -115,14 +115,14 @@ export async function captureGenericChat(config, options) {
             input = await waitForFirstVisible(page, inputSelectors, Math.min(options.timeoutMs, 5000));
         }
         if (!input && options.headed && options.interactive) {
-            console.log(`${config.label} 尚未检测到可提问界面，请在浏览器完成登录；检测成功后将自动继续。`);
+            console.log(`${config.label} 未在页面上找到提问输入框；页面可能仍在加载或界面结构已变化。若页面需要人工操作请在浏览器处理，检测到输入框后将自动继续。`);
             input = await waitForFirstVisible(page, readySelectors, options.loginTimeoutMs || 300000);
         }
         if (gated && !input) {
             return failure(config, "login_required", started, "Page appears to require login, verification, or human interaction.", await saveArtifacts(page, artifactDir, options.outDir));
         }
         if (!input) {
-            return failure(config, "login_required", started, "No visible chat input found.", await saveArtifacts(page, artifactDir, options.outDir));
+            return failure(config, "input_not_found", started, "未找到可见的提问输入框；页面未显示登录入口，界面结构可能已变化，需要更新该平台适配器的输入框选择器。", await saveArtifacts(page, artifactDir, options.outDir));
         }
         if (config.requiresLogin && !(await waitForAuthentication(
             page,
@@ -678,6 +678,23 @@ export async function extractDknowcAnswer(page) {
                 return node.innerText?.trim() || "";
             }
             const clone = node.cloneNode(true);
+            // 克隆节点脱离文档后 innerText 不再应用 display:none，
+            // 必须按原节点的实际渲染状态剔除隐藏元素（如折叠的推理面板）。
+            if (typeof window !== "undefined" && typeof window.getComputedStyle === "function") {
+                const liveElements = Array.from(node.querySelectorAll("*"));
+                const cloneElements = Array.from(clone.querySelectorAll("*"));
+                if (liveElements.length === cloneElements.length) {
+                    liveElements.forEach((element, index) => {
+                        const style = window.getComputedStyle(element);
+                        if (element.hidden || style.display === "none" || style.visibility === "hidden") {
+                            cloneElements[index].remove();
+                        }
+                    });
+                }
+            }
+            // 推理面板、思考状态头、知识专库按钮是界面元素，不属于回答正文；展开时同样不采集。
+            clone.querySelectorAll(".reasoning_value, .reasoning_tip, .waitText, .chatsse-data.chatSubBtn")
+                .forEach((element) => element.remove());
             for (const superscript of Array.from(clone.querySelectorAll("sup"))) {
                 const marker = superscript.textContent?.trim() || "";
                 if (/^\d{1,4}$/.test(marker)) {

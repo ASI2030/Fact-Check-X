@@ -75,7 +75,8 @@ export const PlatformStatusSchema = z.enum([
     "failed",
     "timeout",
     "login_required",
-    "verification_required"
+    "verification_required",
+    "input_not_found"
 ]);
 export const PlatformResultSchema = z
     .object({

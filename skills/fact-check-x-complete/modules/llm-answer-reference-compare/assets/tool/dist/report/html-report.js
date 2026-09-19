@@ -307,7 +307,7 @@ export function renderHtmlReport(run) {
       background: linear-gradient(90deg, var(--platform-accent, var(--accent)), var(--blue));
     }
     .status-ok, .status-success { color: var(--ok); font-weight: 850; }
-    .status-failed, .status-timeout, .status-login_required, .status-verification_required {
+    .status-failed, .status-timeout, .status-login_required, .status-verification_required, .status-input_not_found {
       color: var(--failed);
       font-weight: 850;
     }
@@ -323,7 +323,7 @@ export function renderHtmlReport(run) {
       font-weight: 850;
       white-space: nowrap;
     }
-    .badge.status-failed, .badge.status-timeout, .badge.status-login_required, .badge.status-verification_required {
+    .badge.status-failed, .badge.status-timeout, .badge.status-login_required, .badge.status-verification_required, .badge.status-input_not_found {
       background: #fff1f0;
       color: var(--failed);
     }
@@ -1166,7 +1166,8 @@ function statusLabel(status) {
         failed: "失败 / failed",
         timeout: "超时 / timeout",
         login_required: "需登录 / login required",
-        verification_required: "需验证 / verification required"
+        verification_required: "需验证 / verification required",
+        input_not_found: "未找到输入框 / input not found"
     };
     return labels[status];
 }

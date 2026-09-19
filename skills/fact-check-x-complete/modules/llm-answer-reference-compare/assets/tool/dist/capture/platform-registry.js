@@ -13,7 +13,7 @@ export const builtInPlatforms = [
                 "button:has-text('Sign in')",
                 "[data-testid*='login']"
             ],
-            input: ["[contenteditable='true'][role='textbox']", "div[role='textbox']", "textarea.semi-input-textarea", ".semi-input-textarea", "textarea"],
+            input: [".tiptap[contenteditable='true']", ".ProseMirror[contenteditable='true']", "[contenteditable='true'][role='textbox']", "div[role='textbox']", "textarea.semi-input-textarea", ".semi-input-textarea", "textarea", "[contenteditable='true']"],
             send: ["#flow-end-msg-send", ".send-btn-wrapper button", "[class*='send-btn-wrapper'] button", "button:has-text('发送')", "button[type='submit']"],
             answer: [
                 "[data-plugin-identifier='block_type:10000'] .md-box-root",

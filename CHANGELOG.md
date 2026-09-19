@@ -4,6 +4,13 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.16] - 2026-09-19
+
+- Locate Doubao's TipTap/ProseMirror composer after the platform replaced its text box, with a visible `contenteditable` fallback for future layouts.
+- Report an authenticated page without a chat input as `input_not_found` with adapter-drift guidance instead of mislabeling it `login_required`; the interactive prompt, CLI retry loop and recovery file no longer ask the user to log in.
+- Keep hidden DKnow reasoning panels, thinking-status labels and the knowledge-library button out of captured answers by removing elements that are not rendered on the live page before reading cloned text.
+- Add real-browser regressions for the TipTap composer, the `input_not_found` status and hidden DKnow reasoning text.
+
 ## [1.1.15] - 2026-09-14
 
 - Return existing stage artifacts with a native absolute path, standards-compliant `file://` URI and ready-to-use Markdown link, including correct Windows drive-letter encoding.

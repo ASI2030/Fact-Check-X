@@ -17,6 +17,8 @@ def main() -> int:
         collector_root / "tests/capture_wait_test.mjs",
         collector_root / "tests/dknow_reference_test.mjs",
         collector_root / "tests/doubao_reference_test.mjs",
+        collector_root / "tests/doubao_tiptap_input_test.mjs",
+        collector_root / "tests/dknow_hidden_reasoning_test.mjs",
     ]
     for test in tests:
         process = subprocess.run(["node", str(test)], cwd=root, text=True, capture_output=True, check=False)

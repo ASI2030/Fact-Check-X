@@ -180,7 +180,8 @@ async function runCommand(options) {
                 "接管后保持当前页面；等待人工验证时不得关闭、重复打开浏览器或机械重采。",
                 "告诉用户完成后可回复“验证已完成”或“答案已生成”；继续检测当前回答并自动采集，无需暂停或取消任务。",
                 "完成登录、地区选择、问题提交并等待回答停止生成。",
-                "随后重新运行原始答案采集；全部平台成功前禁止进入知识点对比。"
+                "随后重新运行原始答案采集；全部平台成功前禁止进入知识点对比。",
+                "failedPlatforms[].status 为 input_not_found 时不是登录问题：页面未显示登录入口但找不到提问输入框，说明平台界面已变化，需更新该平台适配器的输入框选择器后重跑，重新登录无法解决。"
             ]
         });
         const details = incomplete
@@ -225,6 +226,10 @@ export async function captureWithRetries(config, options, capture = capturePlatf
             ? result.companionResult
             : result;
         console.log(`${failedResult.label || config.label} 本次采集未完成：${failedResult.status}；${failedResult.error || "未知原因"}`);
+        if (failedResult.status === "input_not_found") {
+            console.log(`${failedResult.label || config.label} 未找到提问输入框，这不是登录问题：平台界面可能已变化，需要更新适配器选择器。已停止机械重采并保留原始问题。`);
+            break;
+        }
         if (["login_required", "verification_required"].includes(failedResult.status)) {
             console.log(`${failedResult.label || config.label} 需要人工接管。已停止机械重采并保留原始问题；请根据 capture-recovery.json 继续。`);
             break;
