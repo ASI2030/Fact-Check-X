@@ -248,6 +248,35 @@ def locate_skills() -> dict[str, Path]:
     return found
 
 
+def installed_version() -> dict:
+    """读取当前实际运行的技能包版本。
+
+    载体界面显示的可能是应用市场上的可用版本而不是本机已安装的版本，两者不一致时
+    很难判断问题出在版本还是代码，所以每次准备运行时都把真实版本连同来源一并回传。
+    版本取自正在执行的这份脚本所在的技能目录，不依赖载体的安装记录。
+    """
+    root = Path(__file__).resolve().parent.parent
+    manifest = root / "package-manifest.json"
+    if manifest.is_file():
+        try:
+            return {
+                "version": str(json.loads(manifest.read_text(encoding="utf-8")).get("version") or "unknown"),
+                "source": str(manifest.resolve()),
+            }
+        except (json.JSONDecodeError, OSError):
+            pass
+    skill_md = root / "SKILL.md"
+    if skill_md.is_file():
+        for line in skill_md.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("version:"):
+                return {
+                    "version": stripped.split(":", 1)[1].strip().strip('"').strip("'"),
+                    "source": str(skill_md.resolve()),
+                }
+    return {"version": "unknown", "source": str(root.resolve())}
+
+
 def prepare_runtime(skills: dict[str, Path]) -> dict:
     tool_root = skills["collector"] / "assets" / "tool"
     package_json = tool_root / "package.json"
@@ -278,6 +307,7 @@ def prepare_runtime(skills: dict[str, Path]) -> dict:
             "runtime": "ready",
             "installAction": "skipped",
             "toolRoot": str(tool_root.resolve()),
+            "installedVersion": installed_version(),
         }
 
     npm = shutil.which("npm")
@@ -307,6 +337,7 @@ def prepare_runtime(skills: dict[str, Path]) -> dict:
         "runtime": "ready",
         "installAction": "installed",
         "toolRoot": str(tool_root.resolve()),
+        "installedVersion": installed_version(),
     }
 
 

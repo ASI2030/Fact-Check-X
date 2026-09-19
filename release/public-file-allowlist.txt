@@ -32,6 +32,7 @@ release/v1.1.14-acceptance.md
 release/v1.1.15-acceptance.md
 release/v1.1.16-acceptance.md
 release/v1.1.17-acceptance.md
+release/v1.1.18-acceptance.md
 scripts/**
 tests/**
 skills/fact-check-x-complete/**

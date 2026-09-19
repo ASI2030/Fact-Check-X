@@ -4,6 +4,12 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.18] - 2026-09-19
+
+- Decode percent-encoded DKnow evidence text so deep-trace source excerpts are stored as readable text instead of escape sequences; a truncated trailing sequence no longer discards the whole excerpt, and plain text containing a literal percent sign is left untouched.
+- Report the running package version and where it was read from in `prepare-runtime` output, so an installation that did not actually change can be told apart from a functional defect.
+- Add regressions for percent-encoded evidence text and for installed-version reporting.
+
 ## [1.1.17] - 2026-09-19
 
 - Keep every DKnow footnote resolvable when one source document backs several markers: references merge on citation identity instead of URL alone, so markers are no longer dropped and the claims citing them are no longer reported as evidence-insufficient.

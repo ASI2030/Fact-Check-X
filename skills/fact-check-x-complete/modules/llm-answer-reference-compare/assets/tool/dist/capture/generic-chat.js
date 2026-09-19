@@ -2447,7 +2447,7 @@ async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sour
             }
             const titleElement = card.querySelector(".chat-jb-title-text, .chat-jb-title-info, .czkjTitle");
             const citeElement = element.querySelector("cite") || card.querySelector("cite");
-            const traceText = (element.getAttribute("data-text") || "").trim();
+            const traceText = decodePercentText((element.getAttribute("data-text") || "").trim());
             const snippetElement = element.classList.contains("jb-original-item")
                 ? element
                 : card.querySelector(".scoresText, .jb-original-item");
@@ -2526,6 +2526,35 @@ async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sour
                 }
             }
             return values.find((value) => !ASSET_URL.test(value)) || "";
+        }
+        // 深知晓深度溯源的 data-text 常常整体是百分号编码（普通问答不是），
+        // 直接落盘会让证据正文不可读、进而被判证据不足。按连续的 %XX 片段逐段解码：
+        // 解不开的片段原样保留，不含 %XX%XX 签名的文本完全不动，避免误伤正文里的百分号。
+        function decodePercentText(value) {
+            const text = String(value || "");
+            if (!/%[0-9A-Fa-f]{2}%[0-9A-Fa-f]{2}/.test(text)) {
+                return text;
+            }
+            return text.replace(/(?:%[0-9A-Fa-f]{2})+/g, (chunk) => {
+                try {
+                    return decodeURIComponent(chunk);
+                }
+                catch {
+                    // 片段尾部可能是被截断的多字节字符，整块解码会抛错。
+                    // 退回到最长可解前缀，剩余的残缺字节原样保留。
+                    const units = chunk.match(/%[0-9A-Fa-f]{2}/g) || [];
+                    for (let index = units.length - 1; index > 0; index -= 1) {
+                        try {
+                            return decodeURIComponent(units.slice(0, index).join(""))
+                                + units.slice(index).join("");
+                        }
+                        catch {
+                            continue;
+                        }
+                    }
+                    return chunk;
+                }
+            });
         }
         function normalizeInBrowser(rawUrl, baseUrl) {
             try {

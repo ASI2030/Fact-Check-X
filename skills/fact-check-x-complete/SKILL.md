@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.17"
+  version: "1.1.18"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.17)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.18)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，官方无法查证的内容统一标为“疑似误导”，移入补充参考风险区且不写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -77,6 +77,10 @@ metadata:
 python3 scripts/fact_check_x.py locate
 python3 scripts/fact_check_x.py prepare-runtime
 ```
+
+`prepare-runtime` 的返回里带 `installedVersion`，是**当前实际运行的这份技能包**的版本与读取路径。
+载体界面显示的可能是应用市场上的可用版本而不是本机已装版本，二者不一致时以这里为准；
+向用户或群里反馈问题时先报这个版本号，避免把版本没装上误判成功能缺陷。
 
 `prepare-runtime` 会先自检；依赖完整时直接跳过，首次缺失时根据包内锁文件自动执行
 `npm ci --omit=dev`，并在实际调用采集 CLI 验证通过后才返回。不得借用其他技能目录或
