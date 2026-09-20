@@ -6,10 +6,10 @@
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.19",
-  "tag": "v1.1.19",
-  "sourceCommitSha": "423afa3a6a6581e797526a8f60156855f2a006a7",
-  "publishedAt": "2026-09-19T22:01:39+08:00",
+  "version": "1.1.20",
+  "tag": "v1.1.20",
+  "sourceCommitSha": "b023bd6489d81b5f84b5c6421e1ecc0e20f22b70",
+  "publishedAt": "2026-09-20T18:31:28+08:00",
   "supportedPlatforms": [
     "深知晓",
     "深知晓（深度溯源）",
@@ -20,64 +20,64 @@
   ],
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 376242,
-    "files": 107,
-    "sha256": "2dc3b03f3920cf0b6fd47ec98c7c8cb8a495e46502a626989f6b0c84f600848f",
-    "skillSourceTreeSha256": "e2bf40d96b89c58739c7fe599382ade6429c7e87a6253e410e9f2f7938a78b04"
+    "bytes": 402522,
+    "files": 111,
+    "sha256": "1c0b1829738628f9947e350f584b720236d152192289be09421359aa220a2fe0",
+    "skillSourceTreeSha256": "07fc3c9a36417ea6885784bb8b1f1e047955bbba55145ee08f0e9955d0d93e2f"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.19.zip",
-      "sha256": "94b019036f1714b77982271eb3387ee51b0f21ecbe99a1d9b8cff14773942070"
+      "file": "llm-answer-reference-compare-v1.1.20.zip",
+      "sha256": "1b77b10aa3afef171d8c7827d0fff944bc00b2e0cf8f57669b27ed13287fe6bd"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.19.zip",
-      "sha256": "a3ffdcc37f86ac47d5b2964163f472ae3f5d2481400e9576e6afdc4e2c197352"
+      "file": "fact-check-x-knowledge-compare-v1.1.20.zip",
+      "sha256": "ee9d2d6b7ecfad8a33284fecde830d8ac6eeab718e93619e28ed7d0de1c5d64b"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.19.zip",
-      "sha256": "350ff68cbbe6bfd4a6020816a743fef54e974e1ceff3e92e70d60d6a351e0187"
+      "file": "fact-check-x-authoritative-verify-v1.1.20.zip",
+      "sha256": "cc5804437afcf7f2ac2ca6228383a55eb554f88a8128149685bc1dc32570e2ed"
     },
     {
-      "file": "fact-check-x-unified-v1.1.19.zip",
-      "sha256": "9dc69f42864a84c865c79c1e6714ea1f040dd950e0fb055e6d539e624b396892"
+      "file": "fact-check-x-unified-v1.1.20.zip",
+      "sha256": "6186f29ee87f1ec0b0b525ae12ee1f0f2d3e690829432f9a6fb9c7e74284ee3a"
     },
     {
-      "file": "fact-check-x-suite-v1.1.19.zip",
-      "sha256": "9a5d1c048126184cf70bb0d4e5b5bddfb70469bc8f0555876c7ab13241d564da"
+      "file": "fact-check-x-suite-v1.1.20.zip",
+      "sha256": "f30a26a05e96c609eb10cd8fb11cb5748caed96e556398540db90046ba3cc8d7"
     },
     {
-      "file": "fact-check-x-complete-v1.1.19.zip",
-      "sha256": "a0f9d5831dc1f46640c87f931448386788a0677a8818f91642d8bdf58ffdb8b5"
+      "file": "fact-check-x-complete-v1.1.20.zip",
+      "sha256": "01d95702b7e97ac76c472e7a94303ca8da28e1f91616302e9d82a35db4697c68"
     }
   ],
   "distribution": {
     "github": {
       "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.19",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.20",
       "assetCount": 12,
       "downloadAssetsByteVerified": 12
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.19",
-      "versionId": 328498,
-      "submittedPackageSha256": "44a040ff20222c6baf9ac955fee71a3c5885b79e11753b88e054185ba98df3fc",
-      "contentFingerprint": "9fcdbe65b8c4a3dbf0e2b9b0d0a780ac8537bc285288683a8ceb43bd550d49da",
+      "version": "1.1.20",
+      "versionId": 342933,
+      "submittedPackageSha256": "21bed152baeb7f6f7d797f82bac3801b32bfa120f46e84ce73ebfa32c11cfe89",
+      "contentFingerprint": "86a6b0b73bd3d5d0f614e8ba652ad582fa1612bf8ebba6394b4374834bd02440",
       "contentAuditStatus": "pending",
       "securityScanStatus": "pending",
       "platformSignature": "pending"
     },
     "workbuddy": {
       "status": "installed_and_verified",
-      "version": "1.1.19",
-      "installSource": "WorkBuddy local upload of the GitHub v1.1.19 formal package",
-      "formalPackageSha256": "2dc3b03f3920cf0b6fd47ec98c7c8cb8a495e46502a626989f6b0c84f600848f",
+      "version": "1.1.20",
+      "installSource": "WorkBuddy local installation byte-identical to the GitHub v1.1.20 formal package",
+      "formalPackageSha256": "1c0b1829738628f9947e350f584b720236d152192289be09421359aa220a2fe0",
       "runtime": "ready",
       "smokeTest": "passed",
-      "installedFiles": 107,
-      "installedVersionReadback": "prepare-runtime returned 1.1.19 from package-manifest.json"
+      "installedFiles": 111,
+      "installedVersionReadback": "prepare-runtime returned 1.1.20 from package-manifest.json"
     }
   },
   "verification": {
@@ -86,9 +86,9 @@
     "publicTreeAudit": "passed",
     "publicReleaseTests": 4,
     "releaseRegressionSuite": "passed",
-    "packageFunctionalTests": "Python package/module checks and JavaScript collector/browser-DOM checks passed, including clean-package runtime preparation",
+    "packageFunctionalTests": "Primary, complete-package, extracted-package, and WorkBuddy-installed Python checks passed; source and installed JavaScript collectors each passed 16/16 browser-DOM regressions",
     "workbuddyInstalled": "verified",
-    "workbuddyOfflineAcceptance": "prepare-runtime returned installedVersion 1.1.19 and installed_version_test.py passed on the actual WorkBuddy tree",
+    "workbuddyOfflineAcceptance": "All 111 packaged files matched the actual WorkBuddy tree byte for byte; prepare-runtime returned installedVersion 1.1.20 and installed_version_test.py passed",
     "marketplaceSignature": "pending platform approval",
     "v113ScoringAndReportSemantics": {
       "status": "passed",
@@ -121,26 +121,30 @@
     "v119SelectorRecoveryAndAuthorityReopen": {
       "status": "passed",
       "basis": "Doubao progress text is rejected as a final answer; selector drift can produce a proposal only after deterministic validation; one capture lifecycle submits the question at most once; authoritativeFinding is preserved verbatim; and finalized authority data can be corrected only through a hash-verified archive-and-reopen transaction. Playwright remains the driver, while the host browser or Computer Use is the primary recovery path and agent-browser is optional diagnostic input."
+    },
+    "v120EvidenceReuseScopeAndDoubaoStream": {
+      "status": "passed",
+      "basis": "Current Doubao completion is locked to a clean close of POST /chat/completion and legacy completion to the stream_reply done event; transport failures remain failures, a completed stream may override a stale spinner, and no question is resubmitted after submission starts. Captured official evidence is reused only when the original text semantically supports the atomic claim, with topic, geographic, boilerplate, and number-equivalence checks. The Shenzhen high-tech-enterprise replay kept K1-K7 supported and K8 insufficient, while classifying district-only and tangential rules as supplemental references."
     }
   },
   "supplyChain": {
     "license": "Apache-2.0",
     "sha256Sums": {
       "file": "SHA256SUMS",
-      "sha256": "c2e53d1b5b813f79e0dcd283c0f62e69cf893f9314b48031fb432834fd555c2d"
+      "sha256": "ab4601db92ee8d5919b6baa9eb33ef15c000fd4e18e94060425487463ed6c394"
     },
     "sbomSpdx": {
       "file": "sbom.spdx.json",
-      "sha256": "63b196132d4f2867d367af4dd80df27936123c099644a1f18f4e9defafb140f1"
+      "sha256": "2d535e48ff68397e889f58c7196998625e9c602ad65bcf1f1b856dbaadc894a3"
     },
     "sbomCycloneDx": {
       "file": "sbom.cdx.json",
-      "sha256": "705730ceaa0b5afe4dfb4a8a251e65d1e79c45fa4d2399e3a5c5031fd203f3c5"
+      "sha256": "9ac81e71171acc1485e35d5da822a7bf72e418ca37bedd1cc0cbfe149f2a746f"
     }
   },
   "publishGate": {
     "githubUploadAllowed": false,
     "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.19 is published on GitHub, submitted to SkillHub for platform review, and installed in WorkBuddy; subsequent product changes require a new version."
+    "blockingReason": "v1.1.20 is published on GitHub, submitted to SkillHub for platform review, and installed and verified in WorkBuddy; subsequent product changes require a new version."
   }
 }
