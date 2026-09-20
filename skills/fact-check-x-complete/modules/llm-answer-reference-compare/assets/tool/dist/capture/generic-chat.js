@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join, relative, win32 } from "node:path";
 import { promisify } from "node:util";
+import { strFromU8, unzipSync } from "fflate";
 import { authenticationRequired, waitForAuthentication } from "./auth-state.js";
 import { openBrowserSession } from "./browser-session.js";
 import { ensureDir, writeTextFile } from "../utils/filesystem.js";
@@ -755,6 +756,13 @@ async function extractKimiAnswer(page) {
     return normalizeAnswerText(text);
 }
 export async function extractDknowcAnswer(page) {
+    const standaloneReport = await readDknowcStandaloneReportState(page);
+    if (standaloneReport?.standalone) {
+        if (standaloneReport.running || !standaloneReport.done || !standaloneReport.substantive) {
+            return "";
+        }
+        return normalizeAnswerText(standaloneReport.reportText);
+    }
     if (await isDknowcStillLoading(page)) {
         return "";
     }
@@ -821,7 +829,50 @@ export async function extractDknowcAnswer(page) {
         return looksLikeDknowcDeepResearchProgress(normalized) ? "" : normalized;
     }).catch(() => "");
 }
+export async function readDknowcStandaloneReportState(page) {
+    if (!page || typeof page.evaluate !== "function") {
+        return undefined;
+    }
+    return page.evaluate(() => {
+        const report = document.querySelector("#report");
+        const steps = document.querySelector("#steps");
+        if (!report || !steps) {
+            return {
+                standalone: false,
+                running: false,
+                done: false,
+                substantive: false,
+                reportText: ""
+            };
+        }
+        const stream = window.STREAM;
+        const statusText = document.querySelector("#st-gen")?.textContent?.trim() || "";
+        const reportText = report.innerText?.trim() || "";
+        const done = steps.classList.contains("done")
+            && /已完成/.test(statusText)
+            && !steps.querySelector(".active");
+        return {
+            standalone: true,
+            running: stream?.running === true,
+            done,
+            substantive: reportText.replace(/\s+/g, "").length >= 30,
+            reportText
+        };
+    }).catch(() => ({
+        standalone: false,
+        running: false,
+        done: false,
+        substantive: false,
+        reportText: ""
+    }));
+}
 async function isDknowcStillLoading(page) {
+    const standaloneReport = await readDknowcStandaloneReportState(page);
+    if (standaloneReport?.standalone) {
+        return standaloneReport.running
+            || !standaloneReport.done
+            || !standaloneReport.substantive;
+    }
     const activeGeneration = page.locator(".chat-loading, .stopChat").last();
     if (await activeGeneration.isVisible().catch(() => false)) {
         return true;
@@ -1979,6 +2030,22 @@ export async function hydrateDirectSourceReferences(page, references, platformUr
                 }
                 continue;
             }
+            if (isDocxReference(reference.url)) {
+                const docxContent = await extractDocxReferenceContent(reference.url);
+                if (docxContent) {
+                    reference.snippet = docxContent.slice(0, 2000);
+                    reference.snippetProvenance = "source_document";
+                    reference.content = docxContent;
+                    reference.contentAcquisition = "direct_docx_extraction";
+                    reference.sourceAcquisitionStatus = "captured";
+                    delete reference.sourceAcquisitionError;
+                }
+                else {
+                    reference.sourceAcquisitionStatus = "failed";
+                    reference.sourceAcquisitionError = "DOCX 正文提取未完成";
+                }
+                continue;
+            }
             const sourcePage = await page.context().newPage().catch(() => undefined);
             if (!sourcePage) {
                 reference.sourceAcquisitionStatus = "failed";
@@ -1997,6 +2064,11 @@ export async function hydrateDirectSourceReferences(page, references, platformUr
                 const status = response?.status() || 0;
                 if ([401, 403, 429].includes(status)) {
                     reference.sourceAcquisitionStatus = "blocked";
+                    reference.sourceAcquisitionError = `来源页面返回 HTTP ${status}`;
+                    continue;
+                }
+                if (status >= 400) {
+                    reference.sourceAcquisitionStatus = "failed";
                     reference.sourceAcquisitionError = `来源页面返回 HTTP ${status}`;
                     continue;
                 }
@@ -2020,10 +2092,23 @@ export async function hydrateDirectSourceReferences(page, references, platformUr
                 delete reference.sourceAcquisitionError;
             }
             catch (error) {
-                reference.sourceAcquisitionStatus = "failed";
-                reference.sourceAcquisitionError = error instanceof Error
-                    ? error.message.slice(0, 300)
-                    : String(error).slice(0, 300);
+                const fallback = await extractSourcePageContentViaFetch(sourcePage, reference.url);
+                if (fallback?.content) {
+                    reference.sourceResolvedUrl = fallback.resolvedUrl || reference.url;
+                    reference.title = longerText(reference.title, fallback.title);
+                    reference.snippet = fallback.content.slice(0, 2000);
+                    reference.snippetProvenance = "source_document";
+                    reference.content = fallback.content;
+                    reference.contentAcquisition = "direct_fetch_extraction";
+                    reference.sourceAcquisitionStatus = "captured";
+                    delete reference.sourceAcquisitionError;
+                }
+                else {
+                    reference.sourceAcquisitionStatus = "failed";
+                    reference.sourceAcquisitionError = error instanceof Error
+                        ? error.message.slice(0, 300)
+                        : String(error).slice(0, 300);
+                }
             }
             finally {
                 await sourcePage.close().catch(() => undefined);
@@ -2315,6 +2400,14 @@ export function isPdfReference(rawUrl) {
         return /\.pdf(?:$|[?#])/i.test(String(rawUrl || ""));
     }
 }
+export function isDocxReference(rawUrl) {
+    try {
+        return new URL(rawUrl).pathname.toLowerCase().endsWith(".docx");
+    }
+    catch {
+        return /\.docx(?:$|[?#])/i.test(String(rawUrl || ""));
+    }
+}
 function hasSubstantiveReferenceContent(reference) {
     const title = String(reference.title || "").trim();
     const text = String(reference.text || "").trim();
@@ -2328,21 +2421,10 @@ function hasSubstantiveReferenceContent(reference) {
 export async function extractPdfReferenceContent(page, rawUrl) {
     let temporaryDirectory;
     try {
-        const response = await fetch(rawUrl, {
-            redirect: "follow",
-            signal: AbortSignal.timeout(240000),
-            headers: {
-                "user-agent": "Mozilla/5.0 Fact-Check-X source verifier"
-            }
-        });
-        if (!response.ok) {
+        const buffer = await fetchReferenceBuffer(rawUrl, true);
+        if (!buffer) {
             return "";
         }
-        const contentLength = Number(response.headers.get("content-length") || 0);
-        if (contentLength > 25 * 1024 * 1024) {
-            return "";
-        }
-        const buffer = Buffer.from(await response.arrayBuffer());
         if (buffer.length > 25 * 1024 * 1024 || !buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
             return "";
         }
@@ -2369,6 +2451,147 @@ export async function extractPdfReferenceContent(page, rawUrl) {
             await rm(temporaryDirectory, { recursive: true, force: true }).catch(() => undefined);
         }
     }
+}
+export async function extractDocxReferenceContent(rawUrl) {
+    try {
+        const buffer = await fetchReferenceBuffer(rawUrl, true);
+        if (!buffer || buffer.length > 25 * 1024 * 1024 || buffer.subarray(0, 2).toString() !== "PK") {
+            return "";
+        }
+        const files = unzipSync(new Uint8Array(buffer));
+        const documentXml = files["word/document.xml"];
+        if (!documentXml) {
+            return "";
+        }
+        const text = decodeXmlEntities(strFromU8(documentXml)
+            .replace(/<w:tab\b[^>]*\/>/g, "\t")
+            .replace(/<w:br\b[^>]*\/>/g, "\n")
+            .replace(/<\/w:p>/g, "\n")
+            .replace(/<[^>]+>/g, ""))
+            .replace(/[ \t]+/g, " ")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+        return text.slice(0, 12000);
+    }
+    catch (error) {
+        console.warn(`DOCX 正文提取未完成：${error instanceof Error ? error.message : String(error)}`);
+        return "";
+    }
+}
+async function fetchReferenceBuffer(rawUrl, allowCurlFallback = false) {
+    try {
+        const response = await fetch(rawUrl, {
+            redirect: "follow",
+            signal: AbortSignal.timeout(240000),
+            headers: {
+                "user-agent": "Mozilla/5.0 Fact-Check-X source verifier"
+            }
+        });
+        if (!response.ok) {
+            return undefined;
+        }
+        const contentLength = Number(response.headers.get("content-length") || 0);
+        if (contentLength > 25 * 1024 * 1024) {
+            return undefined;
+        }
+        return Buffer.from(await response.arrayBuffer());
+    }
+    catch (error) {
+        if (!allowCurlFallback) {
+            return undefined;
+        }
+        try {
+            const { stdout } = await execFileAsync("curl", [
+                "--fail",
+                "--location",
+                "--silent",
+                "--show-error",
+                "--max-time",
+                "240",
+                "--user-agent",
+                "Mozilla/5.0 Fact-Check-X source verifier",
+                rawUrl
+            ], {
+                encoding: "buffer",
+                timeout: 245000,
+                maxBuffer: 26 * 1024 * 1024
+            });
+            return Buffer.from(stdout);
+        }
+        catch (curlError) {
+            console.warn(`来源文件下载未完成：${curlError instanceof Error ? curlError.message : String(curlError)}`);
+            return undefined;
+        }
+    }
+}
+export async function extractSourcePageContentViaFetch(sourcePage, rawUrl) {
+    try {
+        const response = await fetch(rawUrl, {
+            redirect: "follow",
+            signal: AbortSignal.timeout(30000),
+            headers: {
+                "user-agent": "Mozilla/5.0 Fact-Check-X source verifier"
+            }
+        });
+        if (!response.ok) {
+            return undefined;
+        }
+        const contentLength = Number(response.headers.get("content-length") || 0);
+        if (contentLength > 10 * 1024 * 1024) {
+            return undefined;
+        }
+        const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+        if (contentType && !contentType.includes("html") && !contentType.includes("text")) {
+            return undefined;
+        }
+        const html = await response.text();
+        const extracted = await sourcePage.evaluate((rawHtml) => {
+            const doc = new DOMParser().parseFromString(rawHtml, "text/html");
+            const clean = (value) => String(value || "").trim().replace(/\s+/g, " ");
+            const selectors = [
+                "article", "main", "[role='main']", "#content", "#article-content",
+                ".article-content", ".article_detail", ".content"
+            ];
+            const candidates = [];
+            for (const selector of selectors) {
+                for (const element of doc.querySelectorAll(selector)) {
+                    const text = clean(element.textContent);
+                    if (text.length >= 40) {
+                        candidates.push(text);
+                    }
+                }
+            }
+            const bodyText = clean(doc.body?.textContent);
+            if (bodyText.length >= 40) {
+                candidates.push(bodyText);
+            }
+            candidates.sort((first, second) => second.length - first.length);
+            const content = candidates[0] || "";
+            const blocked = /(?:访问过于频繁|安全验证|人机验证|请输入验证码|access denied|forbidden)/i.test(content);
+            return {
+                title: clean(doc.title),
+                content: blocked ? "" : content.slice(0, 12000),
+                blocked,
+                reason: blocked ? "来源页面要求人机验证或拒绝访问" : ""
+            };
+        }, html);
+        return extracted.content
+            ? { ...extracted, resolvedUrl: response.url || rawUrl }
+            : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function decodeXmlEntities(value) {
+    return String(value || "")
+        .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+        .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number.parseInt(decimal, 10)))
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&amp;/g, "&");
 }
 function shouldHydrateDoubaoReference(reference) {
     if (!/^https?:\/\//i.test(reference.url || "") || shouldIgnoreDoubaoReference(reference.url, reference.title || "")) {
@@ -3264,7 +3487,11 @@ export function validateCapturedAnswer(config, answerMarkdown) {
         const compact = answerMarkdown.replace(/\s+/g, "");
         // 仅剩固定提示语（正文尚未流出）同样不算回答。
         const withoutTips = compact.replace(/^AI综合所有相关权威材料后[，,]?参考性解读如下[，,]?(?:建议点击角标查看所依据的材料原文)?[。.]?/, "");
-        if (looksLikeDknowcDeepResearchProgress(compact) || compact.length < 30 || !withoutTips) {
+        const standaloneShell = config.name === "dknowc-deep-research"
+            && /找到相关内容\d+篇/.test(compact)
+            && /知识专库\d+/.test(compact)
+            && /逐段输出并附溯源卡/.test(compact);
+        if (standaloneShell || looksLikeDknowcDeepResearchProgress(compact) || compact.length < 30 || !withoutTips) {
             return {
                 status: "failed",
                 error: `深知晓回答仅为进度占位或过短文本（${compact.slice(0, 30)}），判定采集未完成，不记为成功；请重新采集。`

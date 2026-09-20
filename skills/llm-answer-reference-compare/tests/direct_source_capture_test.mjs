@@ -3,10 +3,20 @@ import { createServer } from "node:http";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { captureGenericChat } from "../assets/tool/dist/capture/generic-chat.js";
-import { resolveVisibleBrowserExecutable } from "../assets/tool/dist/capture/browser-session.js";
+import {
+    captureGenericChat,
+    extractSourcePageContentViaFetch
+} from "../assets/tool/dist/capture/generic-chat.js";
+import {
+    openBrowserSession,
+    resolveVisibleBrowserExecutable
+} from "../assets/tool/dist/capture/browser-session.js";
 
 let origin = "";
+const docxBody = Buffer.from(
+    "UEsDBBQAAAAIAHMMNV11peBtGQEAAG8BAAARAAAAd29yZC9kb2N1bWVudC54bWxtkM1Og0AQgF+F7N1CezCGAL35BPoACGtLAruEXcXeUKOYpr0ZVPRi/LloUS6mqTV9GNltOfkK7tqYaNLLtzuZmW8yY7QPAl/ZhxHxMDJBs6EBBSIHux7qmGB7a3NtAyiE2si1fYygCXqQgLZlxLqLnb0AIqoIASJ6bIIupaGuqsTpwsAmDRxCJHK7OApsKsKoo8Y4csMIO5AQ4Q98taVp62pgewhI5Q52e/INJSIJarHhBStLNpiw6w9WvNVPlzx75f2E37xU08NqnLOHjPVLfj6bjzI+uuNZaqiyUVI4BH90f531Y8afb+skX8zSRXHPinz+flVNzlpaNU7ZyfFS+TUdsNPhysLmv8LP5GjFSMHlPuLzeyvrG1BLAQIUABQAAAAIAHMMNV11peBtGQEAAG8BAAARAAAAAAAAAAAAAAAAAAAAAAB3b3JkL2RvY3VtZW50LnhtbFBLBQYAAAAAAQABAD8AAABIAQAAAAA=",
+    "base64"
+);
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://127.0.0.1");
     response.setHeader("content-type", "text/html; charset=utf-8");
@@ -19,11 +29,17 @@ const server = createServer((request, response) => {
         response.end("Access denied");
         return;
     }
+    if (url.pathname === "/source/policy.docx") {
+        response.setHeader("content-type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        response.end(docxBody);
+        return;
+    }
     if (url.pathname === "/deepseek") {
         response.end(chatPage(
             "ds-assistant-message-main-content",
             `<p>回答中的主张只是上下文<a href="${origin}/source/official"><span class="ds-markdown-cite">[7]</span></a>。</p>
-             <p>另一条来源无法访问<a href="${origin}/source/blocked"><span class="ds-markdown-cite">[11]</span></a>。</p>`
+             <p>另一条来源无法访问<a href="${origin}/source/blocked"><span class="ds-markdown-cite">[11]</span></a>。</p>
+             <p>南山区奖励来源<a href="${origin}/source/policy.docx"><span class="ds-markdown-cite">[12]</span></a>。</p>`
         ));
         return;
     }
@@ -105,7 +121,7 @@ async function capture(name, label, path) {
 try {
     const deepseek = await capture("deepseek", "DeepSeek", "/deepseek");
     assert.equal(deepseek.status, "success");
-    assert.deepEqual(deepseek.references.map((item) => item.marker), ["7", "11"]);
+    assert.deepEqual(deepseek.references.map((item) => item.marker), ["7", "11", "12"]);
     const captured = deepseek.references[0];
     assert.equal(captured.answerContext.includes("回答中的主张"), true);
     assert.equal(captured.snippetProvenance, "source_document");
@@ -113,6 +129,21 @@ try {
     assert.equal(captured.content.includes("已打开的官方来源正文"), true);
     assert.equal(deepseek.references[1].sourceAcquisitionStatus, "blocked");
     assert.equal(deepseek.references[1].answerContext.includes("无法访问"), true);
+    assert.equal(deepseek.references[2].sourceAcquisitionStatus, "captured");
+    assert.equal(deepseek.references[2].contentAcquisition, "direct_docx_extraction");
+    assert.equal(deepseek.references[2].content.includes("首次通过认定给予20万元奖励"), true);
+
+    const fallbackSession = await openBrowserSession(
+        join(out, "fetch-fallback-profile"),
+        "about:blank",
+        {}
+    );
+    const fetched = await extractSourcePageContentViaFetch(
+        fallbackSession.page,
+        `${origin}/source/official`
+    );
+    assert.equal(fetched.content.includes("已打开的官方来源正文"), true);
+    await fallbackSession.release();
 
     const yuanbao = await capture("yuanbao", "腾讯元宝", "/yuanbao");
     assert.equal(yuanbao.status, "success");
@@ -141,7 +172,9 @@ if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
             "capture.deepseek_source_body",
             "capture.yuanbao_source_body",
             "capture.qianwen_source_body",
-            "capture.source_failure_states_distinct"
+            "capture.source_failure_states_distinct",
+            "capture.docx_source_body",
+            "capture.html_direct_fetch_fallback"
         ]
     }), "utf8");
 }

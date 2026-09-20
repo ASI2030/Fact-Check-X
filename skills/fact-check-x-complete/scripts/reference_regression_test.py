@@ -22,6 +22,7 @@ def main() -> int:
         collector_root / "tests/dknow_deep_research_placeholder_test.mjs",
         collector_root / "tests/dknow_marker_merge_test.mjs",
         collector_root / "tests/dknow_percent_encoded_evidence_test.mjs",
+        collector_root / "tests/direct_source_capture_test.mjs",
     ]
     for test in tests:
         try:

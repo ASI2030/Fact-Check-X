@@ -12,7 +12,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 sys.path.insert(0, str(ROOT / "scripts"))
-from knowledge_compare import normalize_role, semantic_claim_support
+from knowledge_compare import (
+    claim_scope_overreach_reason,
+    normalize_role,
+    semantic_claim_support,
+)
 
 
 def run(arguments: list[str]) -> None:
@@ -38,6 +42,22 @@ def main() -> int:
         "深圳高新技术企业奖励50万元",
         "攀枝花市政府网站介绍高新技术企业服务，项目投资50万元。",
     )
+    assert not semantic_claim_support(
+        "深圳市级无一次性认定奖金，一次性现金奖励全部在区级",
+        "鼓励各区参照市级研发投入补助政策，按一定比例给予配套资助。",
+    )
+    assert semantic_claim_support(
+        "深圳市级未设一次性认定奖励",
+        "深圳市现行政策未设置国家高新技术企业一次性认定奖励。",
+    )
+    assert "300万元" in claim_scope_overreach_reason(
+        "各区可给予最高50万元奖励；国高企业每年最高300万元研发资助",
+        "对新认定和新引进的国家级高新技术企业，各区可结合实际给予最高50万元奖励。",
+    )
+    assert claim_scope_overreach_reason(
+        "各区可给予最高50万元奖励",
+        "对新认定和新引进的国家级高新技术企业，各区可结合实际给予最高50万元奖励。",
+    ) == ""
     assert normalize_role(
         "深圳企业申请国家高新技术企业认定的门槛是什么？",
         "南山区对认定企业另给50万元奖励",
@@ -53,6 +73,18 @@ def main() -> int:
         "研发费用指标另有附加条件",
         "direct",
     )[0] == "reference"
+    for requirement in (
+        "科技人员占当年职工总数比例不低于10%",
+        "近三年研发费用占同期销售收入比例按规模分档达标(5%/4%/3%)",
+        "境内研发费用占全部研发费用比例不低于60%",
+        "近一年高新技术产品收入占同期总收入比例不低于60%",
+        "申请认定前一年内未发生重大安全、重大质量事故或严重环境违法行为",
+    ):
+        assert normalize_role(
+            "国家高新技术企业认定条件与深圳奖励是什么？",
+            requirement,
+            "reference",
+        ) == ("direct", "requested_requirement")
     with tempfile.TemporaryDirectory(prefix="fact-check-x-11-") as temp:
         out = Path(temp)
         task = out / "task.json"
@@ -1492,6 +1524,9 @@ def main() -> int:
                 "comparison.direct_reference_scope_normalized",
                 "comparison.policy_fact_not_recommendation",
                 "comparison.forged_official_evidence_rejected",
+                "comparison.requirement_role_promoted",
+                "comparison.absence_claim_requires_explicit_evidence",
+                "comparison.overwide_claim_detected",
             ],
         }), encoding="utf-8")
     print("PASS 知识点结构化对比")

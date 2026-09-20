@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.20"
+  version: "1.1.21"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.20)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.21)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，官方无法查证的内容统一标为“疑似误导”，移入补充参考风险区且不写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -134,7 +134,7 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
 `dknowc-deep-research`：采集器会在同一会话先等待普通回答完整生成，再点击
 “深度溯源”；同页弹出结果时在当前页续采，打开同源结果页时接管新页面，等待结果
 完整生成后独立保存为一个平台。两个平台同时选择时只提交一次原问题，普通答案与
-深度溯源答案、引用和存证分别保存、互不覆盖；按钮缺失、结果未出现或结果未完成均
+深度溯源答案、引用和存证分别保存、互不覆盖；独立报告页必须同时满足流式返回已结束、步骤区已完成且报告正文已实质生成，页面壳、空报告、活动步骤或仍在运行的流均不得记为成功；按钮缺失、结果未出现或结果未完成均
 按采集失败处理。平台组合完全按用户输入决定，
 正式支持的内置选项包括
 `dknowc-chat`、`dknowc-deep-research`、`doubao`、`yuanbao`、`deepseek`、
@@ -145,7 +145,7 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
 
 保留完整原答案、原始 URL、引用标记、引用正文、截图和失败状态。不得摘要、改写或用搜索结果替换原始来源。
 
-当深知平台所附来源只有标题或截断摘要时，采集阶段用可信搜索 `return_full_content=true` 补全与该标题或原始 URL 匹配的同一材料全文。深知晓与深知晓（深度溯源）的可信搜索材料统一按“官方材料”处理，返回的 `源网址` 仅作回溯链接，未返回时保留深知收录页且不伪造外链。DeepSeek 与元宝的每条外部引用必须用 Playwright 逐条打开：成功时记录来源正文、最终落地 URL 和 `sourceAcquisitionStatus=captured`；访问受阻或提取失败时记录 `blocked/failed` 与原因。回答区上下文只保存在 `answerContext`，不得当作链接原文或来源忠实性证据。
+当深知平台所附来源只有标题或截断摘要时，采集阶段用可信搜索 `return_full_content=true` 补全与该标题或原始 URL 匹配的同一材料全文。深知晓与深知晓（深度溯源）的可信搜索材料统一按“官方材料”处理，返回的 `源网址` 仅作回溯链接，未返回时保留深知收录页且不伪造外链。DeepSeek、元宝和千问的每条外部引用必须逐条打开：成功时记录来源正文、最终落地 URL 和 `sourceAcquisitionStatus=captured`；可下载的 PDF/DOCX 直接提取正文，浏览器可访问但 Node 直连失败的 HTML 允许使用安全页面请求回退提取；访问受阻或提取失败时记录 `blocked/failed` 与具体原因。回答区上下文只保存在 `answerContext`，不得当作链接原文或来源忠实性证据。
 
 ### 采集完成硬门禁与 Computer Use 恢复
 
@@ -198,7 +198,7 @@ python3 scripts/fact_check_x.py acknowledge-stage \
 
 由当前承载智能体直接完成知识点分析。每个知识点只表达一个可核验事实变量；同一事实的不同数值必须对齐在同一点；只能使用原始答案采集阶段已经保存的来源判断来源忠实性，禁止联网补证。顶层必须填写 `synthesisDraft`，其 `status` 固定为 `unverified`，正文综合所有相关知识点并保留冲突、条件和缺口，`basisKnowledgePointIds` 只能引用当前知识点；它是“综合草案（未核验）”，不得写成权威最终答案。
 
-原子性必须落实到每个平台的 `claim`，不能只把知识点标题写得宽泛。原回答一句话同时包含多个可独立判真的义务、条件、对象、数值或后果时，必须拆成多个知识点；各点的 `claim` 只保留当前事实，`answerExcerpt` 可以复用同一段原文。知识点必须标明 `claimType=fact|recommendation`：纯操作建议使用 `recommendation`，不因没有逐句脚标而判为引用不忠实；其中夹带的制度事实、条件、数字或时效必须拆成独立 `fact`。仅个别平台增加的实质事实也要单独成点，其他平台标为未覆盖，禁止把新增事实并入宽泛知识点后借用官方材料锚点免查。`trustedAnchor` 只能覆盖已有官方材料实际支持的单一事实变量；超出该变量的主张必须成为无锚点知识点，交给后续一次可信搜索。
+原子性必须落实到每个平台的 `claim`，不能只把知识点标题写得宽泛。原回答一句话同时包含多个可独立判真的义务、条件、对象、数值或后果时，必须拆成多个知识点；各点的 `claim` 只保留当前事实，`answerExcerpt` 可以复用同一段原文，但必须覆盖该 `claim` 的全部实质元素。不得把不同政策事项、不同资助或多个独立数值合并为一条主张后只绑其中一段回答或来源；程序检测到这种范围过宽时必须显式报告 `claim_scope_overreach`、归因为比较分析结构错误并在进入权威核验前阻断，不得静默降级为平台证据不足。知识点必须标明 `claimType=fact|recommendation`：纯操作建议使用 `recommendation`，不因没有逐句脚标而判为引用不忠实；其中夹带的制度事实、条件、数字或时效必须拆成独立 `fact`。仅个别平台增加的实质事实也要单独成点，其他平台标为未覆盖，禁止把新增事实并入宽泛知识点后借用官方材料锚点免查。`trustedAnchor` 只能覆盖已有官方材料实际支持的单一事实变量；缺失、唯一性或排他性主张还必须有同一事实的显式原文；超出该变量的主张必须成为无锚点知识点，交给后续一次可信搜索。
 
 每个 `covered=true` 的 claim 必须填写 `answerExcerpt`：它必须是原始 `answerMarkdown` 的连续子串，并覆盖当前原子主张。载体负责知识点、主张和原回答片段的语义判断；程序负责从已捕获来源中校验脚标、重建可定位证据摘录、归一化引用方式，并自动生成合格的深知晓官方材料锚点或其他平台 `gov.cn` 材料锚点。
 

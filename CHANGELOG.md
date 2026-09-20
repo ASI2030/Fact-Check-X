@@ -4,6 +4,16 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.21] - 2026-09-21
+
+- Wait for the DKnow Deep Trace standalone stream, completed step state, and substantive report body together; reject the 211-character page shell, empty report, active step, and running stream.
+- Promote statutory qualification conditions to direct answers when the question asks for those conditions, while continuing to classify narrower unrequested local rules as supplemental references.
+- Require explicit same-claim evidence for absence, exclusivity, and uniqueness statements so an official page about a related subsidy cannot support a claim that no municipal award exists.
+- Reject overwide comparison claims before authority verification when the claim contains material facts or amounts missing from its bound answer excerpt; report the fault as comparison analysis rather than platform evidence insufficiency.
+- Hydrate directly downloadable DOCX and PDF sources, and use a safe browser-page request fallback for HTML pages that are accessible in the browser but not through Node fetch.
+- Normalize MSYS-style Windows paths such as `/c/WorkBuddy/...` to `C:/WorkBuddy/...` without adding a duplicate drive directory.
+- Add the real high-tech-enterprise report correction and DKnow standalone stream case to the required golden regression catalog.
+
 ## [1.1.20] - 2026-09-20
 
 - Keep waiting when Doubao ends a short partial response with a first-person continuation promise such as “我再核对一下”, instead of recording that progress text as the final answer.

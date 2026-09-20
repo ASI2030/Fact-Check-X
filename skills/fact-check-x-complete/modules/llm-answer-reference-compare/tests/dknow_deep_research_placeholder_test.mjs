@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { extractDknowcAnswer, validateCapturedAnswer } from "../assets/tool/dist/capture/generic-chat.js";
+import {
+    extractDknowcAnswer,
+    readDknowcStandaloneReportState,
+    validateCapturedAnswer,
+    waitForAnswer
+} from "../assets/tool/dist/capture/generic-chat.js";
 import { openBrowserSession } from "../assets/tool/dist/capture/browser-session.js";
 
 // 取自深知晓深度溯源页真实结构（2026-09 存档）：列表里先有一个 display:none 的进度机器人
@@ -31,11 +36,32 @@ const profileDir = await mkdtemp(join(tmpdir(), "fcx-dknow-placeholder-"));
 const session = await openBrowserSession(profileDir, "about:blank", {});
 let early;
 let complete;
+let standaloneEarly;
+let standaloneComplete;
 try {
     await session.page.setContent(fixture({ withBody: false }), { waitUntil: "domcontentloaded" });
     early = await extractDknowcAnswer(session.page);
     await session.page.setContent(fixture({ withBody: true }), { waitUntil: "domcontentloaded" });
     complete = await extractDknowcAnswer(session.page);
+    await session.page.setContent(`<!doctype html><meta charset="utf-8">
+      <div id="steps"><div class="active">检索材料</div><div id="st-gen">逐段输出并附溯源卡</div></div>
+      <div id="report"></div>
+      <script>
+        window.STREAM = { running: true };
+        setTimeout(() => {
+          window.STREAM.running = false;
+          document.querySelector('#steps').classList.add('done');
+          document.querySelector('.active').classList.remove('active');
+          document.querySelector('#st-gen').textContent = '已完成 · 72 字';
+          document.querySelector('#report').textContent = ${JSON.stringify(BODY)};
+        }, 250);
+      </script>`, { waitUntil: "domcontentloaded" });
+    standaloneEarly = await readDknowcStandaloneReportState(session.page);
+    standaloneComplete = await waitForAnswer(
+        { name: "dknowc-deep-research", adapter: "dknowc-deep-research", label: "深知晓（深度溯源）", completionStableMs: 100 },
+        session.page,
+        6000
+    );
 }
 finally {
     await session.release();
@@ -48,6 +74,10 @@ assert.ok(complete.includes("【302】"), "脚标必须保留");
 for (const forbidden of ["[检索完成]", "已完成思考", "已创建本问题知识专库", "用户问的是高新技术企业"]) {
     assert.ok(!complete.includes(forbidden), `回答不得混入界面元素或隐藏面板：${forbidden}`);
 }
+assert.equal(standaloneEarly.standalone, true, "必须识别独立深度报告页");
+assert.equal(standaloneEarly.running, true, "必须读取页面流式运行态");
+assert.equal(standaloneEarly.done, false, "流未结束时不得宣称完成");
+assert.equal(standaloneComplete, BODY, "必须等流结束与报告正文落地后再返回正文");
 
 // 采集健全性门禁：进度占位或过短文本不得以 success 落盘。
 const deep = { name: "dknowc-deep-research", label: "深知晓（深度溯源）" };
@@ -55,6 +85,21 @@ assert.equal(validateCapturedAnswer(deep, "[检索完成]")?.status, "failed", "
 assert.equal(validateCapturedAnswer(deep, "[查询]现行个人所得税法第六条")?.status, "failed", "进度文本必须判失败");
 assert.equal(validateCapturedAnswer({ name: "dknowc-chat", label: "深知晓" }, "已完成思考")?.status, "failed", "过短文本必须判失败");
 assert.equal(validateCapturedAnswer(deep, BODY), undefined, "完整正文必须放行");
+assert.equal(
+    validateCapturedAnswer(deep, "找到相关内容32篇 知识专库0 逐段输出并附溯源卡 用时0.0s")?.status,
+    "failed",
+    "独立报告进度壳不得记为成功"
+);
 assert.equal(validateCapturedAnswer({ name: "doubao", label: "豆包" }, "不需要提供居住证。"), undefined, "其他平台的短回答不受此门禁影响");
+
+if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
+    await writeFile(process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT, JSON.stringify({
+        schemaVersion: "fact-check-x/test-assertions@1",
+        actualAssertionIds: [
+            "capture.deep_trace_stream_terminal",
+            "capture.deep_trace_shell_rejected"
+        ]
+    }), "utf8");
+}
 
 console.log("PASS 深度溯源正文未流出时不再回退到隐藏进度面板；占位/过短回答不记为成功");

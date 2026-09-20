@@ -208,6 +208,21 @@ const pdfUrl = `http://127.0.0.1:${pdfAddress.port}/policy.pdf?f_link_type=f_lin
 const pdfPage = await context.newPage();
 const extractedPdfText = await extractPdfReferenceContent(pdfPage, pdfUrl);
 assert.ok(extractedPdfText.length >= 80, `PDF extracted length was ${extractedPdfText.length}`);
+const originalFetch = globalThis.fetch;
+let curlFallbackPdfText;
+try {
+    globalThis.fetch = async () => {
+        throw new TypeError("simulated Node TLS incompatibility");
+    };
+    curlFallbackPdfText = await extractPdfReferenceContent(pdfPage, pdfUrl);
+}
+finally {
+    globalThis.fetch = originalFetch;
+}
+assert.ok(
+    curlFallbackPdfText.length >= 80,
+    `curl fallback PDF extracted length was ${curlFallbackPdfText.length}`
+);
 await pdfPage.setContent(`
     <div class="md-box-root">
         <p><a href="${pdfUrl}">Official PDF source</a></p>

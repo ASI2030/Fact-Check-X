@@ -63,6 +63,14 @@ def main() -> int:
         assert fact_check_x.file_uri_for_path(
             r"C:\WorkBuddy\fact-check-x\runs\sample run\02-comparison-report.html"
         ) == "file:///C:/WorkBuddy/fact-check-x/runs/sample%20run/02-comparison-report.html"
+        assert fact_check_x.normalize_platform_path_text(
+            "/c/WorkBuddy/fact-check-x/runs/sample run/02-comparison-report.html",
+            "nt",
+        ) == "C:/WorkBuddy/fact-check-x/runs/sample run/02-comparison-report.html"
+        assert fact_check_x.file_uri_for_path(
+            "/c/WorkBuddy/fact-check-x/runs/sample run/02-comparison-report.html",
+            "nt",
+        ) == "file:///C:/WorkBuddy/fact-check-x/runs/sample%20run/02-comparison-report.html"
 
         def assert_deliverable(item: dict, label: str, path: Path) -> None:
             uri = path.resolve().as_uri()
@@ -202,6 +210,30 @@ def main() -> int:
         assert comparison_stage["checkpoint"]["path"] == str(
             (run_dir / "02-comparison-report.html").resolve()
         )
+        overwide_analysis = json.loads(
+            (COMPARE_FIXTURES / "comparison-analysis.json").read_text(encoding="utf-8")
+        )
+        overwide_analysis["knowledgePoints"][0]["claims"]["dknowc-chat"]["claim"] = (
+            "每人每月最高提取1400元，并另有最高300万元研发资助"
+        )
+        overwide_path = Path(temp) / "overwide-comparison-analysis.json"
+        overwide_path.write_text(
+            json.dumps(overwide_analysis, ensure_ascii=False), encoding="utf-8"
+        )
+        overwide_run = Path(temp) / "overwide-run"
+        run(command(
+            "prepare-comparison",
+            "--results", str(results),
+            "--run-dir", str(overwide_run),
+        ))
+        overwide_failure = run_failed(command(
+            "complete-comparison",
+            "--results", str(results),
+            "--analysis", str(overwide_path),
+            "--run-dir", str(overwide_run),
+        ))
+        assert "原子性门禁" in json.dumps(overwide_failure, ensure_ascii=False)
+        assert not (overwide_run / "comparison-gate.json").exists()
         assert "打开各方答案聚合（未核验）" in comparison_stage["checkpoint"]["message"]
         assert (run_dir / "02-comparison-report.html").exists()
         prepared = run(command("prepare-authority", "--run-dir", str(run_dir)), keyless_environment)
@@ -696,6 +728,8 @@ def main() -> int:
                 "report.technical_failure_notice",
                 "report.renamed_four_stages",
                 "authority.finalize_transaction_rollback",
+                "comparison.overwide_claim_blocks_authority",
+                "path.windows_drive_normalized",
             ],
         }), encoding="utf-8")
     print("PASS Fact-Check-X 统一入口")

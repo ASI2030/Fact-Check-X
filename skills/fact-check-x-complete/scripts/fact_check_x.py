@@ -399,9 +399,19 @@ def capture_digest(path: Path) -> str:
     return digest.hexdigest()
 
 
-def file_uri_for_path(path: Path | str) -> str:
-    """Return a standards-compliant file URI without guessing path separators."""
+def normalize_platform_path_text(path: Path | str, platform: str | None = None) -> str:
     raw = str(path)
+    if (platform or os.name) == "nt":
+        match = re.match(r"^/([A-Za-z])(?:/(.*))?$", raw)
+        if match:
+            suffix = match.group(2) or ""
+            return f"{match.group(1).upper()}:/{suffix}"
+    return raw
+
+
+def file_uri_for_path(path: Path | str, platform: str | None = None) -> str:
+    """Return a standards-compliant file URI without guessing path separators."""
+    raw = normalize_platform_path_text(path, platform)
     if re.match(r"^[A-Za-z]:[\\/]", raw) or raw.startswith("\\\\"):
         posix_path = PureWindowsPath(raw).as_posix()
         encoded = quote(posix_path, safe="/:")
@@ -410,7 +420,7 @@ def file_uri_for_path(path: Path | str) -> str:
 
 
 def deliverable_descriptor(label: str, path: Path | str, **extra) -> dict:
-    resolved = Path(path).resolve()
+    resolved = Path(normalize_platform_path_text(path)).resolve()
     if not resolved.is_file():
         raise PipelineError(f"阶段产物不存在：{resolved}")
     file_uri = file_uri_for_path(resolved)
@@ -912,6 +922,20 @@ def complete_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> di
     shutil.copyfile(comparison_report, comparison_deliverable)
     normalize_report_file(comparison_deliverable, collect_technical_notices(run_dir))
     comparison_data = load_json(comparison)
+    blocking_analysis_gaps = [
+        item
+        for item in comparison_data.get("analysisGaps") or []
+        if isinstance(item, dict) and item.get("blocking") is True
+    ]
+    if blocking_analysis_gaps:
+        details = "; ".join(
+            f"{item.get('knowledgePointId') or '?'}·{item.get('platform') or '?'}：{item.get('reason') or '比较分析结构错误'}"
+            for item in blocking_analysis_gaps[:5]
+        )
+        raise PipelineError(
+            "比较分析未通过原子性门禁，禁止进入权威核验。"
+            f"请补全 answerExcerpt 或拆分过宽主张，并重新执行 complete-comparison：{details}"
+        )
     comparison_gate = write_comparison_provenance(run_dir, results_path, analysis, comparison)
     result.update({
         "stage": "comparison_completed",
