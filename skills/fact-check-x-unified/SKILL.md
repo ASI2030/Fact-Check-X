@@ -52,6 +52,8 @@ python3 scripts/fact_check_x.py acknowledge-stage \
 
 当前智能体读取 `<run>/comparison-task.json`，写入 `<run>/comparison-analysis.json`，再执行：
 
+`comparison-task.json` 是自包含的紧凑工作集。阶段确认后只允许“读取任务包一次、写入分析一次、执行验收一次”，最多三次工具调用；不得读取技能源码、契约或完整 `results.json` 探路，不得打印或转储完整任务包。`capturedText` 只是有界原文预览，完整正文由程序在验收时从 `results.json` 校验和重建。
+
 拆解时，原子性同时约束知识点和各平台 `claim`。一个原句包含多个独立义务、条件、对象、数值或后果时必须拆点，每个 `claim` 只保留当前事实；平台独有的实质新增事实也要另起无锚点知识点，不能并入宽泛知识点后复用深知晓锚点免查。每个知识点同时标明 `claimType=fact|recommendation`：纯操作建议可标为 `recommendation`，不因缺少逐句脚标而判引用不忠实；建议中包含的制度事实、条件、数字或时效必须拆成独立 `fact`。
 
 ```bash
@@ -79,7 +81,7 @@ python3 scripts/fact_check_x.py search-authority --run-dir <run> --max-workers 1
 
 当前智能体逐个读取 `authority/requests` 与 `authority/evidence`，把裁决写入 `authority/assessments/<知识点ID>.json`，然后：
 
-免查模式下，`trustedAnchor.officialAnswer` 是当前事实知识点的权威结论；锚点证据列表用于来源追溯。无论来自深知晓还是 `gov.cn`，都必须确认已捕获正文实际支持该结论，不得仅凭官方属性自动判定。平台主张与 `officialAnswer` 语义一致或可由其直接推出时，裁决为 `supported` 并引用有效锚点证据 ID。仅当平台主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。知识点对比阶段的引用忠实性与本阶段的事实正确性分别保留，不能因平台自身引用不足而拒绝判断已经被权威结论证实的主张。`recommendation` 作为“操作建议”单独展示，不进入事实准确率或幻觉率；若权威证据证明建议会误导，仍可判为 `contradicted`。
+免查模式下，`trustedAnchor.officialAnswer` 是当前事实知识点的权威结论；锚点证据列表用于来源追溯。无论来自深知晓还是 `gov.cn`，都必须确认已捕获正文实际支持该结论，不得仅凭官方属性自动判定。`trustedAnchor.claimEvidenceMap` 记录各平台已经逐主张绑定的官方原文；命中该映射的平台直接复用本次回答自带证据，不得因另一轮可信搜索未召回同一材料而降为证据不足。其他平台主张与 `officialAnswer` 语义一致或可由其直接推出时，裁决为 `supported` 并引用有效锚点证据 ID。仅当平台主张增加了权威结论不能支持的实质事实，或确实无法判定时，才使用 `insufficient`。知识点对比阶段的引用忠实性与本阶段的事实正确性分别保留，不能因平台自身引用不足而拒绝判断已经被权威结论证实的主张。`recommendation` 作为“操作建议”单独展示，不进入事实准确率或幻觉率；若权威证据证明建议会误导，仍可判为 `contradicted`。
 
 ```json
 {

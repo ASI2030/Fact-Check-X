@@ -13,7 +13,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 sys.path.insert(0, str(ROOT / "scripts"))
-from authority_verify import acquire, finalize, normalize_verdict, trusted_search, trusted_search_timeout_seconds
+from authority_verify import acquire, finalize, normalize_verdict, semantic_claim_support, trusted_search, trusted_search_timeout_seconds
 from render_final_report import (
     attached_provenance,
     metrics,
@@ -37,6 +37,18 @@ def run_failed(arguments: list[str], environment: dict[str, str] | None = None) 
 
 
 def main() -> int:
+    assert semantic_claim_support(
+        "每人每月最高提取额度为1400元",
+        "按免租赁合同情形核定的月度提取上限为一千四百元。",
+    )
+    assert not semantic_claim_support(
+        "每人每月最高提取额度为1400元",
+        "首页 政务公开 政务服务 联系我们 主办单位 2024年度网站访问1400次。",
+    )
+    assert not semantic_claim_support(
+        "深圳高新技术企业奖励50万元",
+        "攀枝花市政府网站介绍高新技术企业服务，项目投资50万元。",
+    )
     def verdict_point(category: str) -> dict:
         return {
             "role": "direct",
@@ -281,6 +293,75 @@ def main() -> int:
             deep_trace_result["verdicts"]["dknowc-deep-research"]["category"]
             == "direct_accurate"
         )
+
+        pooled_request = json.loads(
+            (FIXTURES / "K1-request.json").read_text(encoding="utf-8")
+        )
+        pooled_request["claims"]["dknowc-deep-research"] = json.loads(
+            json.dumps(pooled_request["claims"]["dknowc-chat"], ensure_ascii=False)
+        )
+        pooled_request["claims"]["deepseek"] = json.loads(
+            json.dumps(pooled_request["claims"]["dknowc-chat"], ensure_ascii=False)
+        )
+        pooled_request["claims"]["deepseek"]["sourceLevel"] = "official"
+        pooled_request["trustedAnchor"]["evidence"].append({
+            **pooled_request["trustedAnchor"]["evidence"][0],
+            "id": "A2",
+            "evidencePlatform": "dknowc-deep-research",
+        })
+        pooled_request["trustedAnchor"]["evidence"][0]["evidencePlatform"] = "dknowc-chat"
+        pooled_request["trustedAnchor"]["evidence"].append({
+            **pooled_request["trustedAnchor"]["evidence"][0],
+            "id": "A3",
+            "url": "https://www.gz.gov.cn/policy/rent",
+            "platformUrl": "",
+            "platformTrustSource": "",
+            "evidencePlatform": "deepseek",
+            "sourcePolicy": "gov_cn_reference",
+        })
+        pooled_request["trustedAnchor"]["sourcePolicies"] = [
+            "dknow_official_reference", "gov_cn_reference"
+        ]
+        pooled_request["trustedAnchor"]["claimEvidenceMap"] = {
+            "dknowc-chat": ["A1"],
+            "dknowc-deep-research": ["A2"],
+            "deepseek": ["A3"],
+        }
+        pooled_evidence = acquire(pooled_request)
+        assert pooled_evidence["searchMode"] == "dknow_exempt"
+        pooled_assessment = json.loads(
+            (FIXTURES / "K1-assessment.json").read_text(encoding="utf-8")
+        )
+        pooled_assessment["verdicts"]["dknowc-deep-research"] = {
+            "verdict": "insufficient",
+            "reason": "追加搜索没有再次召回同一材料。",
+            "evidenceIds": [],
+        }
+        pooled_assessment["verdicts"]["deepseek"] = {
+            "verdict": "insufficient",
+            "reason": "错误忽略已采集的政府官网原文。",
+            "evidenceIds": [],
+        }
+        try:
+            finalize(pooled_request, pooled_evidence, pooled_assessment)
+        except Exception as exc:
+            assert "必须裁决为 supported" in str(exc)
+        else:
+            raise AssertionError("平台自带官方原文被追加搜索空结果错误降级")
+        pooled_assessment["verdicts"]["dknowc-deep-research"] = {
+            "verdict": "supported",
+            "reason": "平台自带官方原文直接支持当前主张。",
+            "evidenceIds": ["A2"],
+        }
+        pooled_assessment["verdicts"]["deepseek"] = {
+            "verdict": "supported",
+            "reason": "平台自带政府官网原文直接支持当前主张。",
+            "evidenceIds": ["A3"],
+        }
+        pooled_result = finalize(pooled_request, pooled_evidence, pooled_assessment)
+        for platform in ("dknowc-chat", "dknowc-deep-research", "deepseek"):
+            assert pooled_result["verdicts"][platform]["category"] == "direct_accurate"
+            assert pooled_result["verdicts"][platform]["evidenceIds"]
 
         gov_request = json.loads(
             (FIXTURES / "K1-request.json").read_text(encoding="utf-8")
@@ -1027,6 +1108,7 @@ def main() -> int:
                 "schemaVersion": "fact-check-x/test-assertions@1",
                 "actualAssertionIds": [
                     "authority.deep_trace_exempt_zero_search",
+                    "authority.platform_official_evidence_not_downgraded",
                 ],
             }),
             encoding="utf-8",

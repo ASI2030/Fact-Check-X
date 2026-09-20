@@ -4,6 +4,18 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.20] - 2026-09-20
+
+- Keep waiting when Doubao ends a short partial response with a first-person continuation promise such as “我再核对一下”, instead of recording that progress text as the final answer.
+- Refuse every capture `run` whose output directory already contains `results.json`, preventing a one-platform recovery attempt from resubmitting the question or overwriting a prior multi-platform result.
+- Preserve every claim-bound official source from DKnow, DKnow Deep Trace and government domains in one evidence pool. A later trusted-search miss can no longer downgrade a claim already supported by captured official text.
+- Validate mixed official evidence per source policy and lock supported claim-platform pairs to their bound evidence IDs before rendering the evaluation report.
+- Classify tangential conditions and narrower local rules as supplemental references: district rules are supplemental to a city-scoped question, and province or city rules are supplemental to a national question unless regional differences were explicitly requested.
+- Accept uncovered facts with `faithfulness=not_applicable` at the comparison boundary and normalize them to `insufficient`, while continuing to reject that value for covered factual claims.
+- Keep Stage 2 generation bounded to one compact, single-pass analysis task so the host model does not repeatedly explore or rebuild the same comparison input.
+- Close every test page and browser context explicitly, and cap each installed browser regression at 180 seconds so a system-Chrome shutdown stall cannot masquerade as an unfinished product run.
+- Add regressions from the real Shenzhen high-tech-enterprise run for both the partial-answer classifier and the no-overwrite gate.
+
 ## [1.1.19] - 2026-09-19
 
 - Add a selector recovery and validation layer that may accept proposals from the host browser or optional `agent-browser`, while keeping Playwright as the driver and requiring deterministic visibility, uniqueness and content checks before use.

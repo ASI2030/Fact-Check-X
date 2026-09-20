@@ -45,7 +45,7 @@ EXCLUDED_PARTS = {
     "sessions",
     "runs",
 }
-EXCLUDED_NAMES = {".DS_Store", "Thumbs.db"}
+EXCLUDED_NAMES = {".DS_Store", "Thumbs.db", "probe-db.mjs"}
 ZIP_TIME = (2026, 7, 29, 0, 0, 0)
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 

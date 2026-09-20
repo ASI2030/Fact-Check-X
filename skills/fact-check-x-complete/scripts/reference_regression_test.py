@@ -24,7 +24,19 @@ def main() -> int:
         collector_root / "tests/dknow_percent_encoded_evidence_test.mjs",
     ]
     for test in tests:
-        process = subprocess.run(["node", str(test)], cwd=root, text=True, capture_output=True, check=False)
+        try:
+            process = subprocess.run(
+                ["node", str(test)],
+                cwd=root,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=180,
+            )
+        except subprocess.TimeoutExpired as error:
+            print((error.stdout or error.stderr or "").strip())
+            print(f"FAIL 浏览器回归超时：{test.name} 超过 180 秒仍未退出")
+            return 124
         print(process.stdout or process.stderr, end="")
         if process.returncode:
             return process.returncode

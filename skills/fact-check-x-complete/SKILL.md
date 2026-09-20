@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   slug: fact-check-x
   displayName: 全知晓（Fact-Check-X）
-  version: "1.1.19"
+  version: "1.1.20"
   summary: 支持 6 个 AI 平台的完整采集、结构化对比、权威核验、答案生成与平台表现评估。
   tags: [事实核验, 多平台对比, 可信搜索, 深度溯源]
   homepage: https://github.com/ASI2030/Fact-Check-X
@@ -13,7 +13,7 @@ metadata:
 
 # 全知晓（Fact-Check-X）
 
-![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.19)
+![Fact-Check-X 多平台事实核验：完整采集、知识点对比、权威核验与答案生成、平台表现评估](https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v=1.1.20)
 
 把同一个问题交给一个或多个 AI 平台，完整保留每家的回答和引用，再把关键事实逐点对齐、核验并评估各平台表现。第三步会基于权威证据生成最终答案，但不会用“答案生成”代替完整事实核验：证据冲突会被保留，官方无法查证的内容统一标为“疑似误导”，移入补充参考风险区且不写入确定结论。用户只需说出问题和要比较的平台，不需要学习平台 ID、内部流程编号或报告术语。
 
@@ -151,8 +151,8 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
 
 - 回答开始后持续等待，直到内容稳定且页面不再生成；不得按固定短等待时间提前收走。
 - 完整回答中出现“登录”操作说明，或页面底部仍有地区提示，不等于回答本身是登录/地区门禁；只有短小且主体为门禁提示的内容才可判失败。
-- 单个平台失败、超时、只返回登录/地区提示或没有完整回答时，先自动重采。
-- 自动重采后仍失败，采集器会写出 `capture-recovery.json` 并以非零状态退出。此时必须暂停流水线。
+- 单个平台失败、超时、只返回登录/地区提示或没有完整回答时，采集器只能在本次 `run` 和同一已提交页面内继续等待、恢复定位或提取；不得重新输入问题、重新提交或重新运行采集命令。
+- 同页恢复仍失败时，采集器会写出 `capture-recovery.json` 并以非零状态退出。此时必须暂停流水线。
 - Playwright 检测到登录、验证码或人机验证时，优先保持当前命令与页面运行，提示用户本人完成；完成后自动续采。
 - 登录准备命令非零退出、浏览器意外关闭或人工处理超时时，同样会写出 `capture-recovery.json`；这已经是 Computer Use 接管信号，不是继续诊断浏览器环境的授权。
 - `capture-recovery.json` 的 `action` 为 `computer_use` 时，有 Computer Use 的运行载体立即恢复同一平台，处理登录后的页面操作、地区选择、问题提交和回答完成等待；没有该能力时停在原始答案采集阶段，不得直接跳到知识点对比。
@@ -160,7 +160,7 @@ node modules/llm-answer-reference-compare/assets/tool/dist/cli.js run \
 - 接管时必须直接读取并复用 `capture-recovery.json.question`，不得要求用户滚动到旧会话开头寻找或复制原问题。
 - 登录、验证或人工发送需要用户参与时，保持当前 Playwright 页面和采集上下文，不得关闭页面、重复打开浏览器或机械重采。明确告诉用户直接在页面处理即可，也可回复“验证已完成”或“答案已生成”；不得要求用户暂停或取消任务。
 - Computer Use 遇到账号、密码、短信验证码、人机验证或 CAPTCHA 时，交给用户本人处理；检测用户处理完成或收到“验证已完成”“答案已生成”后，重新检查当前页面，等待回答完全停止生成并自动续采。
-- Computer Use 恢复页面后重新运行原始答案采集。只有 `results.json` 中所有指定平台均为 `success`、回答非空且 `capture-recovery.json.status` 不再是 `required`，才允许运行 `prepare-comparison`。
+- Computer Use 恢复时只能在原会话继续等待、定位和提取，不得再次提交问题。`run` 发现当前运行目录已有 `results.json` 会直接拒绝执行，避免单平台重跑覆盖多平台现场。运行中的同一用户任务禁止通过换新目录、延长等待时间或再次运行 `run` 来恢复；只有当前任务已终止且用户明确发起了新的独立测试，才可使用新运行目录。只有 `results.json` 中所有指定平台均为 `success`、回答非空且 `capture-recovery.json.status` 不再是 `required`，才允许运行 `prepare-comparison`。
 - 统一入口生成的 `capture-gate.json` 是程序级硬门禁；失败平台、空回答和初始化提示都无法进入知识点对比、权威核验或最终报告。
 
 ### 第二步：各方答案聚合（未核验）
@@ -194,7 +194,9 @@ python3 scripts/fact_check_x.py acknowledge-stage \
 
 豆包等页面可能只显示来源名称而不暴露原文 URL。采集器会先尝试展开来源标签获取真实链接；仍无链接时写入 `sourceMentions`。此时必须表述为“0 条可回溯参考文献，N 个无 URL 来源标签”，不得说“页面没有来源”，也不得把标签伪造成参考文献。
 
-读取 `comparison-task.json`，由当前承载智能体直接写 `comparison-analysis.json`。每个知识点只表达一个可核验事实变量；同一事实的不同数值必须对齐在同一点；只能使用原始答案采集阶段已经保存的来源判断来源忠实性，禁止联网补证。顶层必须填写 `synthesisDraft`，其 `status` 固定为 `unverified`，正文综合所有相关知识点并保留冲突、条件和缺口，`basisKnowledgePointIds` 只能引用当前知识点；它是“综合草案（未核验）”，不得写成权威最终答案。
+`comparison-task.json` 是自包含的紧凑工作集。阶段确认后严格按“读取任务包一次、写入 `comparison-analysis.json` 一次、执行 `complete-comparison` 一次”完成，最多三次工具调用；不得读取技能源码、契约或完整 `results.json` 探路，不得先打印或转储完整任务包。任务包中的 `capturedText` 是从完整来源正文中选出的有界原文预览；完整正文仍保存在 `results.json`，由程序在验收时校验并重建证据。
+
+由当前承载智能体直接完成知识点分析。每个知识点只表达一个可核验事实变量；同一事实的不同数值必须对齐在同一点；只能使用原始答案采集阶段已经保存的来源判断来源忠实性，禁止联网补证。顶层必须填写 `synthesisDraft`，其 `status` 固定为 `unverified`，正文综合所有相关知识点并保留冲突、条件和缺口，`basisKnowledgePointIds` 只能引用当前知识点；它是“综合草案（未核验）”，不得写成权威最终答案。
 
 原子性必须落实到每个平台的 `claim`，不能只把知识点标题写得宽泛。原回答一句话同时包含多个可独立判真的义务、条件、对象、数值或后果时，必须拆成多个知识点；各点的 `claim` 只保留当前事实，`answerExcerpt` 可以复用同一段原文。知识点必须标明 `claimType=fact|recommendation`：纯操作建议使用 `recommendation`，不因没有逐句脚标而判为引用不忠实；其中夹带的制度事实、条件、数字或时效必须拆成独立 `fact`。仅个别平台增加的实质事实也要单独成点，其他平台标为未覆盖，禁止把新增事实并入宽泛知识点后借用官方材料锚点免查。`trustedAnchor` 只能覆盖已有官方材料实际支持的单一事实变量；超出该变量的主张必须成为无锚点知识点，交给后续一次可信搜索。
 

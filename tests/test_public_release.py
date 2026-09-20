@@ -13,10 +13,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-VERSION = "1.1.19"
-PUBLISHED_VERSION = "1.1.18"
-WORKBUDDY_VERSION = "1.1.14"
-OFFICIAL_SHA = "d16db35085b9e6acbd9aeb040916dba3391901d4ea27f2319fc8821ebe7818db"
+VERSION = "1.1.20"
+PUBLISHED_VERSION = "1.1.19"
+WORKBUDDY_VERSION = "1.1.19"
+OFFICIAL_SHA = "2dc3b03f3920cf0b6fd47ec98c7c8cb8a495e46502a626989f6b0c84f600848f"
 
 
 def load_module(name: str, path: Path):
@@ -190,6 +190,7 @@ class PublicReleaseTest(unittest.TestCase):
                     names = archive.namelist()
                     skill = archive.read("SKILL.md").decode("utf-8")
                 self.assertIn("package-manifest.json", names)
+                self.assertNotIn("probe-db.mjs", {Path(name).name for name in names})
                 self.assertFalse(
                     any(name.startswith("fact-check-x-complete/") for name in names)
                 )

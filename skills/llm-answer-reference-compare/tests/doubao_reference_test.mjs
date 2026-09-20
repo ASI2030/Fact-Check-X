@@ -376,6 +376,10 @@ await new Promise((resolve, reject) => {
     pdfServer.closeAllConnections?.();
 });
 
+await Promise.all(
+    context.pages().map((openPage) => openPage.close({ runBeforeUnload: false }).catch(() => undefined))
+);
+await context.close().catch(() => undefined);
 await browser.close();
 if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
     const { writeFile } = await import("node:fs/promises");

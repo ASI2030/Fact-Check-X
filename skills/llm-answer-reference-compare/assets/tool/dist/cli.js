@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { authenticationRequired, waitForAuthentication } from "./capture/auth-state.js";
@@ -117,6 +118,7 @@ async function waitForChatReady(page, config, timeoutMs) {
     return false;
 }
 async function runCommand(options) {
+    await ensureFreshCaptureOutput(options.out, options.question);
     const timeoutMs = positiveNumber(options.timeout, 180000);
     const retryCount = nonnegativeInteger(options.retries, 2);
     const retryDelayMs = nonnegativeInteger(options.retryDelay, 3000);
@@ -199,6 +201,27 @@ async function runCommand(options) {
         question: options.question,
         failedPlatforms: []
     });
+}
+export async function ensureFreshCaptureOutput(outDir, question) {
+    const resultsPath = join(outDir, "results.json");
+    if (!existsSync(resultsPath)) {
+        return;
+    }
+    let existing;
+    try {
+        existing = await readJsonFile(resultsPath);
+    }
+    catch (error) {
+        throw new Error(`运行目录已有无法解析的 results.json，已拒绝重新提交问题以避免覆盖现场：${resultsPath}。请保留该目录诊断；确需开始新测试时使用新的运行目录。`);
+    }
+    const existingPlatforms = Array.isArray(existing?.platforms)
+        ? existing.platforms.map((platform) => platform?.label || platform?.platform).filter(Boolean)
+        : [];
+    const sameQuestion = String(existing?.question || "").trim() === String(question || "").trim();
+    const detail = existingPlatforms.length > 0
+        ? `已有平台：${existingPlatforms.join("、")}`
+        : "已有采集结果";
+    throw new Error(`运行目录已有 results.json（${detail}${sameQuestion ? "；问题相同" : "；问题不同"}），run 已拒绝重新提交或覆盖。恢复当前任务时只能在原会话继续等待、定位和提取；开始新的采集必须使用新的运行目录。`);
 }
 export function buildCapturePlan(configs) {
     const dknowcChat = configs.find((config) => config.name === "dknowc-chat");

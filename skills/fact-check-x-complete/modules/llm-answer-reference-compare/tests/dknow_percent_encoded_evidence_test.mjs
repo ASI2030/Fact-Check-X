@@ -17,6 +17,8 @@ const ENCODED = encodeURIComponent("并于每月10日前通过社保卡发放低
 // 尾部残缺的百分号片段：解不开时必须原样保留，不能连累整条正文
 const TRUNCATED = encodeURIComponent("第二十五条 县级人民政府民政部门应当") + "%E4%BA";
 const PERCENT_LITERAL = "研发费用占比不低于5%的企业适用本条";
+const HTML_EVIDENCE = "<p>咨询电话：0930-7121766</p><div>工作日上午办理。</div>";
+const ATTACHMENT_PREFIX = "https://example.gov.cn/download/policy.pdf 补贴期限最长不超过三年，期满后不再延长。";
 
 const card = (id, url, text) => `<div class="chat-jb">
   <div class="chat-jb-title"><span class="chat-jb-title-text">【临夏回族自治州东乡族自治县】最低生活保障金的给付</span></div>
@@ -28,11 +30,13 @@ const card = (id, url, text) => `<div class="chat-jb">
 </div>`;
 
 const fixture = `<!doctype html><meta charset="utf-8"><div class="czkj-robot"><div class="czkj-msg">
-<p>低保发放<sup class="sup">2</sup>，受理时间<sup class="sup">5</sup>，条例原文<sup class="sup">7</sup>，研发占比<sup class="sup">9</sup>。
+<p>低保发放<sup class="sup">2</sup>，受理时间<sup class="sup">5</sup>，条例原文<sup class="sup">7</sup>，研发占比<sup class="sup">9</sup>，电话<sup class="sup">11</sup>，期限<sup class="sup">12</sup>。
   ${card("2", URL_A, ENCODED)}
   ${card("5", URL_B, PLAIN)}
   ${card("7", URL_C, TRUNCATED)}
   ${card("9", URL_C + "?x=1", PERCENT_LITERAL)}
+  ${card("11", URL_C + "?x=2", HTML_EVIDENCE)}
+  ${card("12", URL_C + "?x=3", ATTACHMENT_PREFIX)}
 </p>
 </div></div>`;
 
@@ -60,7 +64,10 @@ assert.match(textOf("7"), /第二十五条\s*县级人民政府民政部门应�
 assert.ok(textOf("7").includes("%E4%BA"), "解不开的残缺片段必须原样保留，不得丢弃或报错");
 // 4) 正文里真实存在的百分号不得被误当作编码
 assert.match(textOf("9"), /研发费用占比不低于5%的企业适用本条/, `含百分号的正常文本不得被误解码；实际 ${JSON.stringify(textOf("9"))}`);
-// 5) 任何一条证据都不得整体停留在编码态：允许残缺尾巴，但编码字符不得占据正文主体
+// 5) HTML 标签和附件下载地址不是证据正文，清洗后保留可审计文本
+assert.equal(textOf("11"), "咨询电话：0930-7121766 工作日上午办理。", "HTML 证据应转成纯文本");
+assert.equal(textOf("12"), "补贴期限最长不超过三年，期满后不再延长。", "附件地址前缀应从正文移除");
+// 6) 任何一条证据都不得整体停留在编码态：允许残缺尾巴，但编码字符不得占据正文主体
 for (const reference of references) {
     const text = reference.traceabilityText || reference.snippet || "";
     if (!text) {

@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
+sys.path.insert(0, str(ROOT / "scripts"))
+from knowledge_compare import normalize_role, semantic_claim_support
 
 
 def run(arguments: list[str]) -> None:
@@ -20,6 +22,37 @@ def run(arguments: list[str]) -> None:
 
 
 def main() -> int:
+    assert semantic_claim_support(
+        "每人每月最高提取额度为1400元",
+        "按免租赁合同情形核定的月度提取上限为一千四百元。",
+    )
+    assert semantic_claim_support(
+        "东乡县低保咨询电话0930-7121766",
+        "办事指南咨询方式：东乡县最低生活保障业务咨询电话0930-7121766。",
+    )
+    assert not semantic_claim_support(
+        "每人每月最高提取额度为1400元",
+        "首页 政务公开 政务服务 联系我们 主办单位 2024年度网站访问1400次。",
+    )
+    assert not semantic_claim_support(
+        "深圳高新技术企业奖励50万元",
+        "攀枝花市政府网站介绍高新技术企业服务，项目投资50万元。",
+    )
+    assert normalize_role(
+        "深圳企业申请国家高新技术企业认定的门槛是什么？",
+        "南山区对认定企业另给50万元奖励",
+        "direct",
+    ) == ("reference", "subregion_outside_question_scope")
+    assert normalize_role(
+        "中国国家高新技术企业认定门槛是什么？",
+        "深圳另有区级奖励政策",
+        "direct",
+    ) == ("reference", "local_detail_outside_question_scope")
+    assert normalize_role(
+        "研发费用和高新技术产品收入占比门槛是多少？",
+        "研发费用指标另有附加条件",
+        "direct",
+    )[0] == "reference"
     with tempfile.TemporaryDirectory(prefix="fact-check-x-11-") as temp:
         out = Path(temp)
         task = out / "task.json"
@@ -31,6 +64,9 @@ def main() -> int:
         task_data = json.loads(task.read_text(encoding="utf-8"))
         result = json.loads(comparison.read_text(encoding="utf-8"))
         html = report.read_text(encoding="utf-8")
+        assert task_data["executionProtocol"]["mode"] == "single_pass"
+        assert task_data["executionProtocol"]["maxToolCallsAfterStageAcknowledgement"] == 3
+        assert task_data["outputShape"]["knowledgePoints"][0]["id"] == "K1"
         assert task_data["platforms"][0]["citationMode"] == "explicit"
         assert task_data["platforms"][1]["citationMode"] == "global"
         point = result["knowledgePoints"][0]
@@ -67,6 +103,46 @@ def main() -> int:
             assert current_term in html
         for retired_term in ("页面模式", "绑定方式", "显式标记", "局部角标绑定", "平台声明全局来源", "无对应的清单"):
             assert retired_term not in html
+
+        long_source_results = {
+            "schemaVersion": "1",
+            "question": "研发费用占销售收入比例的门槛是多少？",
+            "platforms": [{
+                "platform": "dknowc-chat",
+                "label": "深知晓",
+                "status": "success",
+                "answerMarkdown": "最近一年销售收入小于5000万元的企业，研发费用占比不低于5%。【1】",
+                "references": [{
+                    "title": "高新技术企业认定管理工作指引",
+                    "url": "https://example.test/policy",
+                    "marker": "1",
+                    "body": ("无关背景材料。" * 900)
+                    + "企业最近一年销售收入小于5000万元的，研究开发费用总额占同期销售收入总额的比例不低于5%。",
+                }],
+            }],
+        }
+        long_source_path = out / "long-source-results.json"
+        long_source_task_path = out / "long-source-task.json"
+        long_source_path.write_text(
+            json.dumps(long_source_results, ensure_ascii=False), encoding="utf-8"
+        )
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(long_source_path),
+            "--task-output",
+            str(long_source_task_path),
+        ])
+        long_source_task = json.loads(
+            long_source_task_path.read_text(encoding="utf-8")
+        )
+        long_reference = long_source_task["platforms"][0]["references"][0]
+        assert long_reference["capturedTextTruncated"] is True
+        assert long_reference["capturedTextLength"] > 5000
+        assert len(long_reference["capturedText"]) <= 900
+        assert "不低于5%" in long_reference["capturedText"]
+        assert long_source_task_path.stat().st_size < 32000
 
         recommendation_results = {
             "schemaVersion": "1",
@@ -294,6 +370,66 @@ def main() -> int:
         assert "product-truth@1" in rejected_missing_fields.stdout
         assert "缺少必填字段" in rejected_missing_fields.stdout
         assert not omitted_boolean_result.exists()
+
+        uncovered_fact = json.loads(
+            (FIXTURES / "comparison-analysis.json").read_text(encoding="utf-8")
+        )
+        uncovered_claim = uncovered_fact["knowledgePoints"][0]["claims"]["doubao"]
+        uncovered_claim.update({
+            "covered": False,
+            "claim": "豆包未回答该知识点",
+            "answerExcerpt": "",
+            "citedReferenceIndexes": [],
+            "answerLevelReferenceIndexes": [],
+            "faithfulness": "not_applicable",
+            "reason": "本次回答未覆盖",
+            "evidence": [],
+        })
+        uncovered_fact_path = out / "uncovered-fact-analysis.json"
+        uncovered_fact_output = out / "uncovered-fact-comparison.json"
+        uncovered_fact_path.write_text(
+            json.dumps(uncovered_fact, ensure_ascii=False), encoding="utf-8"
+        )
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(FIXTURES / "results.json"),
+            "--analysis",
+            str(uncovered_fact_path),
+            "--output",
+            str(uncovered_fact_output),
+        ])
+        uncovered_normalized = json.loads(
+            uncovered_fact_output.read_text(encoding="utf-8")
+        )["knowledgePoints"][0]["claims"]["doubao"]
+        assert uncovered_normalized["covered"] is False
+        assert uncovered_normalized["faithfulness"] == "insufficient"
+
+        covered_fact = json.loads(
+            (FIXTURES / "comparison-analysis.json").read_text(encoding="utf-8")
+        )
+        covered_fact["knowledgePoints"][0]["claims"]["doubao"]["faithfulness"] = (
+            "not_applicable"
+        )
+        covered_fact_path = out / "covered-fact-not-applicable-analysis.json"
+        covered_fact_output = out / "covered-fact-not-applicable-comparison.json"
+        covered_fact_path.write_text(
+            json.dumps(covered_fact, ensure_ascii=False), encoding="utf-8"
+        )
+        rejected_covered_fact = subprocess.run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input",
+            str(FIXTURES / "results.json"),
+            "--analysis",
+            str(covered_fact_path),
+            "--output",
+            str(covered_fact_output),
+        ], text=True, capture_output=True, check=False)
+        assert rejected_covered_fact.returncode != 0
+        assert "faithfulness 只能在操作建议中为 not_applicable" in rejected_covered_fact.stdout
+        assert not covered_fact_output.exists()
 
         three_results = json.loads((FIXTURES / "results.json").read_text(encoding="utf-8"))
         deepseek = json.loads(json.dumps(three_results["platforms"][1], ensure_ascii=False))
@@ -653,6 +789,153 @@ def main() -> int:
         )["knowledgePoints"][0]["trustedAnchor"]
         assert deep_anchor["eligible"] is True
         assert deep_anchor["platform"] == "dknowc-deep-research"
+
+        official_pool_results = {
+            "schemaVersion": "1",
+            "question": "国家高新技术企业认定条件与深圳奖励",
+            "platforms": [
+                {
+                    "platform": "dknowc-chat",
+                    "label": "深知晓",
+                    "status": "success",
+                    "answerMarkdown": "深圳市提出各区可给予最高50万元奖励【1】。",
+                    "references": [{
+                        "title": "深圳市人民政府关于加快培育壮大市场主体的实施意见",
+                        "url": "https://www.sz.gov.cn/example/reward",
+                        "marker": "1",
+                        "snippet": "对新认定和新引进的国家级高新技术企业，各区可结合实际给予最高50万元奖励。",
+                    }],
+                },
+                {
+                    "platform": "dknowc-deep-research",
+                    "label": "深知晓（深度溯源）",
+                    "status": "success",
+                    "answerMarkdown": "各区可结合实际给予最高50万元奖励【1】。",
+                    "references": [{
+                        "title": "深圳市人民政府关于加快培育壮大市场主体的实施意见",
+                        "url": "https://www.sz.gov.cn/example/reward",
+                        "marker": "1",
+                        "snippet": "对新认定和新引进的国家级高新技术企业，各区可结合实际给予最高50万元奖励。",
+                    }],
+                },
+                {
+                    "platform": "deepseek",
+                    "label": "DeepSeek",
+                    "status": "success",
+                    "answerMarkdown": "各区可结合实际给予最高50万元奖励【1】。",
+                    "references": [{
+                        "title": "深圳市人民政府关于加快培育壮大市场主体的实施意见",
+                        "url": "https://www.sz.gov.cn/example/reward",
+                        "marker": "1",
+                        "snippet": "对新认定和新引进的国家级高新技术企业，各区可结合实际给予最高50万元奖励。",
+                    }],
+                },
+            ],
+        }
+        official_pool_analysis = {
+            "schemaVersion": "fact-check-x/comparison-analysis@1",
+            "coreQuestion": official_pool_results["question"],
+            "synthesisDraft": {
+                "status": "unverified",
+                "answer": "待核验",
+                "basisKnowledgePointIds": ["K1"],
+            },
+            "knowledgePoints": [{
+                "id": "K1",
+                "description": "深圳市级政策提出各区可给予最高50万元奖励",
+                "role": "direct",
+                "claimType": "fact",
+                "core": True,
+                "claims": {
+                    platform["platform"]: {
+                        "covered": True,
+                        "claim": "各区可结合实际给予最高50万元奖励",
+                        "answerExcerpt": platform["answerMarkdown"],
+                        "citedReferenceIndexes": [1],
+                        "answerLevelReferenceIndexes": [],
+                        "faithfulness": "supported",
+                        "reason": "",
+                        "evidence": [{"referenceIndex": 1, "excerpt": "各区可结合实际给予最高50万元奖励"}],
+                    }
+                    for platform in official_pool_results["platforms"]
+                },
+                "comparison": {"status": "consensus", "summary": "三平台一致"},
+                "trustedAnchor": {"eligible": False},
+            }],
+        }
+        official_pool_results_path = out / "official-pool-results.json"
+        official_pool_analysis_path = out / "official-pool-analysis.json"
+        official_pool_output_path = out / "official-pool-comparison.json"
+        official_pool_results_path.write_text(json.dumps(official_pool_results, ensure_ascii=False), encoding="utf-8")
+        official_pool_analysis_path.write_text(json.dumps(official_pool_analysis, ensure_ascii=False), encoding="utf-8")
+        run([
+            sys.executable,
+            str(ROOT / "scripts" / "knowledge_compare.py"),
+            "--input", str(official_pool_results_path),
+            "--analysis", str(official_pool_analysis_path),
+            "--output", str(official_pool_output_path),
+        ])
+        official_pool_point = json.loads(official_pool_output_path.read_text(encoding="utf-8"))["knowledgePoints"][0]
+        assert official_pool_point["role"] == "reference"
+        assert official_pool_point["roleNormalizationReason"] == "subregion_outside_question_scope"
+        assert set(official_pool_point["trustedAnchor"]["claimEvidenceMap"]) == {
+            "dknowc-chat", "dknowc-deep-research", "deepseek"
+        }
+        assert set(official_pool_point["trustedAnchor"]["sourcePolicies"]) == {
+            "dknow_official_reference", "gov_cn_reference"
+        }
+        assert len(official_pool_point["trustedAnchor"]["evidence"]) == 3
+
+        phone_results = {
+            "schemaVersion": "1",
+            "question": "东乡县低保怎么办理？",
+            "platforms": [{
+                "platform": "dknowc-deep-research",
+                "label": "深知晓（深度溯源）",
+                "status": "success",
+                "answerMarkdown": "咨询电话0930-7121766；建议提前电话确认材料细节【1】。",
+                "references": [{
+                    "title": "东乡县最低生活保障金给付办事指南",
+                    "url": "https://zwfw.gansu.gov.cn/example",
+                    "marker": "1",
+                    "snippet": "咨询方式电话：0930-7121766。",
+                }],
+            }],
+        }
+        phone_analysis = {
+            "schemaVersion": "fact-check-x/comparison-analysis@1",
+            "coreQuestion": phone_results["question"],
+            "synthesisDraft": {"status": "unverified", "answer": "待核验", "basisKnowledgePointIds": ["K1"]},
+            "knowledgePoints": [{
+                "id": "K1",
+                "description": "咨询渠道（电话0930-7121766）",
+                "role": "reference",
+                "claimType": "recommendation",
+                "core": False,
+                "claims": {"dknowc-deep-research": {
+                    "covered": True,
+                    "claim": "咨询电话0930-7121766；建议提前电话确认材料细节",
+                    "answerExcerpt": phone_results["platforms"][0]["answerMarkdown"],
+                    "citedReferenceIndexes": [1],
+                    "answerLevelReferenceIndexes": [],
+                    "faithfulness": "supported",
+                    "reason": "",
+                    "evidence": [{"referenceIndex": 1, "excerpt": "咨询方式电话：0930-7121766"}],
+                }},
+                "comparison": {"status": "single", "summary": "单平台覆盖"},
+                "trustedAnchor": {"eligible": False},
+            }],
+        }
+        phone_results_path = out / "phone-results.json"
+        phone_analysis_path = out / "phone-analysis.json"
+        phone_output_path = out / "phone-comparison.json"
+        phone_results_path.write_text(json.dumps(phone_results, ensure_ascii=False), encoding="utf-8")
+        phone_analysis_path.write_text(json.dumps(phone_analysis, ensure_ascii=False), encoding="utf-8")
+        run([sys.executable, str(ROOT / "scripts" / "knowledge_compare.py"), "--input", str(phone_results_path), "--analysis", str(phone_analysis_path), "--output", str(phone_output_path)])
+        phone_point = json.loads(phone_output_path.read_text(encoding="utf-8"))["knowledgePoints"][0]
+        assert phone_point["claimType"] == "fact"
+        assert phone_point["trustedAnchor"]["eligible"] is True
+        assert phone_point["trustedAnchor"]["claimEvidenceMap"]["dknowc-deep-research"]
 
         compound_results = json.loads(json.dumps(deep_research_results, ensure_ascii=False))
         compound_results["question"] = "在深圳外地人如何买房"
@@ -1205,6 +1488,10 @@ def main() -> int:
                 "citation.time_not_marker",
                 "source.answer_context_not_source_body",
                 "deep_trace.independent_official_anchor",
+                "comparison.official_evidence_pool_preserved",
+                "comparison.direct_reference_scope_normalized",
+                "comparison.policy_fact_not_recommendation",
+                "comparison.forged_official_evidence_rejected",
             ],
         }), encoding="utf-8")
     print("PASS 知识点结构化对比")

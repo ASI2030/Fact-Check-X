@@ -67,6 +67,7 @@ export async function captureGenericChat(config, options) {
     let capturedReferences = [];
     let capturedSourceMentions = [];
     let capturedSourceCountAudit;
+    let doubaoStreamMonitor;
     try {
         if (options.headed && options.interactive) {
             console.log(`${config.label}：将打开浏览器。请先完成登录或验证；检测到可提问界面后会自动继续采集。`);
@@ -189,6 +190,10 @@ export async function captureGenericChat(config, options) {
         config._previousAnswer = previousAnswer;
         await input.click();
         await fillPrompt(input, options.question);
+        if (config.name === "doubao") {
+            doubaoStreamMonitor = createDoubaoStreamCompletionMonitor(page);
+            doubaoStreamMonitor.markSubmitted();
+        }
         let submission = await submitPromptAndConfirm(config, activePage, input, options.question, previousAnswer, options);
         if (submission === "verification_required") {
             const verificationHandled = await handleVerificationIfNeeded(config, page, options);
@@ -225,7 +230,8 @@ export async function captureGenericChat(config, options) {
         }
         let answerMarkdown = await waitForAnswer(config, page, options.timeoutMs, previousAnswer, options.question, {
             interactive: Boolean(options.headed && options.interactive),
-            verificationTimeoutMs: options.loginTimeoutMs || 300000
+            verificationTimeoutMs: options.loginTimeoutMs || 300000,
+            streamMonitor: doubaoStreamMonitor
         });
         if (answerMarkdown) {
             lifecycle.answerObserved = true;
@@ -345,6 +351,7 @@ export async function captureGenericChat(config, options) {
         );
     }
     finally {
+        doubaoStreamMonitor?.dispose();
         await session?.release();
     }
 }
@@ -843,10 +850,86 @@ function looksLikeDknowcDeepResearchProgress(value) {
     // 仅由方括号占位符构成的短文本（如“[检索完成]”）是进度状态，不是回答。
     return /^(?:\[[^\]]{1,20}\])+$/.test(text) && text.length < 80;
 }
+export function createDoubaoStreamCompletionMonitor(page) {
+    const legacyEndpoint = "/alice/message/stream_reply";
+    const currentEndpoint = "/chat/completion";
+    const eventTarget = typeof page.context === "function" ? page.context() : page;
+    let submittedAt = Number.POSITIVE_INFINITY;
+    const state = {
+        started: false,
+        completed: false,
+        failed: false,
+        active: 0,
+        responseCount: 0,
+        endpoint: ""
+    };
+    const onResponse = (response) => {
+        const url = String(response.url?.() || "");
+        const endpoint = url.includes(currentEndpoint)
+            ? currentEndpoint
+            : url.includes(legacyEndpoint)
+                ? legacyEndpoint
+                : "";
+        if (Date.now() < submittedAt || !endpoint) {
+            return;
+        }
+        state.started = true;
+        state.completed = false;
+        state.active += 1;
+        state.responseCount += 1;
+        state.endpoint = endpoint;
+        Promise.resolve(response.finished?.())
+            .then(async (transportError) => {
+                state.active = Math.max(0, state.active - 1);
+                const status = Number(response.status?.() || 200);
+                if (transportError || status >= 400) {
+                    state.failed = true;
+                    return;
+                }
+                if (endpoint === currentEndpoint) {
+                    // The current Doubao frontend keeps this response open for the
+                    // whole answer. A clean transport close is its completion signal.
+                    state.completed = state.active === 0;
+                    return;
+                }
+                const body = await response.text?.().catch(() => "") || "";
+                if (/(?:^|\r?\n)event:\s*err\s*(?:\r?\n|$)/im.test(body)) {
+                    state.failed = true;
+                    return;
+                }
+                if (/(?:^|\r?\n)event:\s*done\s*(?:\r?\n|$)/im.test(body)) {
+                    state.completed = state.active === 0;
+                }
+            })
+            .catch(() => {
+                state.active = Math.max(0, state.active - 1);
+                state.failed = true;
+            });
+    };
+    eventTarget.on?.("response", onResponse);
+    return {
+        markSubmitted() {
+            submittedAt = Date.now() - 1000;
+            state.started = false;
+            state.completed = false;
+            state.failed = false;
+            state.active = 0;
+            state.responseCount = 0;
+            state.endpoint = "";
+        },
+        snapshot() {
+            return { ...state };
+        },
+        dispose() {
+            eventTarget.off?.("response", onResponse);
+        }
+    };
+}
 export async function waitForAnswer(config, page, timeoutMs, previousAnswer = "", question = "", control = {}) {
     let deadline = Date.now() + timeoutMs;
     let lastText = "";
     let stableSince = 0;
+    let generationObserved = false;
     let promptReported = false;
     let verificationReported = false;
     let loginReported = false;
@@ -907,8 +990,21 @@ export async function waitForAnswer(config, page, timeoutMs, previousAnswer = ""
             continue;
             }
         }
+        const streamState = config.name === "doubao" && control.streamMonitor
+            ? control.streamMonitor.snapshot()
+            : undefined;
+        if (streamState?.failed) {
+            throw new Error("豆包回答流异常结束，已拒绝把不完整页面记为成功。");
+        }
         const generating = await isGenerationInProgress(config, page);
-        if (generating && !lastText) {
+        if (generating) {
+            generationObserved = true;
+        }
+        if (streamState?.started) {
+            generationObserved = true;
+        }
+        const doubaoStreamCompleted = config.name === "doubao" && streamState?.completed;
+        if (generating && !doubaoStreamCompleted && !lastText) {
             await page.waitForTimeout(1500);
             continue;
         }
@@ -945,7 +1041,16 @@ export async function waitForAnswer(config, page, timeoutMs, previousAnswer = ""
             lastText = text;
             stableSince = Date.now();
         }
-        else if (text && !generating && stableSince && Date.now() - stableSince >= stableWindowMs) {
+        else if (text && (doubaoStreamCompleted || !generating) && stableSince && Date.now() - stableSince >= stableWindowMs) {
+            // 豆包以回答流正常结束为主标志；旧接口使用 SSE done，DOM 生成态仅作兼容兜底。
+            if (config.name === "doubao" && control.streamMonitor && !streamState?.completed) {
+                await page.waitForTimeout(1500);
+                continue;
+            }
+            if (config.name === "doubao" && !control.streamMonitor && !generationObserved) {
+                await page.waitForTimeout(1500);
+                continue;
+            }
             return text;
         }
         await page.waitForTimeout(1500);
@@ -2532,7 +2637,7 @@ async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sour
             }
             const titleElement = card.querySelector(".chat-jb-title-text, .chat-jb-title-info, .czkjTitle");
             const citeElement = element.querySelector("cite") || card.querySelector("cite");
-            const traceText = decodePercentText((element.getAttribute("data-text") || "").trim());
+            const traceText = cleanEvidenceText((element.getAttribute("data-text") || "").trim());
             const snippetElement = element.classList.contains("jb-original-item")
                 ? element
                 : card.querySelector(".scoresText, .jb-original-item");
@@ -2640,6 +2745,28 @@ async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sour
                     return chunk;
                 }
             });
+        }
+        function cleanEvidenceText(value) {
+            let text = decodePercentText(value);
+            if (/<\/?[a-z][^>]*>/i.test(text)) {
+                text = text.replace(/<\/?(?:p|div|li|br|tr|td|th|h[1-6]|section|article)\b[^>]*>/gi, " ");
+                const template = document.createElement("template");
+                template.innerHTML = text;
+                text = template.content.textContent || "";
+            }
+            text = text.replace(/\u00a0/g, " ").trim();
+            const leadingUrl = text.match(/^(?:附件(?:地址|链接)?[:：]\s*)?(https?:\/\/\S+)\s+([\s\S]+)$/i);
+            if (leadingUrl) {
+                const candidate = leadingUrl[1];
+                const remainder = leadingUrl[2].trim();
+                if (
+                    remainder.length >= 20
+                    && /(?:attachment|download|file|upload|\.pdf(?:[?#]|$)|\.docx?(?:[?#]|$)|\.xlsx?(?:[?#]|$))/i.test(candidate)
+                ) {
+                    text = remainder;
+                }
+            }
+            return text.replace(/\s+/g, " ").trim();
         }
         function normalizeInBrowser(rawUrl, baseUrl) {
             try {
@@ -2942,10 +3069,17 @@ export function looksLikeDoubaoInterimAnswer(value) {
     const text = String(value || "")
         .replace(/\s+/g, "")
         .replace(/[\u3002\uff0c,\uff01!\u2026.]+$/g, "");
-    if (!text || text.length > 80) {
+    if (!text || text.length > 240) {
         return false;
     }
-    return /^(?:我(?:来|正在)?|正在)?(?:为你|为您)?(?:查证|核实|检索|搜索|分析|思考|生成|整理)(?:中|资料|相关资料|内容|信息|答案)?(?:请稍候)?$/.test(text);
+    if (/^(?:我(?:来|正在)?|正在)?(?:为你|为您)?(?:查证|核实|检索|搜索|分析|思考|生成|整理)(?:中|资料|相关资料|内容|信息|答案)?(?:请稍候)?$/.test(text)) {
+        return true;
+    }
+    const clauses = text.split(/[\u3002\uff01!\uff1f?\uff1b;]+/).filter(Boolean);
+    const finalClause = clauses.at(-1) || "";
+    const promisesMoreWork = /(?:^|[，,])(?:我(?:会)?|让我|接下来我?)(?:再|来|先|继续|正在)?(?:查|核对|查证|核实|检索|搜索|查询|确认|检查|梳理|整理|分析|精读|复核|阅读|查看|比对|验证)(?:一下|下)?/.test(finalClause);
+    const containsDeliveredResult = /[\uff1a:]|(?:结论|如下|分别为|不低于|不得低于|至少|具体为)/.test(finalClause);
+    return promisesMoreWork && !containsDeliveredResult;
 }
 export async function dismissYuanbaoGuides(page) {
     const selectors = [

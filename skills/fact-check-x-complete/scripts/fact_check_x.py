@@ -844,6 +844,15 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     initialize_interaction_gate(run_dir, args.execution_mode)
     result.update({
         "stage": "capture_completed",
+        "analysisExecution": {
+            "mode": "single_pass",
+            "maxToolCallsAfterStageAcknowledgement": 3,
+            "instructions": [
+                "读取 comparison-task.json 一次，不读取技能源码、契约或完整 results.json 探路",
+                "直接写入 comparison-analysis.json 一次",
+                "执行 complete-comparison 一次，由程序使用完整采集正文校验",
+            ],
+        },
         "platforms": [
             {
                 "platform": item.get("platform"),

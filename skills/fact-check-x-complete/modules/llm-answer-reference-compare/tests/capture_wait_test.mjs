@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
     authenticationRequired,
     waitForAuthentication
@@ -6,6 +9,7 @@ import {
 import {
     activateDknowcDeepResearch,
     confirmPromptSubmission,
+    createDoubaoStreamCompletionMonitor,
     extractDknowcAnswer,
     extractDoubaoSourceMentions,
     isPdfReference,
@@ -18,7 +22,7 @@ import {
     waitForAnswer
 } from "../assets/tool/dist/capture/generic-chat.js";
 import { builtInPlatforms } from "../assets/tool/dist/capture/platform-registry.js";
-import { buildCapturePlan, captureWithRetries } from "../assets/tool/dist/cli.js";
+import { buildCapturePlan, captureWithRetries, ensureFreshCaptureOutput } from "../assets/tool/dist/cli.js";
 import { normalizeUrl } from "../assets/tool/dist/utils/urls.js";
 
 const started = Date.now();
@@ -151,6 +155,93 @@ assert.equal(looksLikeYuanbaoInterimAnswer("我来查一下深圳夫妻投靠入
 assert.equal(looksLikeYuanbaoInterimAnswer("我来查一下。经核验，以下是完整政策条件。".repeat(12)), false);
 assert.equal(looksLikeDoubaoInterimAnswer("正在查证"), true);
 assert.equal(validateCapturedAnswer({ name: "doubao" }, "正在查证")?.status, "failed");
+const realDoubaoInterim = "官方来源已确认现行门槛仍是国科发火〔2016〕32 号规定的标准。我再核对一下科技部官网原文，确保引用的条文准确。";
+assert.equal(looksLikeDoubaoInterimAnswer(realDoubaoInterim), true);
+assert.equal(validateCapturedAnswer({ name: "doubao" }, realDoubaoInterim)?.status, "failed");
+const observedDoubaoInterim = "搜索结果已经指向官方文件。我再精读科技部官网原文，确认条款全文和现行有效性。";
+assert.equal(looksLikeDoubaoInterimAnswer(observedDoubaoInterim), true);
+assert.equal(validateCapturedAnswer({ name: "doubao" }, observedDoubaoInterim)?.status, "failed");
+const reproducedDoubaoInterim = "我来查一下深圳市小微企业招用离校 2 年内未就业高校毕业生社保补贴的现行政策依据。";
+assert.equal(looksLikeDoubaoInterimAnswer(reproducedDoubaoInterim), true);
+assert.equal(validateCapturedAnswer({ name: "doubao" }, reproducedDoubaoInterim)?.status, "failed");
+let doubaoResponseListener;
+const streamMonitorContext = {
+    on(event, listener) {
+        assert.equal(event, "response");
+        doubaoResponseListener = listener;
+    },
+    off(event, listener) {
+        assert.equal(event, "response");
+        assert.equal(listener, doubaoResponseListener);
+    }
+};
+const streamMonitorPage = {
+    context() {
+        return streamMonitorContext;
+    }
+};
+const completedStreamMonitor = createDoubaoStreamCompletionMonitor(streamMonitorPage);
+completedStreamMonitor.markSubmitted();
+doubaoResponseListener({
+    url() {
+        return "https://www.doubao.com/alice/message/stream_reply";
+    },
+    async finished() {
+        return null;
+    },
+    async text() {
+        return "event: pb\ndata: payload\n\nevent: done\ndata:\n\n";
+    }
+});
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(completedStreamMonitor.snapshot().started, true);
+assert.equal(completedStreamMonitor.snapshot().completed, true);
+assert.equal(completedStreamMonitor.snapshot().failed, false);
+assert.equal(completedStreamMonitor.snapshot().endpoint, "/alice/message/stream_reply");
+completedStreamMonitor.markSubmitted();
+doubaoResponseListener({
+    url() {
+        return "https://www.doubao.com/chat/completion";
+    },
+    status() {
+        return 200;
+    },
+    async finished() {
+        return null;
+    },
+    async text() {
+        throw new Error("The current stream must not require buffering its body.");
+    }
+});
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(completedStreamMonitor.snapshot().started, true);
+assert.equal(completedStreamMonitor.snapshot().completed, true);
+assert.equal(completedStreamMonitor.snapshot().failed, false);
+assert.equal(completedStreamMonitor.snapshot().endpoint, "/chat/completion");
+completedStreamMonitor.dispose();
+assert.equal(looksLikeDoubaoInterimAnswer("已定位当前政策，接下来我复核官方原文。"), true);
+assert.equal(
+    looksLikeDoubaoInterimAnswer("经核对，研发费用占比按收入分档为 5%、4%、3%；高新技术产品收入占比不低于 60%。"),
+    false
+);
+const protectedOutput = await mkdtemp(join(tmpdir(), "fcx-existing-capture-"));
+try {
+    await writeFile(join(protectedOutput, "results.json"), JSON.stringify({
+        schemaVersion: "1",
+        question: "同一个问题",
+        platforms: [
+            { platform: "dknowc-chat", label: "深知晓", status: "success" },
+            { platform: "doubao", label: "豆包", status: "failed" }
+        ]
+    }), "utf8");
+    await assert.rejects(
+        () => ensureFreshCaptureOutput(protectedOutput, "同一个问题"),
+        /拒绝重新提交或覆盖/
+    );
+}
+finally {
+    await rm(protectedOutput, { recursive: true, force: true });
+}
 assert.equal(
     looksLikeLoginOnlyText("完整政策回答中要求考生登录北京教育考试院网站填报信息。".repeat(8)),
     false
@@ -173,6 +264,61 @@ const answer = await waitForAnswer(
     "广州无合同租房提取住房公积金每月最高多少？"
 );
 assert.equal(answer, "每人每月最高提取 1400 元。");
+
+const doubaoGenerationStarted = Date.now();
+const doubaoGenerationPage = {
+    locator(selector) {
+        return {
+            last() {
+                return this;
+            },
+            async count() {
+                return selector === ".md-box-root" || selector === "#flow-end-msg-stop" ? 1 : 0;
+            },
+            async isVisible() {
+                return selector === "#flow-end-msg-stop";
+            },
+            async innerText() {
+                return "";
+            },
+            async evaluate() {
+                const elapsed = Date.now() - doubaoGenerationStarted;
+                if (elapsed < 110) {
+                    return "已定位政策材料";
+                }
+                return "经核对，企业和人员需满足现行政策条件，补贴标准以实际缴纳的单位部分为准。";
+            }
+        };
+    },
+    async waitForTimeout(milliseconds) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(milliseconds, 10)));
+    }
+};
+const doubaoCompletedAnswer = await waitForAnswer(
+    {
+        name: "doubao",
+        label: "豆包",
+        selectors: { answer: [".md-box-root"] },
+        completionStableMs: 20
+    },
+    doubaoGenerationPage,
+    1000,
+    "",
+    "深圳小微企业社保补贴是什么？",
+    {
+        streamMonitor: {
+            snapshot() {
+                const elapsed = Date.now() - doubaoGenerationStarted;
+                return {
+                    started: elapsed >= 50,
+                    completed: elapsed >= 140,
+                    failed: false
+                };
+            }
+        }
+    }
+);
+assert.match(doubaoCompletedAnswer, /^经核对/);
 
 const dknowStarted = Date.now();
 const dknowPage = {
@@ -782,7 +928,9 @@ if (process.env.FACT_CHECK_X_ASSERTIONS_OUTPUT) {
         actualAssertionIds: [
             "browser.question_replayed",
             "browser.retry_submitted",
-            "verification.qianwen_slider_detected"
+            "verification.qianwen_slider_detected",
+            "capture.doubao_intermediate_not_complete",
+            "capture.existing_results_no_resubmit"
         ]
     }));
 }
