@@ -1,6 +1,6 @@
 {
   "schemaVersion": "fact-check-x/public-release-source-manifest@2",
-  "status": "ready_to_publish",
+  "status": "published",
   "product": {
     "nameZh": "全知晓",
     "nameEn": "Fact-Check-X",
@@ -67,8 +67,10 @@
   ],
   "distribution": {
     "github": {
-      "status": "authorized_pending_publication",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.24"
+      "status": "release_published",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.24",
+      "assetCount": 12,
+      "downloadAssetsByteVerified": 12
     },
     "skillhub": {
       "status": "submitted_pending_review",
@@ -98,8 +100,10 @@
     "generalPlatformRanking": false
   },
   "publishGate": {
-    "githubUploadAllowed": true,
-    "marketplaceUploadAllowed": true,
-    "basis": "Explicit owner authorization on 2026-10-15; exact-package regression and readback complete"
-  }
+    "githubUploadAllowed": false,
+    "marketplaceUploadAllowed": false,
+    "blockingReason": "Version 1.1.24 is published on GitHub and submitted to SkillHub review. Further product changes require a new version."
+  },
+  "sourceCommitSha": "b7805760de937acc883993d76c65e249126aa5b0",
+  "publishedAt": "2026-10-15T15:03:25+08:00"
 }
