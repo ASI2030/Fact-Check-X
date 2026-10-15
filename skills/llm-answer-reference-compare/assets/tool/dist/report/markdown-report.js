@@ -71,7 +71,9 @@ export function renderMarkdownReport(run) {
                 const attribution = reference.originAttributionStatus === "trusted_search_official_url"
                     ? "（已返回来源链接）"
                     : "";
-                const acquisition = reference.sourceAcquisitionStatus === "captured"
+                const acquisition = reference.sourceContentScope === "platform_excerpt"
+                    ? "（平台引用片段，非文件全文）"
+                    : reference.sourceAcquisitionStatus === "captured"
                     ? "（已打开并存证正文）"
                     : reference.sourceAcquisitionStatus === "blocked"
                         ? "（来源访问受阻）"

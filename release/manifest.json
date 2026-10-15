@@ -1,154 +1,105 @@
 {
   "schemaVersion": "fact-check-x/public-release-source-manifest@2",
-  "status": "published",
+  "status": "ready_to_publish",
   "product": {
     "nameZh": "全知晓",
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.21",
-  "tag": "v1.1.21",
-  "sourceCommitSha": "d6757c628cfa8b1bd903f429f3d388273fcfcd32",
-  "publishedAt": "2026-09-21T02:23:50+08:00",
-  "supportedPlatforms": [
-    "深知晓",
-    "深知晓（深度溯源）",
-    "豆包",
-    "腾讯元宝",
-    "DeepSeek",
-    "通义千问"
-  ],
+  "version": "1.1.24",
+  "tag": "v1.1.24",
+  "previousPublishedVersion": "1.1.21",
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 409754,
-    "files": 111,
-    "sha256": "acd20d7847d358c44c809868d2d3dc8dc0d12f02c1487deaea7e161087240194",
-    "skillSourceTreeSha256": "ae077d286d4b52abe6c360f624cf048cadab73ad7fabde9c2b00df9bc4e99d32"
+    "bytes": 426973,
+    "files": 121,
+    "sha256": "f892e60173464fb1dd1eeba49cb3a0f421abce81021dde8fcd53cb98a21b2c6d"
   },
   "publicArtifacts": [
     {
-      "file": "llm-answer-reference-compare-v1.1.21.zip",
-      "sha256": "bf6876fa32cc465d0f5cf957de0d0b42cdf188fbca963dbb9b0a830f76bd79f5"
+      "file": "SHA256SUMS",
+      "sha256": "8168cc594a55809039f3b10016edd43238a26d0be436d3b382da30d1d9b4982e"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.21.zip",
-      "sha256": "8353dbbe7a4eee4bfbe2b38c16793a17bf72c3d2a94139ee8ab254b18173401b"
+      "file": "fact-check-x-authoritative-verify-v1.1.24.zip",
+      "sha256": "38cbc44d9929c990a4cb0bbc2c6a9da3895bf3487efac44fd9759c400db9618d"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.21.zip",
-      "sha256": "cc5804437afcf7f2ac2ca6228383a55eb554f88a8128149685bc1dc32570e2ed"
+      "file": "fact-check-x-complete-v1.1.24.zip",
+      "sha256": "f892e60173464fb1dd1eeba49cb3a0f421abce81021dde8fcd53cb98a21b2c6d"
     },
     {
-      "file": "fact-check-x-unified-v1.1.21.zip",
-      "sha256": "7bf6a29397e54e3e27586c5538e4e095be4a7f84931f03967d25f1cec83a104a"
+      "file": "fact-check-x-complete.zip",
+      "sha256": "f892e60173464fb1dd1eeba49cb3a0f421abce81021dde8fcd53cb98a21b2c6d"
     },
     {
-      "file": "fact-check-x-suite-v1.1.21.zip",
-      "sha256": "1de8b3bb9461adfbf3b5539351091aac77dbbbf11502791a1c42899d028f9521"
+      "file": "fact-check-x-knowledge-compare-v1.1.24.zip",
+      "sha256": "7f26a16fc95d359d9cbbf947b2b42b4614b6b1b8b9421f45d2b4272e5368ad65"
     },
     {
-      "file": "fact-check-x-complete-v1.1.21.zip",
-      "sha256": "58c3c565b4dafad18d2aa6f6d84b1bb4e36a4a0aa9220d7c411b18868c7e7c68"
+      "file": "fact-check-x-skillhub-v1.1.24.zip",
+      "sha256": "c80efa568fe4f9099823eddad28210b7c13e4fc488843b420f5fbd1029cbe854"
+    },
+    {
+      "file": "fact-check-x-suite-v1.1.24.zip",
+      "sha256": "934f7f5c9245ed1b453161a997ca4342f38dd6ab253a2a10e08a4d3d6bcb0608"
+    },
+    {
+      "file": "fact-check-x-unified-v1.1.24.zip",
+      "sha256": "df373a221fc718dec6d8e921527554b3c012619087fc09365eed6da4ec7343e4"
+    },
+    {
+      "file": "llm-answer-reference-compare-v1.1.24.zip",
+      "sha256": "8afd5df9eff66b6691ae00a2d4e35f41d5585fceb3f717fcef4e526c66a8a6eb"
+    },
+    {
+      "file": "release-manifest.json",
+      "sha256": "1a453b59ef5e6611e01bf78bb531a244d669fe19a4220ca4f191d763837458b7"
+    },
+    {
+      "file": "sbom.cdx.json",
+      "sha256": "cb6573e204c078639c3807f1b30cf470f04b1fb957346e6bd438e2d4c283398f"
+    },
+    {
+      "file": "sbom.spdx.json",
+      "sha256": "c0cb6b9ebba548b595e7ea35a5aae6d5fab1d7b8e7824e5088f395ed0beffebe"
     }
   ],
   "distribution": {
     "github": {
-      "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.21",
-      "assetCount": 12,
-      "downloadAssetsByteVerified": 12
+      "status": "authorized_pending_publication",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.24"
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.21",
-      "versionId": 360838,
-      "submittedPackageSha256": "4ee42f69c5d68509b1fdc5cef8d99249612133dde9c23aa5468d2742ac43f7de",
-      "contentFingerprint": "66d7a132e185d8add0c8d19aa68c7e54b064b365d0fbe3d3068288aeae7faba8",
+      "version": "1.1.24",
+      "versionId": 437875,
+      "submittedPackageSha256": "c80efa568fe4f9099823eddad28210b7c13e4fc488843b420f5fbd1029cbe854",
       "contentAuditStatus": "pending",
-      "securityScanStatus": "pending",
-      "platformSignature": "pending"
+      "securityScanStatus": "pending"
     },
     "workbuddy": {
-      "status": "installed_and_verified",
-      "version": "1.1.21",
-      "installSource": "WorkBuddy local installation byte-identical to the GitHub v1.1.21 formal package",
-      "formalPackageSha256": "acd20d7847d358c44c809868d2d3dc8dc0d12f02c1487deaea7e161087240194",
-      "runtime": "ready",
-      "smokeTest": "passed",
-      "installedFiles": 111,
-      "installedVersionReadback": "prepare-runtime returned 1.1.21 from package-manifest.json"
+      "status": "not_updated_in_this_release"
     }
   },
   "verification": {
     "reproducibleBuild": "verified",
     "independentBuildsMatched": 2,
-    "publicTreeAudit": "passed",
-    "publicReleaseTests": 4,
-    "releaseRegressionSuite": "passed",
-    "packageFunctionalTests": "Required golden regressions passed 19/19 with 42/42 feedback records covered; source, clean-extracted-package, and WorkBuddy-installed Python and browser-DOM suites passed",
-    "workbuddyInstalled": "verified",
-    "workbuddyOfflineAcceptance": "All 111 packaged files matched the actual WorkBuddy tree byte for byte; prepare-runtime returned installedVersion 1.1.21, unified smoke passed, and the complete reference regression suite passed",
-    "marketplaceSignature": "pending platform approval",
-    "v113ScoringAndReportSemantics": {
-      "status": "passed",
-      "basis": "Coverage counts answered claims independently from evidence sufficiency. A point is excluded from coverage and accuracy denominators only when every selected platform omitted it or lacked sufficient evidence. Internally distinct unsupported states remain traceable while the user-facing category is 疑似误导. Stage four consumes the locked stage-three result without recomputing it."
-    },
-    "v113SourceAndTechnicalEvidence": {
-      "status": "passed",
-      "basis": "Government-anchor downgrades are conservative and non-symmetric, Qwen direct-source body capture is covered by regression tests, long evidence is folded by default, and technical acquisition failures are displayed in every report stage."
-    },
-    "v114DoubaoSourceCountBoundary": {
-      "status": "passed",
-      "basis": "Doubao platform-declared counts and auditable page links are retained separately. A 21-declared/16-auditable difference is nonblocking after all exposed links are captured, while an unopened source surface and cited PDF without verifiable body remain fail-closed."
-    },
-    "v115ArtifactsSourcesAndRecommendations": {
-      "status": "passed",
-      "basis": "Existing stage artifacts expose native paths plus standards-compliant file URIs and Markdown links, portable packages remove host paths, DKnow inline and knowledge-library sources preserve scope without duplicate counting, and recommendation-only points remain outside factual verification metrics."
-    },
-    "v116DoubaoComposerAndDknowExtraction": {
-      "status": "passed",
-      "basis": "The Doubao adapter locates the TipTap/ProseMirror composer with a visible contenteditable fallback; an authenticated page without a chat input reports input_not_found with adapter-drift guidance instead of login_required; captured DKnow answers exclude elements not rendered on the live page, including the collapsed reasoning panel, thinking-status labels and the knowledge-library button. Real-browser regressions fail on the v1.1.15 collector and pass on v1.1.16; all ten archived DKnow capture pages replay without hidden text."
-    },
-    "v117FootnoteResolutionAndDeepTraceCapture": {
-      "status": "passed",
-      "basis": "References merge on citation identity rather than URL alone, so every marker of a multi-marker source document stays resolvable; a marker's platform mirror and originating government URL merge into one reference keeping the external address; hidden deep-trace progress placeholders are never returned as answers and placeholder or near-empty DKnow answers are not recorded as successful captures. Replaying twelve archived DKnow pages raises marker coverage from 185/269 (68.8%) on v1.1.16 to 269/269 (100%); the same replay on v1.1.14 yields 269/270 (99.6%), locating the defect in v1.1.15."
-    },
-    "v118ReadableEvidenceAndInstalledVersion": {
-      "status": "passed",
-      "basis": "Percent-encoded DKnow evidence text is decoded per contiguous escape run, so a truncated trailing sequence leaves only that fragment untouched and text without a paired escape signature is unchanged. Replaying ten archived DKnow pages reduces encoded evidence fields from 22/305 to 0/305, all of them deep-trace captures. prepare-runtime returns installedVersion with the executing package's version and its source file, taken from the running script's own directory. Scoring is unchanged."
-    },
-    "v119SelectorRecoveryAndAuthorityReopen": {
-      "status": "passed",
-      "basis": "Doubao progress text is rejected as a final answer; selector drift can produce a proposal only after deterministic validation; one capture lifecycle submits the question at most once; authoritativeFinding is preserved verbatim; and finalized authority data can be corrected only through a hash-verified archive-and-reopen transaction. Playwright remains the driver, while the host browser or Computer Use is the primary recovery path and agent-browser is optional diagnostic input."
-    },
-    "v120EvidenceReuseScopeAndDoubaoStream": {
-      "status": "passed",
-      "basis": "Current Doubao completion is locked to a clean close of POST /chat/completion and legacy completion to the stream_reply done event; transport failures remain failures, a completed stream may override a stale spinner, and no question is resubmitted after submission starts. Captured official evidence is reused only when the original text semantically supports the atomic claim, with topic, geographic, boilerplate, and number-equivalence checks. The Shenzhen high-tech-enterprise replay kept K1-K7 supported and K8 insufficient, while classifying district-only and tangential rules as supplemental references."
-    },
-    "v121DeepTraceSourceRecoveryAndClaimScope": {
-      "status": "passed",
-      "basis": "Standalone DKnow Deep Trace capture now requires the stream to be stopped, all steps to be complete, and a substantive report body, rejecting the 211-character shell. Statutory conditions asked by the question are direct answers. Absence and exclusivity claims require explicit same-claim evidence. A claim that exceeds its answer excerpt is reported as claim_scope_overreach with comparison_analysis responsibility and blocks authority verification rather than being blamed on the platform. Four of seven archived DeepSeek source-body failures are recovered through secure PDF, DOCX, and browser-safe HTML extraction; the remaining external source failures stay explicit. MSYS /c paths normalize to C:/ without a duplicated c segment."
-    }
-  },
-  "supplyChain": {
-    "license": "Apache-2.0",
-    "sha256Sums": {
-      "file": "SHA256SUMS",
-      "sha256": "f168ea58ef3832d9baff36b4ca6826bda83d75827a60f45d0fc80e28ecae64c9"
-    },
-    "sbomSpdx": {
-      "file": "sbom.spdx.json",
-      "sha256": "9bd35d2e956ce76a77a75e581ec9e939abe52a466dfbcd86690ee0f823492379"
-    },
-    "sbomCycloneDx": {
-      "file": "sbom.cdx.json",
-      "sha256": "e43b2b20a817f03638e5de9446d5382e5a74e3b81300aeef2c52f960af1509b1"
-    }
+    "cleanPackagedFilesMatched": 121,
+    "installedRegressionTests": 21,
+    "installedRegressionPassed": 21,
+    "livePlatforms": 4,
+    "liveKeyFacts": 16,
+    "trustedSearchRequests": 1,
+    "trustedSearchTechnicalErrors": 0,
+    "windowsPhysicalMachine": "not_tested",
+    "boundedBusinessRegression": true,
+    "generalPlatformRanking": false
   },
   "publishGate": {
-    "githubUploadAllowed": false,
-    "marketplaceUploadAllowed": false,
-    "blockingReason": "v1.1.21 is published on GitHub, submitted to SkillHub for platform review, and installed and verified in WorkBuddy; subsequent product changes require a new version."
+    "githubUploadAllowed": true,
+    "marketplaceUploadAllowed": true,
+    "basis": "Explicit owner authorization on 2026-10-15; exact-package regression and readback complete"
   }
 }

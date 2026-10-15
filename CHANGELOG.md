@@ -4,6 +4,16 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.24] - 2026-10-15
+
+- Reject Doubao background-job acknowledgements at both capture and evaluation boundaries; continue in the original conversation instead of resubmitting.
+- Preserve DeepSeek and Doubao paragraph, list, table-cell and citation boundaries, including visible ordinary-link text.
+- Preserve DeepKnow product-source authority without a government-domain or source-URL prerequisite; claim support remains a separate check.
+- Permit evidence-backed current-year/project adjudication even when an older official quotation was faithful; missing repeat search results still cannot erase captured evidence.
+- Keep explicitly requested statutory ratio and incident restrictions in direct answers.
+- Include the previously distributed citation-presence, adjacent-marker, numeric-evidence, region and source-body fixes from the v1.1.22/v1.1.23 packages.
+- Validate the exact complete package with 21 regression groups, a real four-platform 16-key-fact workflow and repeatable builds. Preserve evidence gaps and external source failures; no general platform ranking or physical Windows validation is claimed.
+
 ## [1.1.21] - 2026-09-21
 
 - Wait for the DKnow Deep Trace standalone stream, completed step state, and substantive report body together; reject the 211-character page shell, empty report, active step, and running stream.

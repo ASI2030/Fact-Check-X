@@ -60,20 +60,20 @@ def main() -> int:
         [verdict_point("direct_accurate")], "sample"
     ) == {
         "level": "direct_supported",
-        "headline": "全部有官方依据支持",
+        "headline": "直接事实点已回答 1/1 项：直接正确 1 项；未回答 0 项",
     }
     assert platform_verdict_summary(
         [verdict_point("direct_accurate"), verdict_point("indirect_accurate")],
         "sample",
     ) == {
         "level": "indirect_supported",
-        "headline": "部分非官方依据支持，通过全知晓用官方依据的核验",
+        "headline": "直接事实点已回答 2/2 项：直接正确 1 项、间接正确 1 项；未回答 0 项",
     }
     assert platform_verdict_summary(
         [verdict_point("coincidental")], "sample"
     ) == {
         "level": "coincidental",
-        "headline": "无引用依据，但与官方依据巧合一致",
+        "headline": "直接事实点已回答 1/1 项：结果正确但引用支持未成立 1 项；未回答 0 项",
     }
     recommendation_claim = {
         "claimType": "recommendation",

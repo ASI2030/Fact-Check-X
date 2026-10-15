@@ -173,7 +173,7 @@ def render_detail(
         if not claim.get("covered"):
             cells.append(f'<td {attributes}><span class="muted">未覆盖</span></td>')
             continue
-        indexes = "、".join(str(i) for i in claim.get("citedReferenceIndexes") or []) or "无"
+        indexes = "、".join(str(i) for i in dict.fromkeys((claim.get("attachedReferenceIndexes") or []) + (claim.get("citedReferenceIndexes") or []))) or "无"
         citation_label = {
             "explicit": "直接展示",
             "global": "来源清单",
@@ -187,7 +187,8 @@ def render_detail(
             "answer_level_semantic": "全文语义溯源",
             "none": "未建立溯源",
         }.get(claim.get("referenceBinding"), claim.get("referenceBinding") or "未建立溯源")
-        source_label = SOURCE_LEVEL.get(claim.get("sourceLevel"), claim.get("sourceLevel") or "无所附来源")
+        source_level = claim.get("attachedSourceLevel") if claim.get("attachedReferenceIndexes") else claim.get("sourceLevel")
+        source_label = SOURCE_LEVEL.get(source_level, source_level or "无所附来源")
         cells.append(f'''<td {attributes}><b>{esc(claim.get("claim"))}</b><dl><dt>依据索引</dt><dd>{esc(indexes)}</dd><dt>依据展示</dt><dd>{esc(citation_label)}</dd><dt>溯源方式</dt><dd>{esc(binding_label)}</dd><dt>来源层级</dt><dd>{esc(source_label)}</dd><dt>忠实性</dt><dd>{esc(FAITH.get(claim.get("faithfulness"), claim.get("faithfulness")))}</dd></dl><p>{esc(claim.get("reason"))}</p></td>''')
     comparison_cell = ""
     if not single_platform:

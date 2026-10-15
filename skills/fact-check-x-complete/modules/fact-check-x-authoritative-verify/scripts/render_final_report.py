@@ -50,7 +50,7 @@ def attached_provenance(claim: dict, platform: dict) -> list[dict]:
     references = platform.get("references") or []
     evidence = {item.get("referenceIndex"): item.get("excerpt") for item in claim.get("evidence") or []}
     output = []
-    for index in claim.get("citedReferenceIndexes") or []:
+    for index in dict.fromkeys((claim.get("attachedReferenceIndexes") or []) + (claim.get("citedReferenceIndexes") or [])):
         if not isinstance(index, int) or not (1 <= index <= len(references)):
             continue
         reference = references[index - 1]
@@ -259,12 +259,15 @@ def metrics(points: list[dict], platforms: list[dict]) -> dict:
 
 def platform_verdict_summary(points: list[dict], platform_id: str) -> dict:
     categories = []
+    missing_count = 0
     recommendation_count = 0
     for point in points:
         if point.get("role") != "direct":
             continue
         claim = (point.get("claims") or {}).get(platform_id) or {}
         if not claim.get("covered"):
+            if point.get("claimType", "fact") != "recommendation":
+                missing_count += 1
             continue
         verdict = (((point.get("authority") or {}).get("verdicts") or {}).get(platform_id) or {})
         if point.get("claimType", "fact") == "recommendation":
@@ -273,33 +276,17 @@ def platform_verdict_summary(points: list[dict], platform_id: str) -> dict:
             continue
         categories.append(str(verdict.get("category") or "unverified"))
 
+    if categories:
+        labels = {"direct_accurate": "直接正确", "indirect_accurate": "间接正确", "coincidental": "结果正确但引用支持未成立", "misleading": "错误", "fabricated": "待核实", "unverified": "待核实"}
+        counts = {category: categories.count(category) for category in dict.fromkeys(categories)}
+        level = ("error" if "misleading" in counts else "suspected" if {"fabricated", "unverified"} & counts.keys() else "coincidental" if "coincidental" in counts else "indirect_supported" if "indirect_accurate" in counts else "direct_supported")
+        distribution = "、".join(f"{labels.get(category, category)} {count} 项" for category, count in counts.items())
+        return {"level": level, "headline": f"直接事实点已回答 {len(categories)}/{len(categories) + missing_count} 项：{distribution}；未回答 {missing_count} 项"}
+
     if not categories:
         if recommendation_count:
             return {"level": "recommendation", "headline": "已给出操作建议；建议项不进入事实准确率"}
         return {"level": "missing", "headline": "未直接回答可核验知识点"}
-    if "misleading" in categories:
-        return {"level": "error", "headline": "部分直接答案经官方依据核验有误"}
-    if any(category in {"fabricated", "unverified"} for category in categories):
-        return {
-            "level": "suspected",
-            "headline": "部分直接答案官方无法查证，存在过期、编造或信息源误导风险",
-        }
-    if "coincidental" in categories:
-        return {
-            "level": "coincidental",
-            "headline": "无引用依据，但与官方依据巧合一致",
-        }
-    if "indirect_accurate" in categories:
-        return {
-            "level": "indirect_supported",
-            "headline": "部分非官方依据支持，通过全知晓用官方依据的核验",
-        }
-    if all(category == "direct_accurate" for category in categories):
-        return {
-            "level": "direct_supported",
-            "headline": "全部有官方依据支持",
-        }
-    return {"level": "missing", "headline": "当前证据不足以形成总判定"}
 
 
 def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[dict, dict]:
@@ -356,7 +343,7 @@ def build_legacy(results: dict, comparison: dict, verification: dict) -> tuple[d
                 "claim_type": point.get("claimType", "fact"),
                 "category": CATEGORY.get(verdict.get("category"), "证据不足"),
                 "claim": str(claim.get("claim") or ""),
-                "source_type": source_label(str(claim.get("sourceLevel") or "none")),
+                "source_type": source_label(str((claim.get("attachedSourceLevel") if claim.get("attachedReferenceIndexes") else claim.get("sourceLevel")) or "none")),
                 "reference_binding": str(claim.get("referenceBinding") or "none"),
                 "faithful": faithful_label(str(claim.get("faithfulness") or "insufficient")),
                 "verdict_reason": str(verdict.get("reason") or ""),

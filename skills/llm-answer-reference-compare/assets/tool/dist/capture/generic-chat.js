@@ -603,9 +603,16 @@ async function extractDeepSeekAnswer(page) {
         const clone = node.cloneNode(true);
         for (const anchor of Array.from(clone.querySelectorAll("a[href]"))) {
             const marker = anchor.querySelector(".ds-markdown-cite")?.textContent?.replace(/\D+/g, "");
-            anchor.replaceWith(document.createTextNode(marker ? `[${marker}]` : ""));
+            anchor.replaceWith(document.createTextNode(marker ? `[${marker}]` : (anchor.textContent || "")));
         }
-        return clone.innerText.trim();
+        // Detached innerText collapses table/list boundaries into one paragraph.
+        for (const cell of clone.querySelectorAll("td, th")) cell.append(document.createTextNode("\t"));
+        for (const block of clone.querySelectorAll("p, h1, h2, h3, h4, li, tr, blockquote")) {
+            block.prepend(document.createTextNode("\n"));
+            block.append(document.createTextNode("\n"));
+        }
+        for (const br of clone.querySelectorAll("br")) br.replaceWith(document.createTextNode("\n"));
+        return (clone.textContent || "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
     }).catch(() => "");
     if (!text || looksLikeLoadingText(text)) {
         return "";
@@ -632,7 +639,13 @@ async function extractDoubaoAnswer(page) {
             source.replaceWith(document.createTextNode(`【${sourceMarkers.get(label)}】`));
         }
         clone.querySelectorAll(".spacing-ANk22f").forEach((element) => element.remove());
-        return clone.innerText.trim();
+        for (const cell of clone.querySelectorAll("td, th")) cell.append(document.createTextNode("\t"));
+        for (const block of clone.querySelectorAll("p, h1, h2, h3, h4, li, tr, .container-enLQFx")) {
+            block.prepend(document.createTextNode("\n"));
+            block.append(document.createTextNode("\n"));
+        }
+        for (const br of clone.querySelectorAll("br")) br.replaceWith(document.createTextNode("\n"));
+        return (clone.textContent || "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
     }).catch(() => "");
     if (!text || looksLikeLoadingText(text)) {
         return "";
@@ -847,7 +860,24 @@ export async function readDknowcStandaloneReportState(page) {
         }
         const stream = window.STREAM;
         const statusText = document.querySelector("#st-gen")?.textContent?.trim() || "";
-        const reportText = report.innerText?.trim() || "";
+        // Preserve citation identity before DOM text flattens adjacent superscripts.
+        const readReportNode = (node) => {
+            if (node.nodeType === Node.TEXT_NODE) return node.textContent || "";
+            if (node.nodeType !== Node.ELEMENT_NODE) return "";
+            const style = getComputedStyle(node);
+            if (style.display === "none" || style.visibility === "hidden"
+                || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(node.tagName)) return "";
+            if (node.tagName === "SUP") {
+                const marker = (node.getAttribute("data-cite") || node.textContent || "").trim();
+                if (/^\d{1,4}$/.test(marker)) return `【${marker}】`;
+            }
+            if (node.tagName === "BR") return "\n";
+            const text = Array.from(node.childNodes, readReportNode).join("");
+            if (/^(TD|TH)$/.test(node.tagName)) return `${text}\t`;
+            return /^(block|list-item|table-row|flex|grid)$/.test(style.display)
+                ? `\n${text}\n` : text;
+        };
+        const reportText = readReportNode(report).replace(/\n[\t ]*\n+/g, "\n").trim();
         const done = steps.classList.contains("done")
             && /已完成/.test(statusText)
             && !steps.querySelector(".active");
@@ -1098,7 +1128,7 @@ export async function waitForAnswer(config, page, timeoutMs, previousAnswer = ""
                 await page.waitForTimeout(1500);
                 continue;
             }
-            if (config.name === "doubao" && !control.streamMonitor && !generationObserved) {
+            if (config.name === "doubao" && !control.streamMonitor && !generationObserved && !control.resumingExistingAnswer) {
                 await page.waitForTimeout(1500);
                 continue;
             }
@@ -1232,8 +1262,18 @@ export async function extractReferences(config, page, question = "") {
             });
         }
     }
-    if (["deepseek", "yuanbao", "qianwen"].includes(config.name)) {
+    if (isDknowcPlatform(config)) {
+        await hydrateDirectSourceReferences(page, references.filter((reference) =>
+            !isDknowInternalUrl(reference.url) && !hasSubstantiveReferenceContent(reference)
+        ), config.url);
+    }
+    else if (["deepseek", "yuanbao", "qianwen"].includes(config.name)) {
         await hydrateDirectSourceReferences(page, references, config.url);
+    }
+    for (const reference of references) {
+        if (reference.content && reference.contentAcquisition) {
+            reference.sourceContentScope = "document_extraction";
+        }
     }
     return { references, sourceCountAudit };
 }
@@ -2214,8 +2254,7 @@ async function extractTrustedSearchReference(reference, question = "") {
         const content = String(best?.body || "")
             .replace(/\s+/g, " ")
             .replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, "$1")
-            .trim()
-            .slice(0, 12000);
+            .trim();
         if (!content) {
             return undefined;
         }
@@ -2440,7 +2479,7 @@ export async function extractPdfReferenceContent(page, rawUrl) {
             .replace(/\s+/g, " ")
             .replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, "$1")
             .trim();
-        return extracted.slice(0, 12000);
+        return extracted;
     }
     catch (error) {
         console.warn(`PDF 正文提取未完成：${error instanceof Error ? error.message : String(error)}`);
@@ -2471,7 +2510,7 @@ export async function extractDocxReferenceContent(rawUrl) {
             .replace(/[ \t]+/g, " ")
             .replace(/\n{3,}/g, "\n\n")
             .trim();
-        return text.slice(0, 12000);
+        return text;
     }
     catch (error) {
         console.warn(`DOCX 正文提取未完成：${error instanceof Error ? error.message : String(error)}`);
@@ -2547,6 +2586,7 @@ export async function extractSourcePageContentViaFetch(sourcePage, rawUrl) {
         const html = await response.text();
         const extracted = await sourcePage.evaluate((rawHtml) => {
             const doc = new DOMParser().parseFromString(rawHtml, "text/html");
+            doc.querySelectorAll("script, style, nav, header, footer, noscript").forEach((node) => node.remove());
             const clean = (value) => String(value || "").trim().replace(/\s+/g, " ");
             const selectors = [
                 "article", "main", "[role='main']", "#content", "#article-content",
@@ -2562,7 +2602,7 @@ export async function extractSourcePageContentViaFetch(sourcePage, rawUrl) {
                 }
             }
             const bodyText = clean(doc.body?.textContent);
-            if (bodyText.length >= 40) {
+            if (!candidates.length && bodyText.length >= 40) {
                 candidates.push(bodyText);
             }
             candidates.sort((first, second) => second.length - first.length);
@@ -2570,7 +2610,7 @@ export async function extractSourcePageContentViaFetch(sourcePage, rawUrl) {
             const blocked = /(?:访问过于频繁|安全验证|人机验证|请输入验证码|access denied|forbidden)/i.test(content);
             return {
                 title: clean(doc.title),
-                content: blocked ? "" : content.slice(0, 12000),
+                content: blocked ? "" : content,
                 blocked,
                 reason: blocked ? "来源页面要求人机验证或拒绝访问" : ""
             };
@@ -2611,6 +2651,8 @@ function shouldHydrateDoubaoReference(reference) {
 async function extractSourcePageContent(sourcePage) {
     return sourcePage.evaluate(() => {
         const clean = (value) => String(value || "").trim().replace(/\s+/g, " ");
+        const doc = document.cloneNode(true);
+        doc.querySelectorAll("script, style, nav, header, footer, noscript").forEach((node) => node.remove());
         const selectors = [
             "article",
             "main",
@@ -2623,15 +2665,15 @@ async function extractSourcePageContent(sourcePage) {
         ];
         const candidates = [];
         for (const selector of selectors) {
-            for (const element of document.querySelectorAll(selector)) {
+            for (const element of doc.querySelectorAll(selector)) {
                 const text = clean(element.innerText || element.textContent);
                 if (text.length >= 40) {
                     candidates.push(text);
                 }
             }
         }
-        const bodyText = clean(document.body?.innerText || document.body?.textContent);
-        if (bodyText.length >= 40) {
+        const bodyText = clean(doc.body?.textContent);
+        if (!candidates.length && bodyText.length >= 40) {
             candidates.push(bodyText);
         }
         candidates.sort((first, second) => second.length - first.length);
@@ -2639,7 +2681,7 @@ async function extractSourcePageContent(sourcePage) {
         const blocked = /(?:访问过于频繁|安全验证|人机验证|请输入验证码|access denied|forbidden)/i.test(content);
         return {
             title: clean(document.title),
-            content: blocked ? "" : content.slice(0, 12000),
+            content: blocked ? "" : content,
             blocked,
             reason: blocked ? "来源页面要求人机验证或拒绝访问" : ""
         };
@@ -2852,22 +2894,24 @@ async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sour
             if (!element.hasAttribute("data-id") && element.querySelector(CARD_ITEM)) {
                 continue;
             }
-            const card = element.closest(".chat-jb, .chatsse-note-item, .jb-modal-note") || element;
+            const card = element.closest(".chat-jb, .chatsse-note-item, .jb-modal-note, .jb, .kb-item") || element;
             const marker = readMarker(element);
             const rawUrl = readUrl(element, card);
             if (!rawUrl) {
                 continue;
             }
-            const titleElement = card.querySelector(".chat-jb-title-text, .chat-jb-title-info, .czkjTitle");
+            const titleElement = card.querySelector(".chat-jb-title-text, .chat-jb-title-info, .czkjTitle, .jb-txt, .kb-item-title");
             const citeElement = element.querySelector("cite") || card.querySelector("cite");
-            const traceText = cleanEvidenceText((element.getAttribute("data-text") || "").trim());
+            const traceText = cleanEvidenceText((element.getAttribute("data-text")
+                || (element.matches(".jb-quote") ? element.querySelector("span")?.textContent : "")
+                || "").trim());
             const snippetElement = element.classList.contains("jb-original-item")
                 ? element
                 : card.querySelector(".scoresText, .jb-original-item");
-            const snippet = (traceText || snippetElement?.textContent || "")
+            const sourceBody = (traceText || snippetElement?.textContent || "")
                 .trim()
-                .replace(/\s+/g, " ")
-                .slice(0, 500);
+                .replace(/\s+/g, " ");
+            const snippet = sourceBody.slice(0, 500);
             const normalizedUrl = rawUrl ? normalizeInBrowser(rawUrl, base) : "";
             const key = `${normalizedUrl}#${marker || ""}`;
             if (seen.has(key)) {
@@ -2889,6 +2933,8 @@ async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sour
                 citationScope: options.citationScope,
                 sourceSection: options.sourceSection || citeElement?.textContent?.trim() || undefined,
                 traceabilityText: traceText || undefined,
+                content: sourceBody || undefined,
+                sourceContentScope: sourceBody ? "platform_excerpt" : undefined,
                 linkStatus: "captured",
                 platformTrustSource: "dknow_reference_capture"
             });
@@ -2899,7 +2945,7 @@ async function extractDknowcReferenceCards(locator, baseUrl, citationScope, sour
             if (FOOTNOTE_MARKER.test(own)) {
                 return own;
             }
-            const scoreElement = element.querySelector(".chatsse-note-score-id, .hasColor, [data-id]");
+            const scoreElement = element.querySelector(".chatsse-note-score-id, .hasColor, [data-id], .jb-no");
             const scoped = (scoreElement?.getAttribute("data-id") || scoreElement?.textContent || "").trim();
             if (FOOTNOTE_MARKER.test(scoped)) {
                 return scoped;
@@ -3068,6 +3114,7 @@ function mergeDknowcReference(references, incoming) {
     existing.sourceSection = existing.sourceSection || incoming.sourceSection;
     existing.linkStatus = existing.linkStatus || incoming.linkStatus;
     existing.platformTrustSource = existing.platformTrustSource || incoming.platformTrustSource;
+    existing.sourceContentScope = existing.sourceContentScope || incoming.sourceContentScope;
     existing.citationScope = combineCitationScope(existing.citationScope, incoming.citationScope);
 }
 
@@ -3133,11 +3180,17 @@ async function extractDknowcKnowledgeLibraryReferences(page, baseUrl) {
 export async function extractDknowcReferences(page, baseUrl, question = "") {
     const references = [];
     const inlineReferences = await extractDknowcReferenceCards(
-        page.locator(".jb-original-item[data-id], .chatsse-note-item, .chat-jb"),
+        page.locator(".jb-original-item[data-id], .chatsse-note-item, .chat-jb, .jb .jb-quote"),
         baseUrl,
         "inline"
     );
     for (const reference of inlineReferences) {
+        mergeDknowcReference(references, reference);
+    }
+    const reportLibraryReferences = await extractDknowcReferenceCards(
+        page.locator(".kb-item .jb-quote"), baseUrl, "global", "知识专库"
+    );
+    for (const reference of reportLibraryReferences) {
         mergeDknowcReference(references, reference);
     }
     const globalReferences = await extractDknowcKnowledgeLibraryReferences(page, baseUrl);
@@ -3292,6 +3345,12 @@ export function looksLikeDoubaoInterimAnswer(value) {
     const text = String(value || "")
         .replace(/\s+/g, "")
         .replace(/[\u3002\uff0c,\uff01!\u2026.]+$/g, "");
+    // A completed stream may only acknowledge a delegated background job.
+    if (/^(?:已将|已把|已交给|已经将|已经把).{0,100}(?:Agent|智能体|后台)/i.test(text)
+        && /(?:后台执行|后台处理|完成后|稍后.{0,20}(?:给你|给您)|期间你可以继续)/.test(text)
+        && !/(?:以下是|结果如下|调研结果如下|报告如下)/.test(text)) {
+        return true;
+    }
     if (!text || text.length > 240) {
         return false;
     }

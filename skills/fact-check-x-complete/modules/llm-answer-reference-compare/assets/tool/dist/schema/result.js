@@ -13,6 +13,7 @@ export const ReferenceSchema = z.object({
         "source_document"
     ]).optional(),
     content: z.string().optional(),
+    sourceContentScope: z.enum(["platform_excerpt", "document_extraction"]).optional(),
     originUrl: z.string().optional(),
     origin_url: z.string().optional(),
     resourceUrl: z.string().optional(),
@@ -38,7 +39,9 @@ export const ReferenceSchema = z.object({
     contentAcquisition: z.enum([
         "trusted_search_full_content",
         "direct_pdf_extraction",
-        "direct_page_extraction"
+        "direct_page_extraction",
+        "direct_docx_extraction",
+        "direct_fetch_extraction"
     ]).optional(),
     sourceResolvedUrl: z.string().optional(),
     sourceAcquisitionStatus: z.enum([

@@ -191,11 +191,58 @@ def looks_like_navigation_or_footer(value: object) -> bool:
 def geographic_scopes(value: object) -> set[str]:
     text = re.sub(r"\s+", "", str(value or ""))
     scopes = {term for term in CITY_SCOPE_TERMS if term in text}
-    for match in re.finditer(
-        r"([\u4e00-\u9fff]{2,6})(?:省|市|自治区|自治州|区|县|旗)", text
-    ):
-        scopes.add(match.group(1))
+    # Unknown names remain unknown; ordinary words ending in 区/市 are not places.
+    named_regions = (
+        "广东省", "浙江省", "江苏省", "山东省", "福建省", "安徽省", "江西省",
+        "湖南省", "湖北省", "河南省", "河北省", "山西省", "陕西省", "四川省",
+        "贵州省", "云南省", "海南省", "辽宁省", "吉林省", "黑龙江省", "甘肃省",
+        "青海省", "台湾省", "内蒙古自治区", "广西壮族自治区", "西藏自治区",
+        "宁夏回族自治区", "新疆维吾尔自治区", "香港特别行政区", "澳门特别行政区",
+        "福田区", "罗湖区", "南山区", "宝安区", "龙岗区", "龙华区", "盐田区",
+        "坪山区", "光明区", "大鹏新区", "东乡县", "康乐县",
+        "攀枝花市", "南宁市", "合肥市", "惠州市", "石家庄市", "太原市", "沈阳市",
+        "长春市", "哈尔滨市", "福州市", "南昌市", "济南市", "郑州市", "长沙市",
+        "海口市", "贵阳市", "昆明市", "拉萨市", "西安市", "兰州市", "西宁市",
+        "银川市", "乌鲁木齐市", "呼和浩特市",
+    )
+    scopes.update(name for name in named_regions if name in text)
     return scopes
+
+
+def request_service_area(request: dict) -> str:
+    point = str((request.get("knowledgePoint") or {}).get("description") or "")
+    # A national legal condition must not inherit a city's reward search filter.
+    if re.search(r"全国|国家层面|国家统一|国家标准|法定认定条件|国家高新技术企业认定条件", point):
+        return ""
+    for value in (point, request.get("title") or ""):
+        if value != point and not re.search(r"市级|区级|本市|当地|地方|补贴|奖励|办理|申请渠道", point):
+            return ""
+        scopes = geographic_scopes(value)
+        if not scopes:
+            continue
+        if len(scopes) != 1:
+            return ""
+        scope = next(iter(scopes))
+        return scope + "市" if scope in CITY_SCOPE_TERMS else scope
+    return ""
+
+
+def numeric_facts_supported(claim: str, evidence: str) -> bool:
+    # Numbers in years, filing IDs and unrelated units are not amount evidence.
+    unit = r"(?:亿元|万元|元|年|个月|月|日|天|件|家|人|次(?!性)|岁|平方米|分|%)"
+    def expand_range(text: str) -> str:
+        text = re.sub(r"(\d)万(?!元)", r"\1万元", text)
+        return re.sub(
+            rf"(?<![\d.])(\d+(?:\.\d+)?)(?:至|到|[-—–~～])(\d+(?:\.\d+)?)({unit})",
+            r"\1\3至\2\3", text,
+        )
+    claim, evidence = expand_range(claim), expand_range(evidence)
+    for match in re.finditer(rf"(?<![\d.])(\d+(?:\.\d+)?)({unit})?", claim):
+        value, suffix = match.groups()
+        pattern = rf"(?<![\d.]){re.escape(value)}" + (re.escape(suffix) if suffix else r"(?![\d.])")
+        if not re.search(pattern, evidence):
+            return False
+    return True
 
 
 def semantic_claim_support(claim: object, evidence: object) -> bool:
@@ -212,7 +259,7 @@ def semantic_claim_support(claim: object, evidence: object) -> bool:
     ) and not re.search(r"(?:可能|或许|据称|通常|一般情况下)", claim_text):
         return False
     numeric = re.findall(r"\d+(?:\.\d+)?", claim_text)
-    if any(value not in evidence_text for value in numeric):
+    if not numeric_facts_supported(claim_text, evidence_text):
         return False
     if any(
         re.search(
@@ -229,6 +276,11 @@ def semantic_claim_support(claim: object, evidence: object) -> bool:
         return False
     claim_scopes = geographic_scopes(claim_text)
     evidence_scopes = geographic_scopes(evidence_text)
+    for suffixes in (("市",), ("区", "县", "旗")):
+        claim_local = {scope for scope in claim_scopes if scope.endswith(suffixes) or (suffixes == ("市",) and scope in CITY_SCOPE_TERMS)}
+        evidence_local = {scope for scope in evidence_scopes if scope.endswith(suffixes) or (suffixes == ("市",) and scope in CITY_SCOPE_TERMS)}
+        if claim_local and evidence_local and not claim_local & evidence_local:
+            return False
     if claim_scopes and evidence_scopes and not (claim_scopes & evidence_scopes):
         return False
     coverage = semantic_overlap_score(claim_text, evidence_text)
@@ -357,7 +409,7 @@ def parse_articles(data: dict, limit: int) -> list[dict]:
                     "title": clipped(article.get("文章标题"), 240),
                     "url": str(article.get("源网址") or ""),
                     "date": str(article.get("发布日期") or ""),
-                    "body": clipped(body, 6000),
+                    "body": body,
                 }
             )
     return output
@@ -462,7 +514,7 @@ def fixture_search(fixture: object) -> dict:
                 "title": clipped(item.get("title"), 240),
                 "url": str(item.get("url") or ""),
                 "date": str(item.get("date") or ""),
-                "body": clipped(item.get("body"), 6000),
+                "body": str(item.get("body") or ""),
             }
         )
     return {
@@ -525,8 +577,11 @@ def valid_official_anchor(request: dict) -> bool:
     if not evidence:
         return False
     for item in evidence:
+        item_policy = str(item.get("sourcePolicy") or source_policy)
         parsed = urlparse(str(item.get("url") or ""))
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        # DeepKnow source authority is a product guarantee, not a URL property.
+        # Its capture/material checks below and claim support checks still apply.
+        if item_policy != "dknow_official_reference" and (parsed.scheme not in {"http", "https"} or not parsed.netloc):
             return False
         if (
             not isinstance(item.get("referenceIndex"), int)
@@ -600,6 +655,7 @@ def valid_official_anchor(request: dict) -> bool:
                 {
                     "id": str(item.get("id") or f"A{index}"),
                     "body": str(item.get("body") or item.get("excerpt") or ""),
+                    "excerpt": str(item.get("excerpt") or ""),
                 }
                 for index, item in enumerate(evidence, 1)
             ]
@@ -631,6 +687,7 @@ def acquire(
     request: dict, service_area: str = "", limit: int = 6, fixture: object | None = None
 ) -> dict:
     validate_request(request)
+    service_area = service_area.strip() or request_service_area(request)
     anchor = request.get("trustedAnchor") or {}
     query = build_query(request["cloudPayload"])
     covered_claims = [
@@ -736,12 +793,27 @@ def normalize_verdict(item: dict, claim: dict, evidence_ids: set[str]) -> dict:
 def evidence_supports_claim(
     claim: dict, evidence_items: list[dict], ids: list[str]
 ) -> bool:
+    claim_text = str(claim.get("claim") or "")
+    for item in evidence_items:
+        if str(item.get("id")) not in set(ids):
+            continue
+        body = str(item.get("body") or "")
+        excerpt = str(item.get("excerpt") or "")
+        # Keep the surrounding sentence so a quote cannot drop its own qualifier.
+        if excerpt and excerpt in body:
+            start = body.index(excerpt)
+            end = start + len(excerpt)
+            start = max(body.rfind(mark, 0, start) for mark in ("。", "！", "？", "\n")) + 1
+            if body[end - 1:end] not in ("。", "！", "？", "\n"):
+                stops = [body.find(mark, end) for mark in ("。", "！", "？", "\n")]
+                end = min((stop + 1 for stop in stops if stop >= 0), default=len(body))
+            if semantic_claim_support(claim_text, body[start:end]):
+                return True
     selected = "\n".join(
         str(item.get("body") or "")
         for item in evidence_items
         if str(item.get("id")) in set(ids)
     )
-    claim_text = str(claim.get("claim") or "")
     if semantic_claim_support(claim_text, selected):
         return True
     premise = " ".join(
@@ -814,10 +886,15 @@ def validate_assessment(request: dict, evidence: dict, assessment: dict) -> None
         if verdict in ("supported", "contradicted") and not ids:
             raise SkillError(f"{platform} 的 {verdict} 裁决必须至少引用一个 evidenceId")
         if anchor_mode and platform in anchored_platforms and verdict != "supported":
-            raise SkillError(
-                f"合法 trustedAnchor 已建立，{platform} 的平台自带官方原文已支持当前主张，必须裁决为 supported；"
-                "请在本阶段重写 assessment"
-            )
+            own_ids = set(claim_evidence_map.get(platform) or [entry.get("id") for entry in anchor.get("evidence") or []])
+            # Faithful quotation of one official source cannot override conflicting
+            # evidence about the current year/project. Empty re-search still cannot
+            # erase an established source; a changed verdict must cite other evidence.
+            if not set(ids) - own_ids:
+                raise SkillError(
+                    f"合法 trustedAnchor 已建立，{platform} 没有提供独立的适用性或冲突证据时必须裁决为 supported；"
+                    "不能只因追加搜索未命中而降级"
+                )
         if (
             verdict == "supported"
             and not anchor_mode
@@ -885,7 +962,7 @@ def finalize(request: dict, evidence: dict, assessment: dict) -> dict:
             verdicts[pid] = normalize_verdict(
                 ((assessment.get("verdicts") or {}).get(pid) or {}), claim, evidence_ids
             )
-            if pid in anchored_claims and claim.get("claimType") != "recommendation":
+            if pid in anchored_claims and claim.get("claimType") != "recommendation" and verdicts[pid]["verdict"] == "supported":
                 verdicts[pid]["verdict"] = "supported"
                 verdicts[pid]["category"] = "direct_accurate"
                 verdicts[pid]["evidenceIds"] = list(

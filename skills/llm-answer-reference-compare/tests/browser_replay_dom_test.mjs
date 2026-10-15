@@ -11,6 +11,11 @@ let pageLoads = 0;
 const submitted = [];
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://127.0.0.1");
+    if (url.pathname === "/policy/12") {
+        response.setHeader("content-type", "text/html; charset=utf-8");
+        response.end("<article>校外培训管理规定：线下培训结束时间不得晚于20:30，线上培训结束时间不得晚于21:00。来源卡原文不得混入主回答。该来源由本地夹具提供，不依赖外部网络。</article>");
+        return;
+    }
     if (url.pathname === "/submitted") {
         submitted.push(url.searchParams.get("q"));
         response.end("ok");
@@ -28,7 +33,7 @@ const server = createServer((request, response) => {
             '<p>线下培训结束时间不得晚于20:30，线上培训结束时间不得晚于21:00<sup class="sup">12</sup>；</p>' +
             '<div class="chatsse-note-item"><span class="chatsse-note-score-id" data-id="12">12</span>' +
             '<span class="czkjTitle">校外培训管理规定</span>' +
-            '<span data-url="https://example.gov.cn/policy/12"></span>' +
+            '<span data-url="' + location.origin + '/policy/12"></span>' +
             '<span class="scoresText">来源卡原文不得混入主回答</span></div>';
           document.querySelector('#q').value = '';
         };

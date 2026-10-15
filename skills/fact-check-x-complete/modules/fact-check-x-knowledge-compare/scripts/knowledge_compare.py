@@ -108,10 +108,10 @@ def normalize_role(question: str, description: str, raw_role: object) -> tuple[s
         for term in ("条件", "门槛", "要求", "资格", "须满足", "需要满足")
     )
     describes_requirement = bool(re.search(
-        r"(?:须|应当|不得|不低于|不超过|未发生|达到|达标|拥有|属于|注册成立)",
+        r"(?:须|应当|不得|不低于|不超过|未发生|达到|达标|拥有|属于|注册成立|申请前.{0,12}(?:事故|违法))",
         compact_description,
     ))
-    if role == "reference" and asks_requirements and describes_requirement:
+    if asks_requirements and describes_requirement:
         return "direct", "requested_requirement"
     question_topics = topic_groups(compact_question)
     point_topics = topic_groups(compact_description)
@@ -270,10 +270,21 @@ def longest_common_claim_span(claim: str, evidence: str) -> int:
 def geographic_scopes(value: object) -> set[str]:
     text = re.sub(r"\s+", "", str(value or ""))
     scopes = {term for term in CITY_SCOPE_TERMS if term in text}
-    for match in re.finditer(r"([\u4e00-\u9fff]{2,6})(?:省|市|自治区|自治州|区|县|旗)", text):
-        name = match.group(1)
-        if len(name) <= 6:
-            scopes.add(name)
+    # Unknown names remain unknown; ordinary words ending in 区/市 are not places.
+    named_regions = (
+        "广东省", "浙江省", "江苏省", "山东省", "福建省", "安徽省", "江西省",
+        "湖南省", "湖北省", "河南省", "河北省", "山西省", "陕西省", "四川省",
+        "贵州省", "云南省", "海南省", "辽宁省", "吉林省", "黑龙江省", "甘肃省",
+        "青海省", "台湾省", "内蒙古自治区", "广西壮族自治区", "西藏自治区",
+        "宁夏回族自治区", "新疆维吾尔自治区", "香港特别行政区", "澳门特别行政区",
+        "福田区", "罗湖区", "南山区", "宝安区", "龙岗区", "龙华区", "盐田区",
+        "坪山区", "光明区", "大鹏新区", "东乡县", "康乐县",
+        "攀枝花市", "南宁市", "合肥市", "惠州市", "石家庄市", "太原市", "沈阳市",
+        "长春市", "哈尔滨市", "福州市", "南昌市", "济南市", "郑州市", "长沙市",
+        "海口市", "贵阳市", "昆明市", "拉萨市", "西安市", "兰州市", "西宁市",
+        "银川市", "乌鲁木齐市", "呼和浩特市",
+    )
+    scopes.update(name for name in named_regions if name in text)
     return scopes
 
 
@@ -330,6 +341,24 @@ def claim_scope_overreach_reason(claim: object, answer_excerpt: object) -> str:
     return ""
 
 
+def numeric_facts_supported(claim: str, evidence: str) -> bool:
+    # Numbers in years, filing IDs and unrelated units are not amount evidence.
+    unit = r"(?:亿元|万元|元|年|个月|月|日|天|件|家|人|次(?!性)|岁|平方米|分|%)"
+    def expand_range(text: str) -> str:
+        text = re.sub(r"(\d)万(?!元)", r"\1万元", text)
+        return re.sub(
+            rf"(?<![\d.])(\d+(?:\.\d+)?)(?:至|到|[-—–~～])(\d+(?:\.\d+)?)({unit})",
+            r"\1\3至\2\3", text,
+        )
+    claim, evidence = expand_range(claim), expand_range(evidence)
+    for match in re.finditer(rf"(?<![\d.])(\d+(?:\.\d+)?)({unit})?", claim):
+        value, suffix = match.groups()
+        pattern = rf"(?<![\d.]){re.escape(value)}" + (re.escape(suffix) if suffix else r"(?![\d.])")
+        if not re.search(pattern, evidence):
+            return False
+    return True
+
+
 def semantic_claim_support(claim: object, evidence: object) -> bool:
     claim_text = canonicalize_policy_expression(claim)
     evidence_text = canonicalize_policy_expression(evidence)
@@ -343,7 +372,7 @@ def semantic_claim_support(claim: object, evidence: object) -> bool:
     ):
         return False
     numeric = re.findall(r"\d+(?:\.\d+)?", claim_text)
-    if any(value not in evidence_text for value in numeric):
+    if not numeric_facts_supported(claim_text, evidence_text):
         return False
     if any(
         re.search(
@@ -360,6 +389,11 @@ def semantic_claim_support(claim: object, evidence: object) -> bool:
         return False
     claim_scopes = geographic_scopes(claim_text)
     evidence_scopes = geographic_scopes(evidence_text)
+    for suffixes in (("市",), ("区", "县", "旗")):
+        claim_local = {scope for scope in claim_scopes if scope.endswith(suffixes) or (suffixes == ("市",) and scope in CITY_SCOPE_TERMS)}
+        evidence_local = {scope for scope in evidence_scopes if scope.endswith(suffixes) or (suffixes == ("市",) and scope in CITY_SCOPE_TERMS)}
+        if claim_local and evidence_local and not claim_local & evidence_local:
+            return False
     if claim_scopes and evidence_scopes and not (claim_scopes & evidence_scopes):
         return False
     coverage, _, _ = semantic_overlap_score(claim_text, evidence_text)
@@ -389,7 +423,7 @@ def raw_evidence_supports_claim(claim: object, evidence: object) -> bool:
     if claim_requires_explicit_absence_evidence(claim_text) and not has_explicit_absence_evidence(evidence_text):
         return False
     numeric = re.findall(r"\d+(?:\.\d+)?", claim_text)
-    if numeric and not all(value in evidence_text for value in numeric):
+    if not numeric_facts_supported(claim_text, evidence_text):
         return False
     units = set(re.findall(
         r"\d+(?:\.\d+)?\s*(万元|元|年|月|日|天|件|家|人|次|岁|平方米|%)",
@@ -430,7 +464,7 @@ def official_anchor_policy(reference: dict, platform_id: str) -> str:
 
 def reference_text(reference: dict) -> str:
     parts = []
-    for key in ("snippet", "text", "content", "body"):
+    for key in ("snippet", "text", "content", "body", "traceabilityText"):
         if key == "snippet" and reference.get("snippetProvenance") == "answer_context":
             continue
         value = str(reference.get(key) or "").strip()
@@ -719,6 +753,7 @@ def task_platform(platform: dict) -> dict:
             "originAttributionStatus",
             "snippetProvenance",
             "sourceAcquisitionStatus",
+            "sourceContentScope",
             "sourceResolvedUrl",
             "zone",
         ):
@@ -809,6 +844,8 @@ def build_task(question: str, platforms: list[dict]) -> dict:
             "claimType=fact 表示可验证的事实主张，claimType=recommendation 表示纯操作建议",
             "纯操作建议不因缺少逐句脚标而判为引用不忠实；建议中包含的制度事实、条件、数字或时效必须拆成独立 fact 知识点",
             "每个平台逐点填写 covered、claim、citedReferenceIndexes、faithfulness、reason 和 evidence",
+            "必须保留原回答中限定当前主张的年度、项目、对象和适用条件；历史公示不能去掉年度改写为现行政策，不同项目金额不能直接判为同一事实冲突",
+            "answerExcerpt 应只定位当前主张及其相连脚标；不得跨表格行借用其他地区或其他主张的引用。attachedReferenceIndexes 表示已观察到的引用，不等于 citedReferenceIndexes 中通过支持校验的证据",
             "covered=true 时必须填写 answerExcerpt；它必须是原回答的连续原文子串，并覆盖当前原子主张",
             "answerExcerpt 必须包含 claim 的全部实质要素和量化值；claim 超出 answerExcerpt 是比较分析错误，不得写成平台来源不足",
             "逐句脚标来源只有在脚标实际出现在当前 answerExcerpt 内时才算与该主张局部绑定；不得用答案后段的脚标反向支持前段主张",
@@ -1036,9 +1073,13 @@ def normalize_claim(raw: object, platform: dict, kid: str, claim_type: str, anal
         if levels
         else "none"
     )
+    # Keep observed attachments independent of successful support validation.
+    attached_indexes = sorted(locally_bound_indexes) if covered and excerpt_valid else []
+    attached_levels = [source_level(references[index - 1], platform["platform"]) for index in attached_indexes]
+    attached_level = next((value for value in ("official", "dknow_trusted_search_official", "nonofficial") if value in attached_levels), "none")
     binding_mode = (
         "local"
-        if any(index in locally_bound_indexes for index in requested)
+        if attached_indexes
         else "declared_global"
         if requested
         else "answer_level_semantic"
@@ -1073,6 +1114,8 @@ def normalize_claim(raw: object, platform: dict, kid: str, claim_type: str, anal
         "claim": clipped(item.get("claim"), 1000) if covered else "",
         "answerExcerpt": clipped(answer_excerpt, 4000) if covered else "",
         "locallyBoundReferenceIndexes": sorted(locally_bound_indexes),
+        "attachedReferenceIndexes": attached_indexes,
+        "attachedSourceLevel": attached_level,
         "citationMode": citation_mode,
         "citedReferenceIndexes": effective_indexes,
         "answerLevelReferenceIndexes": answer_level_requested,
@@ -1137,7 +1180,7 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
             evidence.append({
                 "referenceIndex": reference_index,
                 "excerpt": excerpt,
-                "body": clipped(body, 6000),
+                "body": body,
             })
         if not evidence or len(policies) != 1:
             continue

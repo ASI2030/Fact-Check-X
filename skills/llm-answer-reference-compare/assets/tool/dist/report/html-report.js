@@ -911,7 +911,9 @@ function renderReferenceItem(platform, reference, index) {
         : reference.citationScope === "inline_and_global"
             ? `<span class="badge neutral">间接查找</span> `
             : "";
-    const acquisition = reference.sourceAcquisitionStatus === "captured"
+    const acquisition = reference.sourceContentScope === "platform_excerpt"
+        ? `<span class="badge warning">平台引用片段，非文件全文</span> `
+        : reference.sourceAcquisitionStatus === "captured"
         ? `<span class="badge neutral">已打开并存证正文</span> `
         : reference.sourceAcquisitionStatus === "blocked"
             ? `<span class="badge warning">来源访问受阻</span> `

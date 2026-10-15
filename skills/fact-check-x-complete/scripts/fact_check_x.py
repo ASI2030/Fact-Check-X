@@ -780,8 +780,14 @@ def validate_capture_results(results_path: Path, minimum_platforms: int = 1) -> 
             )
         elif is_prompt_only(answer):
             incomplete.append(f"{item.get('label') or item.get('platform')}: 捕获内容是登录、地区选择或初始化提示")
+        elif item.get("platform") == "doubao":
+            compact = "".join(answer.split())
+            if (re.search(r"^(?:已将|已把|已交给|已经将|已经把).{0,100}(?:Agent|智能体|后台)", compact, re.I)
+                    and re.search(r"后台执行|后台处理|完成后|稍后.{0,20}(?:给你|给您)|期间你可以继续", compact)
+                    and not re.search(r"以下是|结果如下|调研结果如下|报告如下", compact)):
+                incomplete.append("豆包: 只有后台任务受理通知，尚未取得最终回答；只能在原会话续采，禁止重复提问")
     if incomplete:
-        raise PipelineError("采集未完成，已禁止进入知识点对比；请先重新采集失败平台：" + "；".join(incomplete))
+        raise PipelineError("采集未完成，已禁止进入知识点对比；请先恢复失败平台的原会话：" + "；".join(incomplete))
     recovery_path = results_path.parent / "capture-recovery.json"
     if recovery_path.exists():
         recovery = load_json(recovery_path)
