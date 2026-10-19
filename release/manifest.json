@@ -1,6 +1,6 @@
 {
   "schemaVersion": "fact-check-x/public-release-source-manifest@2",
-  "status": "ready_to_publish",
+  "status": "published",
   "product": {
     "nameZh": "全知晓",
     "nameEn": "Fact-Check-X",
@@ -67,8 +67,17 @@
   ],
   "distribution": {
     "github": {
-      "status": "authorized_pending_publication",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.25"
+      "status": "release_published",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.25",
+      "isDraft": false,
+      "isPrerelease": false,
+      "publishedAt": "2026-10-19T11:14:18+08:00",
+      "targetCommit": "6705d003ba22d9ed151dc89563f3d6b489a5859b",
+      "assetCount": 12,
+      "downloadAssetsByteVerified": 12,
+      "installedVersion": "1.1.25",
+      "managedFilesMatched": 128,
+      "installedSmoke": "passed"
     },
     "skillhub": {
       "status": "submitted_pending_review",
@@ -77,7 +86,9 @@
       "versionId": 445422,
       "submittedPackageSha256": "93401705873ba567834a8f67fc5714128a6d2366d733abcc2c24c390845ec2e3",
       "contentAuditStatus": "pending",
-      "securityScanStatus": "pending"
+      "securityScanStatus": "pending",
+      "publicInstalledVersion": "1.1.24",
+      "newVersionInstallVerified": false
     },
     "workbuddy": {
       "status": "not_updated_in_this_release"
@@ -98,8 +109,9 @@
     "generalPlatformRanking": false
   },
   "publishGate": {
-    "githubUploadAllowed": true,
-    "marketplaceUploadAllowed": true,
-    "basis": "Explicit owner authorization on 2026-10-19; exact group-delivered package frozen"
-  }
+    "githubUploadAllowed": false,
+    "marketplaceUploadAllowed": false,
+    "blockingReason": "Version 1.1.25 has been published. Further changes require a new version."
+  },
+  "sourceCommitSha": "6705d003ba22d9ed151dc89563f3d6b489a5859b"
 }
