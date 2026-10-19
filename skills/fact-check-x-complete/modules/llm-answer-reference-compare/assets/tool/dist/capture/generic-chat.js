@@ -76,6 +76,9 @@ export async function captureGenericChat(config, options) {
         session = await openBrowserSession(profileDir, config.url, options);
         context = session.context;
         page = session.page;
+        page.on("framenavigated", frame => {
+            if (frame === page.mainFrame()) lifecycle.conversationUrl = page.url();
+        });
         const activePage = page;
         page.setDefaultTimeout(options.timeoutMs);
         page.setDefaultNavigationTimeout(options.timeoutMs);
@@ -278,6 +281,7 @@ export async function captureGenericChat(config, options) {
             );
             page.setDefaultTimeout(options.timeoutMs);
             page.setDefaultNavigationTimeout(options.timeoutMs);
+            lifecycle.conversationUrl = page.url();
             const deepResearchTimeoutMs = Number(config.deepResearchTimeoutMs)
                 || options.timeoutMs;
             answerMarkdown = await waitForAnswer(
@@ -297,6 +301,10 @@ export async function captureGenericChat(config, options) {
         }
         capturedAnswerMarkdown = answerMarkdown;
         const extraction = await extractReferences(config, page, options.question);
+        if (config.name === "doubao") {
+            answerMarkdown = await extractDoubaoAnswer(page, extraction.inlineMarkers);
+            capturedAnswerMarkdown = answerMarkdown;
+        }
         const references = extraction.references;
         capturedReferences = references;
         capturedSourceCountAudit = extraction.sourceCountAudit;
@@ -619,24 +627,20 @@ async function extractDeepSeekAnswer(page) {
     }
     return normalizeAnswerText(text);
 }
-async function extractDoubaoAnswer(page) {
+export async function extractDoubaoAnswer(page, inlineMarkers = []) {
     const locator = page.locator(".md-box-root").last();
     if ((await locator.count().catch(() => 0)) === 0) {
         return "";
     }
-    const text = await locator.evaluate((node) => {
+    const text = await locator.evaluate((node, markers) => {
         const clone = node.cloneNode(true);
-        const sourceMarkers = new Map();
-        for (const source of Array.from(clone.querySelectorAll(".container-DEV3jt, .container-sWvQla"))) {
+        for (const [index, source] of Array.from(clone.querySelectorAll(".container-DEV3jt, .container-sWvQla")).entries()) {
             const label = source.textContent?.trim().replace(/\s+/g, " ");
             if (!label) {
                 source.remove();
                 continue;
             }
-            if (!sourceMarkers.has(label)) {
-                sourceMarkers.set(label, String(sourceMarkers.size + 1));
-            }
-            source.replaceWith(document.createTextNode(`【${sourceMarkers.get(label)}】`));
+            source.replaceWith(document.createTextNode(`【${markers[index] || index + 1}】`));
         }
         clone.querySelectorAll(".spacing-ANk22f").forEach((element) => element.remove());
         for (const cell of clone.querySelectorAll("td, th")) cell.append(document.createTextNode("\t"));
@@ -646,7 +650,7 @@ async function extractDoubaoAnswer(page) {
         }
         for (const br of clone.querySelectorAll("br")) br.replaceWith(document.createTextNode("\n"));
         return (clone.textContent || "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-    }).catch(() => "");
+    }, inlineMarkers).catch(() => "");
     if (!text || looksLikeLoadingText(text)) {
         return "";
     }
@@ -1122,7 +1126,7 @@ export async function waitForAnswer(config, page, timeoutMs, previousAnswer = ""
             lastText = text;
             stableSince = Date.now();
         }
-        else if (text && (doubaoStreamCompleted || !generating) && stableSince && Date.now() - stableSince >= stableWindowMs) {
+        else if (text && !generating && stableSince && Date.now() - stableSince >= stableWindowMs) {
             // 豆包以回答流正常结束为主标志；旧接口使用 SSE done，DOM 生成态仅作兼容兜底。
             if (config.name === "doubao" && control.streamMonitor && !streamState?.completed) {
                 await page.waitForTimeout(1500);
@@ -1153,6 +1157,10 @@ async function isGenerationInProgress(config, page) {
         "[class*='stop-generating']",
         "button:has-text('停止生成')"
     ];
+    if (config.name === "doubao") {
+        selectors.unshift("[data-testid='chat_input_local_break_button']",
+            "[data-conversation-active='true'] [data-testid='conversation-list-v2-status-loading']");
+    }
     if (config.name === "yuanbao") {
         selectors.unshift(
             "#yuanbao-send-btn[aria-label='停止回答']",
@@ -1204,6 +1212,7 @@ export async function extractReferences(config, page, question = "") {
     const seen = new Set();
     const references = [];
     let sourceCountAudit;
+    let inlineMarkers;
     if (isDknowcPlatform(config)) {
         references.push(...(await extractDknowcReferences(page, config.url, question)));
         for (const reference of references) {
@@ -1214,6 +1223,7 @@ export async function extractReferences(config, page, question = "") {
         const diagnostics = {};
         references.push(...(await extractDoubaoReferences(page, config.url, question, diagnostics)));
         sourceCountAudit = diagnostics.sourceCountAudit;
+        inlineMarkers = diagnostics.inlineMarkers;
         for (const reference of references) {
             seen.add(reference.normalizedUrl);
         }
@@ -1275,7 +1285,7 @@ export async function extractReferences(config, page, question = "") {
             reference.sourceContentScope = "document_extraction";
         }
     }
-    return { references, sourceCountAudit };
+    return { references, sourceCountAudit, inlineMarkers };
 }
 async function extractQianwenReferences(page, baseUrl) {
     const sourceButton = page.locator("text=/\\d+篇来源/").last();
@@ -1498,7 +1508,7 @@ export async function extractDoubaoReferences(page, baseUrl, question = "", diag
                 continue;
             }
             const sourceLabel = findSourceLabel(anchor);
-            const markerKey = sourceLabel || rawUrl;
+            const markerKey = normalizeInBrowser(rawUrl, base);
             const isFirstMarkerUse = !sourceMarkers.has(markerKey);
             if (isFirstMarkerUse) {
                 sourceMarkers.set(markerKey, String(sourceMarkers.size + 1));
@@ -1578,13 +1588,16 @@ export async function extractDoubaoReferences(page, baseUrl, question = "", diag
     }
     const sourceControls = root.locator(".container-DEV3jt, .container-sWvQla");
     const sourceCount = await sourceControls.count().catch(() => 0);
-    const markerByLabel = new Map();
-    for (const reference of references) {
-        const label = reference.text?.trim();
-        if (label && reference.marker && reference.citationScope !== "global") {
-            markerByLabel.set(label, reference.marker);
-        }
-    }
+    // Site labels are not article identities; resolve each control to its actual URL.
+    diagnostics.inlineMarkers = [];
+    let nextMarker = Math.max(0, ...references.map(ref => Number(ref.marker) || 0)) + 1;
+    const markerFor = (url, index) => {
+        if (diagnostics.inlineMarkers[index]) return diagnostics.inlineMarkers[index];
+        const existing = references.find(ref => ref.normalizedUrl === url);
+        const marker = existing?.marker || String(nextMarker++);
+        diagnostics.inlineMarkers[index] = marker;
+        return marker;
+    };
     for (let index = 0; index < sourceCount; index += 1) {
         const source = sourceControls.nth(index);
         if (!(await source.isVisible().catch(() => false))) {
@@ -1593,9 +1606,6 @@ export async function extractDoubaoReferences(page, baseUrl, question = "", diag
         const sourceLabel = (await source.innerText().catch(() => "")).trim().replace(/\s+/g, " ");
         if (!sourceLabel) {
             continue;
-        }
-        if (!markerByLabel.has(sourceLabel)) {
-            markerByLabel.set(sourceLabel, String(markerByLabel.size + 1));
         }
         await source.hover({ timeout: 1500 }).catch(() => undefined);
         await page.waitForTimeout(500);
@@ -1693,7 +1703,7 @@ export async function extractDoubaoReferences(page, baseUrl, question = "", diag
         for (const reference of embeddedReferences) {
             mergeDoubaoReference(references, {
                 ...reference,
-                marker: markerByLabel.get(sourceLabel),
+                marker: markerFor(reference.normalizedUrl, index),
                 text: sourceLabel,
                 citationScope: "inline"
             });
@@ -1721,7 +1731,7 @@ export async function extractDoubaoReferences(page, baseUrl, question = "", diag
             title: effectiveTitle,
             url: normalizedUrl,
             normalizedUrl,
-            marker: markerByLabel.get(sourceLabel),
+            marker: markerFor(normalizedUrl, index),
             text: sourceLabel,
             snippet: effectiveTitle,
             citationScope: "inline"
@@ -2584,37 +2594,7 @@ export async function extractSourcePageContentViaFetch(sourcePage, rawUrl) {
             return undefined;
         }
         const html = await response.text();
-        const extracted = await sourcePage.evaluate((rawHtml) => {
-            const doc = new DOMParser().parseFromString(rawHtml, "text/html");
-            doc.querySelectorAll("script, style, nav, header, footer, noscript").forEach((node) => node.remove());
-            const clean = (value) => String(value || "").trim().replace(/\s+/g, " ");
-            const selectors = [
-                "article", "main", "[role='main']", "#content", "#article-content",
-                ".article-content", ".article_detail", ".content"
-            ];
-            const candidates = [];
-            for (const selector of selectors) {
-                for (const element of doc.querySelectorAll(selector)) {
-                    const text = clean(element.textContent);
-                    if (text.length >= 40) {
-                        candidates.push(text);
-                    }
-                }
-            }
-            const bodyText = clean(doc.body?.textContent);
-            if (!candidates.length && bodyText.length >= 40) {
-                candidates.push(bodyText);
-            }
-            candidates.sort((first, second) => second.length - first.length);
-            const content = candidates[0] || "";
-            const blocked = /(?:访问过于频繁|安全验证|人机验证|请输入验证码|access denied|forbidden)/i.test(content);
-            return {
-                title: clean(doc.title),
-                content: blocked ? "" : content,
-                blocked,
-                reason: blocked ? "来源页面要求人机验证或拒绝访问" : ""
-            };
-        }, html);
+        const extracted = await sourcePage.evaluate(extractSourceDocument, html);
         return extracted.content
             ? { ...extracted, resolvedUrl: response.url || rawUrl }
             : undefined;
@@ -2648,44 +2628,29 @@ function shouldHydrateDoubaoReference(reference) {
     ]);
     return snippet.length < 120 || labels.has(snippet);
 }
+export function extractSourceDocument(rawHtml) {
+    const doc = typeof rawHtml === "string" ? new DOMParser().parseFromString(rawHtml, "text/html") : document.cloneNode(true);
+    doc.querySelectorAll("script, style, nav, header, footer, noscript").forEach(node => node.remove());
+    // Detached DOM textContent has no layout separators; retain table cells and rows.
+    doc.querySelectorAll("td, th").forEach(node => node.append("\t"));
+    doc.querySelectorAll("tr, p, div, section, li, h1, h2, h3, br").forEach(node => node.append("\n"));
+    const clean = value => String(value || "").replace(/[ \r\f\v]+/g, " ").replace(/ *\t */g, "\t").replace(/\n[ \t]*\n+/g, "\n").trim();
+    const candidates = [];
+    for (const selector of ["article", "main", "[role='main']", "#content", "#article-content", ".article-content", ".article_detail", ".content"]) {
+        for (const element of doc.querySelectorAll(selector)) {
+            const text = clean(element.textContent);
+            if (text.length >= 40) candidates.push(text);
+        }
+    }
+    const bodyText = clean(doc.body?.textContent);
+    if (!candidates.length && bodyText.length >= 40) candidates.push(bodyText);
+    candidates.sort((a, b) => b.length - a.length);
+    const content = candidates[0] || "";
+    const blocked = /(?:访问过于频繁|安全验证|人机验证|请输入验证码|access denied|forbidden)/i.test(content);
+    return { title: clean(doc.title), content: blocked ? "" : content, blocked, reason: blocked ? "来源页面要求人机验证或拒绝访问" : "" };
+}
 async function extractSourcePageContent(sourcePage) {
-    return sourcePage.evaluate(() => {
-        const clean = (value) => String(value || "").trim().replace(/\s+/g, " ");
-        const doc = document.cloneNode(true);
-        doc.querySelectorAll("script, style, nav, header, footer, noscript").forEach((node) => node.remove());
-        const selectors = [
-            "article",
-            "main",
-            "[role='main']",
-            "#content",
-            "#article-content",
-            ".article-content",
-            ".article_detail",
-            ".content"
-        ];
-        const candidates = [];
-        for (const selector of selectors) {
-            for (const element of doc.querySelectorAll(selector)) {
-                const text = clean(element.innerText || element.textContent);
-                if (text.length >= 40) {
-                    candidates.push(text);
-                }
-            }
-        }
-        const bodyText = clean(doc.body?.textContent);
-        if (!candidates.length && bodyText.length >= 40) {
-            candidates.push(bodyText);
-        }
-        candidates.sort((first, second) => second.length - first.length);
-        const content = candidates[0] || "";
-        const blocked = /(?:访问过于频繁|安全验证|人机验证|请输入验证码|access denied|forbidden)/i.test(content);
-        return {
-            title: clean(document.title),
-            content: blocked ? "" : content,
-            blocked,
-            reason: blocked ? "来源页面要求人机验证或拒绝访问" : ""
-        };
-    }).catch(() => ({ title: "", content: "", blocked: false, reason: "" }));
+    return sourcePage.evaluate(extractSourceDocument).catch(() => ({ title: "", content: "", blocked: false, reason: "" }));
 }
 async function clickDoubaoSourceCard(page, card) {
     const beforeUrl = page.url();
@@ -3464,6 +3429,7 @@ async function captureDknowcDeepCompanion(
     ordinaryAnswer
 ) {
     const started = Date.now();
+    config._activeCaptureLifecycle = { ...options.captureLifecycle, resubmissionAllowed: false };
     const artifactDir = join(options.outDir, "artifacts", config.name);
     await ensureDir(artifactDir);
     let page = ordinaryPage;
@@ -3479,6 +3445,7 @@ async function captureDknowcDeepCompanion(
         );
         page.setDefaultTimeout(options.timeoutMs);
         page.setDefaultNavigationTimeout(options.timeoutMs);
+        config._activeCaptureLifecycle.conversationUrl = page.url();
         const deepResearchTimeoutMs = Number(config.deepResearchTimeoutMs)
             || options.timeoutMs;
         answerMarkdown = await waitForAnswer(
@@ -3617,6 +3584,7 @@ function captureLifecycleSnapshot(config) {
         submissionCount: Number(lifecycle.submissionCount || 0),
         submissionConfirmed: Boolean(lifecycle.submissionConfirmed),
         answerObserved: Boolean(lifecycle.answerObserved),
+        conversationUrl: String(lifecycle.conversationUrl || ""),
         resubmissionAllowed: !lifecycle.submissionAttempted && !lifecycle.answerObserved
     };
 }

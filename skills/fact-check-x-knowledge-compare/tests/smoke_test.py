@@ -25,7 +25,7 @@ def run(arguments: list[str]) -> None:
         raise AssertionError(proc.stdout or proc.stderr)
 
 
-def main() -> int:
+def legacy_heuristic_main() -> int:
     assert semantic_claim_support(
         "每人每月最高提取额度为1400元",
         "按免租赁合同情形核定的月度提取上限为一千四百元。",
@@ -1531,6 +1531,13 @@ def main() -> int:
         }), encoding="utf-8")
     print("PASS 知识点结构化对比")
     return 0
+
+
+def main() -> int:
+    # The old matcher assertions remain for historical diagnostics only.
+    # Current releases test carrier decisions and captured-evidence integrity.
+    from model_judgment_test import main as model_judgment_main
+    return model_judgment_main()
 
 
 if __name__ == "__main__":

@@ -1,83 +1,81 @@
 {
   "schemaVersion": "fact-check-x/public-release-source-manifest@2",
-  "status": "published",
+  "status": "ready_to_publish",
   "product": {
     "nameZh": "全知晓",
     "nameEn": "Fact-Check-X",
     "repository": "https://github.com/ASI2030/Fact-Check-X"
   },
-  "version": "1.1.24",
-  "tag": "v1.1.24",
-  "previousPublishedVersion": "1.1.21",
+  "version": "1.1.25",
+  "tag": "v1.1.25",
+  "previousPublishedVersion": "1.1.24",
   "formalArtifact": {
     "file": "fact-check-x-complete.zip",
-    "bytes": 426973,
-    "files": 121,
-    "sha256": "f892e60173464fb1dd1eeba49cb3a0f421abce81021dde8fcd53cb98a21b2c6d"
+    "bytes": 439189,
+    "files": 128,
+    "sha256": "97309dad7fdf91b6bc8476dbbeec47635096d57f7713655c13532880a324d16a"
   },
   "publicArtifacts": [
     {
       "file": "SHA256SUMS",
-      "sha256": "8168cc594a55809039f3b10016edd43238a26d0be436d3b382da30d1d9b4982e"
+      "sha256": "551c41469c4f206a046394bec3c43f87d62f1bfd279453e4132090701e5f73e0"
     },
     {
-      "file": "fact-check-x-authoritative-verify-v1.1.24.zip",
-      "sha256": "38cbc44d9929c990a4cb0bbc2c6a9da3895bf3487efac44fd9759c400db9618d"
+      "file": "fact-check-x-authoritative-verify-v1.1.25.zip",
+      "sha256": "7a9c0a9a147a03bc8468f1e65ac2386481bacc709c10a4dee4cee5a3197acbd3"
     },
     {
-      "file": "fact-check-x-complete-v1.1.24.zip",
-      "sha256": "f892e60173464fb1dd1eeba49cb3a0f421abce81021dde8fcd53cb98a21b2c6d"
+      "file": "fact-check-x-complete-v1.1.25.zip",
+      "sha256": "97309dad7fdf91b6bc8476dbbeec47635096d57f7713655c13532880a324d16a"
     },
     {
       "file": "fact-check-x-complete.zip",
-      "sha256": "f892e60173464fb1dd1eeba49cb3a0f421abce81021dde8fcd53cb98a21b2c6d"
+      "sha256": "97309dad7fdf91b6bc8476dbbeec47635096d57f7713655c13532880a324d16a"
     },
     {
-      "file": "fact-check-x-knowledge-compare-v1.1.24.zip",
-      "sha256": "7f26a16fc95d359d9cbbf947b2b42b4614b6b1b8b9421f45d2b4272e5368ad65"
+      "file": "fact-check-x-knowledge-compare-v1.1.25.zip",
+      "sha256": "9b102a1181eb04471f4e73ed3da3e866f8a298cc93a4cce36df67da67bf030b3"
     },
     {
-      "file": "fact-check-x-skillhub-v1.1.24.zip",
-      "sha256": "c80efa568fe4f9099823eddad28210b7c13e4fc488843b420f5fbd1029cbe854"
+      "file": "fact-check-x-skillhub-v1.1.25.zip",
+      "sha256": "93401705873ba567834a8f67fc5714128a6d2366d733abcc2c24c390845ec2e3"
     },
     {
-      "file": "fact-check-x-suite-v1.1.24.zip",
-      "sha256": "934f7f5c9245ed1b453161a997ca4342f38dd6ab253a2a10e08a4d3d6bcb0608"
+      "file": "fact-check-x-suite-v1.1.25.zip",
+      "sha256": "60e72222c8a6829cd0fe62ef6b6e17f735be3c43d6952e7dc915c856bcfb9cda"
     },
     {
-      "file": "fact-check-x-unified-v1.1.24.zip",
-      "sha256": "df373a221fc718dec6d8e921527554b3c012619087fc09365eed6da4ec7343e4"
+      "file": "fact-check-x-unified-v1.1.25.zip",
+      "sha256": "0f227f89bdefc0175bef8491981f981cb989b164c8f657cbc9184327ce4f4489"
     },
     {
-      "file": "llm-answer-reference-compare-v1.1.24.zip",
-      "sha256": "8afd5df9eff66b6691ae00a2d4e35f41d5585fceb3f717fcef4e526c66a8a6eb"
+      "file": "llm-answer-reference-compare-v1.1.25.zip",
+      "sha256": "cee53e7229eb3b3c415909965c2c63a56cbddaf250fd8c2101448177792efad0"
     },
     {
       "file": "release-manifest.json",
-      "sha256": "1a453b59ef5e6611e01bf78bb531a244d669fe19a4220ca4f191d763837458b7"
+      "sha256": "7c4724c3a2911013ec08c3efcf9270aa1ae360720eb9c1f86c8f592f1c5bfa45"
     },
     {
       "file": "sbom.cdx.json",
-      "sha256": "cb6573e204c078639c3807f1b30cf470f04b1fb957346e6bd438e2d4c283398f"
+      "sha256": "2c96bd61504dd3b837c10d5c589d5fcc771967c02f1d368359ed4f25a6b2a6e5"
     },
     {
       "file": "sbom.spdx.json",
-      "sha256": "c0cb6b9ebba548b595e7ea35a5aae6d5fab1d7b8e7824e5088f395ed0beffebe"
+      "sha256": "6423ce3469e3d8705a18f1e19a3613c171ac429f2193d67fd7b835256bafc0f9"
     }
   ],
   "distribution": {
     "github": {
-      "status": "release_published",
-      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.24",
-      "assetCount": 12,
-      "downloadAssetsByteVerified": 12
+      "status": "authorized_pending_publication",
+      "url": "https://github.com/ASI2030/Fact-Check-X/releases/tag/v1.1.25"
     },
     "skillhub": {
       "status": "submitted_pending_review",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
-      "version": "1.1.24",
-      "versionId": 437875,
-      "submittedPackageSha256": "c80efa568fe4f9099823eddad28210b7c13e4fc488843b420f5fbd1029cbe854",
+      "version": "1.1.25",
+      "versionId": 445422,
+      "submittedPackageSha256": "93401705873ba567834a8f67fc5714128a6d2366d733abcc2c24c390845ec2e3",
       "contentAuditStatus": "pending",
       "securityScanStatus": "pending"
     },
@@ -88,22 +86,20 @@
   "verification": {
     "reproducibleBuild": "verified",
     "independentBuildsMatched": 2,
-    "cleanPackagedFilesMatched": 121,
-    "installedRegressionTests": 21,
-    "installedRegressionPassed": 21,
+    "cleanPackagedFilesMatched": 128,
+    "installedRegressionTests": 18,
+    "installedRegressionPassed": 18,
     "livePlatforms": 4,
-    "liveKeyFacts": 16,
-    "trustedSearchRequests": 1,
-    "trustedSearchTechnicalErrors": 0,
+    "liveKeyFacts": 13,
+    "computerUseOriginalConversationRecovery": "verified",
+    "recoveryNewSubmissions": 0,
     "windowsPhysicalMachine": "not_tested",
     "boundedBusinessRegression": true,
     "generalPlatformRanking": false
   },
   "publishGate": {
-    "githubUploadAllowed": false,
-    "marketplaceUploadAllowed": false,
-    "blockingReason": "Version 1.1.24 is published on GitHub and submitted to SkillHub review. Further product changes require a new version."
-  },
-  "sourceCommitSha": "b7805760de937acc883993d76c65e249126aa5b0",
-  "publishedAt": "2026-10-15T15:03:25+08:00"
+    "githubUploadAllowed": true,
+    "marketplaceUploadAllowed": true,
+    "basis": "Explicit owner authorization on 2026-10-19; exact group-delivered package frozen"
+  }
 }

@@ -4,6 +4,14 @@ All notable changes are documented in this file. The project follows Semantic Ve
 
 ## [Unreleased]
 
+## [1.1.25] - 2026-10-19
+
+- Let the carrier model judge semantic equivalence, units, arithmetic and policy applicability; validate real answer/source excerpts without replacing model decisions with lexical heuristics.
+- Actively hand failed capture to host browser tools or Computer Use, then resume the original conversation without submitting the question again.
+- Hydrate the original source document when previews are incomplete, preserving table boundaries and original snippets.
+- Bind Doubao citation markers to actual source URLs instead of shared site labels.
+- Verify 18 clean-install regression groups and a real four-platform, 13-core-point workflow including Computer Use recovery. This is not a general platform ranking or physical Windows validation.
+
 ## [1.1.24] - 2026-10-15
 
 - Reject Doubao background-job acknowledgements at both capture and evaluation boundaries; continue in the original conversation instead of resubmitting.

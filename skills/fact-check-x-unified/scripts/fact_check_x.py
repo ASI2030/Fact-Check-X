@@ -861,12 +861,11 @@ def prepare_comparison(args: argparse.Namespace, skills: dict[str, Path]) -> dic
     result.update({
         "stage": "capture_completed",
         "analysisExecution": {
-            "mode": "single_pass",
-            "maxToolCallsAfterStageAcknowledgement": 3,
+            "mode": "evidence_review",
             "instructions": [
-                "读取 comparison-task.json 一次，不读取技能源码、契约或完整 results.json 探路",
-                "直接写入 comparison-analysis.json 一次",
-                "执行 complete-comparison 一次，由程序使用完整采集正文校验",
+                "读取 comparison-task.json；按需回读原来源全文，不以预览未命中作事实判断",
+                "由当前模型记录语义判断、真实摘录和理由，必要时补全同一原来源",
+                "执行 complete-comparison，程序只校验原答、来源和结构的可追溯性",
             ],
         },
         "platforms": [

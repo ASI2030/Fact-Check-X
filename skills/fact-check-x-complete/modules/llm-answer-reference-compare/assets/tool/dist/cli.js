@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { copyFile, mkdir, readdir, readFile, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
+import { join, dirname, resolve, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import { authenticationRequired, waitForAuthentication } from "./capture/auth-state.js";
 import { openBrowserSession } from "./capture/browser-session.js";
-import { captureGenericChat } from "./capture/generic-chat.js";
+import { captureGenericChat, hydrateDirectSourceReferences } from "./capture/generic-chat.js";
+import { resumeExistingCapture } from "./capture/resume.js";
 import { buildLoginRecovery } from "./capture/login-recovery.js";
 import { captureDknowcChat } from "./capture/providers/dknowc-chat.js";
 import { listPlatformConfigs, resolvePlatformTarget } from "./capture/platform-registry.js";
@@ -164,6 +168,8 @@ async function runCommand(options) {
             schemaVersion: "fact-check-x/capture-recovery@2",
             status: "required",
             action: "computer_use",
+            agentMustAct: true,
+            preferredTools: ["host_browser", "computer_use"],
             createdAt: new Date().toISOString(),
             question: options.question,
             failedPlatforms: incomplete.map((platform) => ({
@@ -175,8 +181,12 @@ async function runCommand(options) {
                 error: platform.error,
                 captureLifecycle: platform.captureLifecycle,
                 selectorRecovery: platform.selectorRecovery
+                ,resumeUrl: platform.captureLifecycle?.conversationUrl || normalizeUrl(platform.url)
             })),
             instructions: [
+                "Agent必须检查当前可用工具并实际调用浏览器工具；需要页面视觉交互时使用Computer Use。不能只把恢复步骤转交用户。",
+                "使用resumeUrl定位原会话并核对原问题；已提交的任务只等待、展开来源或重新提取，不重复发问。",
+                "浏览器工具恢复页面后调用resume；程序选择器仍不兼容时，可由浏览器工具直接读取原答、引用和正文并保存现场，再按相同数据契约验收。不得以模型补写或普通搜索替代原答。",
                 "优先使用当前运行载体自带的浏览器或 Computer Use 诊断同一页面；agent-browser 仅是可选诊断工具，不是运行依赖。",
                 "需要用户本人处理账号、密码、验证码或人机验证。",
                 "仅使用 failedPlatforms[].loginUrl 打开平台；该字段是已清洗的纯 URL，不得拼接说明文字或展示层追踪参数。",
@@ -223,6 +233,57 @@ export async function ensureFreshCaptureOutput(outDir, question) {
         : "已有采集结果";
     throw new Error(`运行目录已有 results.json（${detail}${sameQuestion ? "；问题相同" : "；问题不同"}），run 已拒绝重新提交或覆盖。恢复当前任务时只能在原会话继续等待、定位和提取；开始新的采集必须使用新的运行目录。`);
 }
+export async function resumeCommand(options, capture = resumeExistingCapture) {
+    const input = resolve(options.input);
+    const sourceDir = dirname(input);
+    const out = resolve(options.out);
+    if (out === sourceDir || (existsSync(out) && (await readdir(out)).length)) {
+        throw new Error("续采必须使用新的空目录，禁止覆盖原始现场。");
+    }
+    const inputBytes = await readFile(input);
+    const run = parseRunResult(JSON.parse(inputBytes));
+    const prior = run.platforms.find(item => item.platform === options.platform);
+    if (!prior || prior.status === "success") throw new Error("只能恢复原任务中的失败平台，不能删减或重新采集已成功平台。");
+    const config = resolvePlatformTarget(options.platform);
+    const conversationUrl = options.conversationUrl || prior.captureLifecycle?.conversationUrl;
+    if (!conversationUrl) throw new Error("旧结果未保存原会话URL；请提供已核实的 --conversation-url，不得改用平台首页重问。");
+    const resumed = await capture(config, prior, {
+        question: run.question, conversationUrl, outDir: out,
+        timeoutMs: positiveNumber(options.timeout, 600000),
+        loginTimeoutMs: positiveNumber(options.loginTimeout, 300000),
+        headed: true, interactive: Boolean(options.interactive)
+    });
+    if (resumed.platform !== prior.platform || resumed.captureLifecycle?.recoverySubmissionCount !== 0) {
+        throw new Error("续采平台或零提交约束不一致。");
+    }
+    await ensureDir(out);
+    for (const platform of run.platforms) {
+        if (platform.platform === prior.platform) continue;
+        for (const artifact of Object.values(platform.artifacts || {})) {
+            const source = resolve(sourceDir, artifact);
+            const rel = relative(sourceDir, source);
+            if (isAbsolute(rel) || rel.startsWith("..")) throw new Error("存证路径超出原采集目录。");
+            const destination = join(out, rel);
+            await mkdir(dirname(destination), { recursive: true });
+            await copyFile(source, destination);
+        }
+    }
+    const recovered = parseRunResult({ ...run, createdAt: new Date().toISOString(),
+        platforms: run.platforms.map(item => item.platform === prior.platform ? resumed : item),
+        recovery: { sourceResultsSha256: createHash("sha256").update(inputBytes).digest("hex"),
+            platform: prior.platform, conversationUrl, submissionCount: 0 } });
+    await generateReportFiles(recovered, out);
+    const failed = recovered.platforms.filter(item => item.status !== "success");
+    await writeJsonFile(join(out, "capture-recovery.json"), {
+        schemaVersion: "fact-check-x/capture-recovery@2", status: failed.length ? "required" : "not_required",
+        question: run.question, failedPlatforms: failed, action: failed.length ? "computer_use" : "none",
+        agentMustAct: failed.length > 0, preferredTools: ["host_browser", "computer_use"],
+        instructions: failed.length ? ["Agent主动调用浏览器工具或Computer Use恢复原会话，保持原问题和平台集合；只在扫码、验证码等本人步骤请用户介入。"] : []
+    });
+    if (failed.length) throw new Error("原会话续采尚未完成；失败平台仍保留，禁止进入知识点对比。");
+    console.log(`原会话续采完成（新增提交0次）：${out}`);
+    return recovered;
+}
 export function buildCapturePlan(configs) {
     const dknowcChat = configs.find((config) => config.name === "dknowc-chat");
     const dknowcDeepResearch = configs.find((config) => config.name === "dknowc-deep-research");
@@ -234,6 +295,57 @@ export function buildCapturePlan(configs) {
                 ? dknowcDeepResearch
                 : undefined
         }));
+}
+export async function hydrateSourcesCommand(options) {
+    const input = resolve(options.input);
+    const sourceDir = resolve(options.artifactRoot || dirname(input));
+    const out = resolve(options.out);
+    if (out === sourceDir || (existsSync(out) && (await readdir(out)).length)) {
+        throw new Error("正文补全必须使用新的空目录，保留原始采集结果。");
+    }
+    const original = await readFile(input);
+    const run = parseRunResult(JSON.parse(original));
+    const platform = run.platforms.find(item => item.platform === options.platform);
+    const indexes = [...new Set(options.reference.map(Number))];
+    if (!platform || indexes.some(index => !Number.isInteger(index) || index < 1 || index > platform.references.length)) {
+        throw new Error("平台或来源索引不属于原采集结果。");
+    }
+    const selected = indexes.map(index => platform.references[index - 1]);
+    for (const reference of selected) {
+        if (reference.sourceContentScope === "platform_excerpt") reference.platformExcerpt = reference.content;
+    }
+    const profile = await mkdtemp(join(tmpdir(), "fact-check-x-source-"));
+    let session;
+    try {
+        session = await openBrowserSession(profile, "about:blank", { headed: true });
+        await hydrateDirectSourceReferences(session.page, selected, platform.url);
+    } finally {
+        await session?.release();
+        await rm(profile, { recursive: true, force: true });
+    }
+    await ensureDir(out);
+    for (const item of run.platforms) {
+        for (const artifact of Object.values(item.artifacts || {})) {
+            const source = resolve(sourceDir, artifact);
+            const rel = relative(sourceDir, source);
+            if (isAbsolute(rel) || rel.startsWith("..")) throw new Error("存证路径超出原采集目录。");
+            await mkdir(dirname(join(out, rel)), { recursive: true });
+            await copyFile(source, join(out, rel));
+        }
+    }
+    const failed = [];
+    for (let position = 0; position < selected.length; position++) {
+        const reference = selected[position];
+        if (reference.sourceAcquisitionStatus === "captured") reference.sourceContentScope = "document_extraction";
+        else failed.push(indexes[position]);
+    }
+    run.recovery = { mode: "source_hydration", platform: platform.platform, referenceIndexes: indexes,
+        sourceResultsSha256: createHash("sha256").update(original).digest("hex"), submissionCount: 0, failedReferenceIndexes: failed };
+    run.createdAt = new Date().toISOString();
+    await generateReportFiles(run, out);
+    if (failed.length) throw new Error(`来源正文仍未取得：${failed.join(",")}；错误状态和原片段已保留。`);
+    console.log(`原来源正文补全完成（新增提问0次）：${out}`);
+    return run;
 }
 export async function captureWithRetries(config, options, capture = capturePlatform, wait = sleep) {
     const maxAttempts = options.retryCount + 1;
@@ -332,6 +444,26 @@ export function createProgram() {
         .action(async (options) => {
         await runCommand(options);
     });
+    program
+        .command("hydrate-sources")
+        .description("按模型选定的原来源补全正文，不重新提问或用其他材料替换。")
+        .requiredOption("--input <path>", "原采集 results.json")
+        .requiredOption("--platform <name>", "原平台")
+        .requiredOption("--reference <index>", "需要全文的原来源序号，可重复", collect, [])
+        .requiredOption("--out <dir>", "新的空目录")
+        .option("--artifact-root <dir>", "报告包中原截图与页面的相对路径根目录")
+        .action(options => hydrateSourcesCommand(options));
+    program
+        .command("resume")
+        .description("在原会话延长等待或重提取，不发送问题；保留原平台集合和旧产物。")
+        .requiredOption("--input <path>", "原采集 results.json")
+        .requiredOption("--platform <name>", "原任务中失败的平台")
+        .requiredOption("--out <dir>", "新的空输出目录")
+        .option("--conversation-url <url>", "旧版未记录时提供已核实的原会话URL")
+        .option("--interactive", "允许本人在原会话处理登录或验证")
+        .option("--timeout <ms>", "延长等待毫秒数", "600000")
+        .option("--login-timeout <ms>", "等待登录毫秒数", "300000")
+        .action(options => resumeCommand(options));
     program
         .command("login")
         .description("首次使用时打开可见浏览器，提示登录并在检测到聊天界面后保存会话。")

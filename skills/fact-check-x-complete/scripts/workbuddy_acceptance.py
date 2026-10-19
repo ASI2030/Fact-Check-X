@@ -251,12 +251,12 @@ def main() -> int:
                 "知识点对比阶段的引用忠实性和本阶段的事实正确性必须分别保留",
             )
         ),
-        "atomicMaterialAdditionPolicy": all(
+        "modelJudgmentAndEvidencePolicy": all(
             phrase in workbuddy_instructions
             for phrase in (
-                "原子性必须落实到每个平台的 `claim`",
-                "仅个别平台增加的实质事实也要单独成点",
-                "超出该变量的主张必须成为无锚点知识点",
+                "由模型按问题、原答和证据",
+                "不再用固定数字",
+                "hydrate-sources",
             )
         ),
     }

@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { chromium } from "../assets/tool/node_modules/@playwright/test/index.mjs";
 import {
     activateDoubaoSubmittedConversation,
+    extractDoubaoAnswer,
     extractDoubaoReferences,
     extractPdfReferenceContent
 } from "../assets/tool/dist/capture/generic-chat.js";
@@ -82,6 +83,38 @@ assert.deepEqual(references, [
         contentAcquisition: "direct_page_extraction"
     }
 ]);
+
+const duplicateLabelPage = await context.newPage();
+await duplicateLabelPage.setContent(`
+    <div class="md-box-root">
+      <p>收入限额<span class="container-sWvQla" data-target-url="https://policy.example/income">深圳政府在线</span></p>
+      <p>配租通告<span class="container-sWvQla" data-target-url="https://policy.example/rental">深圳政府在线</span></p>
+      <p>再次引用收入<span class="container-sWvQla" data-target-url="https://policy.example/income">深圳政府在线</span></p>
+    </div>
+    <script>
+      document.querySelectorAll('.container-sWvQla').forEach(source => {
+        source.addEventListener('mouseenter', () => {
+          document.querySelectorAll('.semi-popover-wrapper-show').forEach(node => node.remove());
+          const popover = document.createElement('div');
+          popover.className = 'semi-popover-wrapper-show';
+          const link = document.createElement('a');
+          link.href = source.dataset.targetUrl;
+          link.textContent = '深圳政府在线';
+          popover.append(link);
+          document.body.append(popover);
+        });
+      });
+    </script>
+`);
+const markerDiagnostics = {};
+const duplicateLabelRefs = await extractDoubaoReferences(duplicateLabelPage, 'https://www.doubao.com/chat/', '', markerDiagnostics);
+assert.equal(duplicateLabelRefs.length, 2);
+assert.deepEqual(duplicateLabelRefs.map(ref => ref.marker), ['1', '2']);
+assert.deepEqual(markerDiagnostics.inlineMarkers, ['1', '2', '1']);
+const distinctAnswer = await extractDoubaoAnswer(duplicateLabelPage, markerDiagnostics.inlineMarkers);
+assert.match(distinctAnswer, /收入限额【1】/);
+assert.match(distinctAnswer, /配租通告【2】/);
+assert.match(distinctAnswer, /再次引用收入【1】/);
 
 const enterpriseTaskPage = await context.newPage();
 await enterpriseTaskPage.setContent(`

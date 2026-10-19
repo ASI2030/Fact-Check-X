@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from policy_match import normalize_policy_quantities, numeric_facts_supported
+
 import argparse
 import difflib
 import json
@@ -142,7 +144,7 @@ def chinese_number_to_int(value: str) -> int | None:
 
 
 def canonicalize_policy_expression(value: object) -> str:
-    text = re.sub(r"\s+", "", str(value or "")).replace(",", "")
+    text = re.sub(r"\s+", "", normalize_policy_quantities(str(value or "").replace(",", "")))
     text = re.sub(
         r"百分之([零〇一二两三四五六七八九十百千万亿]+)",
         lambda match: f"{chinese_number_to_int(match.group(1))}%"
@@ -169,7 +171,7 @@ def canonicalize_policy_expression(value: object) -> str:
         "提取限额",
     ):
         text = text.replace(variant, "提取额度")
-    return text
+    return normalize_policy_quantities(text)
 
 
 def semantic_overlap_score(claim: str, evidence: str) -> float:
@@ -225,24 +227,6 @@ def request_service_area(request: dict) -> str:
         scope = next(iter(scopes))
         return scope + "市" if scope in CITY_SCOPE_TERMS else scope
     return ""
-
-
-def numeric_facts_supported(claim: str, evidence: str) -> bool:
-    # Numbers in years, filing IDs and unrelated units are not amount evidence.
-    unit = r"(?:亿元|万元|元|年|个月|月|日|天|件|家|人|次(?!性)|岁|平方米|分|%)"
-    def expand_range(text: str) -> str:
-        text = re.sub(r"(\d)万(?!元)", r"\1万元", text)
-        return re.sub(
-            rf"(?<![\d.])(\d+(?:\.\d+)?)(?:至|到|[-—–~～])(\d+(?:\.\d+)?)({unit})",
-            r"\1\3至\2\3", text,
-        )
-    claim, evidence = expand_range(claim), expand_range(evidence)
-    for match in re.finditer(rf"(?<![\d.])(\d+(?:\.\d+)?)({unit})?", claim):
-        value, suffix = match.groups()
-        pattern = rf"(?<![\d.]){re.escape(value)}" + (re.escape(suffix) if suffix else r"(?![\d.])")
-        if not re.search(pattern, evidence):
-            return False
-    return True
 
 
 def semantic_claim_support(claim: object, evidence: object) -> bool:
@@ -790,36 +774,18 @@ def normalize_verdict(item: dict, claim: dict, evidence_ids: set[str]) -> dict:
     }
 
 
-def evidence_supports_claim(
-    claim: dict, evidence_items: list[dict], ids: list[str]
-) -> bool:
-    claim_text = str(claim.get("claim") or "")
-    for item in evidence_items:
-        if str(item.get("id")) not in set(ids):
-            continue
-        body = str(item.get("body") or "")
-        excerpt = str(item.get("excerpt") or "")
-        # Keep the surrounding sentence so a quote cannot drop its own qualifier.
-        if excerpt and excerpt in body:
-            start = body.index(excerpt)
-            end = start + len(excerpt)
-            start = max(body.rfind(mark, 0, start) for mark in ("。", "！", "？", "\n")) + 1
-            if body[end - 1:end] not in ("。", "！", "？", "\n"):
-                stops = [body.find(mark, end) for mark in ("。", "！", "？", "\n")]
-                end = min((stop + 1 for stop in stops if stop >= 0), default=len(body))
-            if semantic_claim_support(claim_text, body[start:end]):
-                return True
-    selected = "\n".join(
-        str(item.get("body") or "")
-        for item in evidence_items
-        if str(item.get("id")) in set(ids)
-    )
-    if semantic_claim_support(claim_text, selected):
-        return True
-    premise = " ".join(
-        str(item.get("excerpt") or "") for item in claim.get("evidence") or []
-    )
-    return bool(premise.strip()) and semantic_claim_support(premise, selected)
+def evidence_supports_claim(claim: dict, evidence_items: list[dict], ids: list[str]) -> bool:
+    """Check evidence availability, not the carrier's semantic conclusion."""
+    by_id = {str(item.get("id")): item for item in evidence_items}
+    if not ids or any(str(key) not in by_id for key in ids):
+        return False
+    for key in ids:
+        item = by_id[str(key)]
+        body = str(item.get("body") or "").strip()
+        excerpt = str(item.get("excerpt") or "").strip()
+        if not body or (excerpt and excerpt not in body):
+            return False
+    return True
 
 
 def validate_assessment(request: dict, evidence: dict, assessment: dict) -> None:
@@ -890,17 +856,16 @@ def validate_assessment(request: dict, evidence: dict, assessment: dict) -> None
             # Faithful quotation of one official source cannot override conflicting
             # evidence about the current year/project. Empty re-search still cannot
             # erase an established source; a changed verdict must cite other evidence.
-            if not set(ids) - own_ids:
+            if not ids:
                 raise SkillError(
-                    f"合法 trustedAnchor 已建立，{platform} 没有提供独立的适用性或冲突证据时必须裁决为 supported；"
-                    "不能只因追加搜索未命中而降级"
+                    f"{platform} 改判已有官方材料时必须引用当前证据并说明理由；"
+                    "同一原文的年度或适用条件也可作为改判依据"
                 )
         if (
-            verdict == "supported"
-            and not anchor_mode
+            verdict in ("supported", "contradicted")
             and not evidence_supports_claim(claim, evidence.get("evidence") or [], ids)
         ):
-            raise SkillError(f"{platform} 的 supported 裁决所引证据无法定位当前主张")
+            raise SkillError(f"{platform} 的裁决引用了缺正文或摘录失真的材料")
 
 
 def finalize(request: dict, evidence: dict, assessment: dict) -> dict:

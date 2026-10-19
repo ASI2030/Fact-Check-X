@@ -13,10 +13,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-VERSION = "1.1.21"
-PUBLISHED_VERSION = "1.1.21"
-WORKBUDDY_VERSION = "1.1.21"
-OFFICIAL_SHA = "acd20d7847d358c44c809868d2d3dc8dc0d12f02c1487deaea7e161087240194"
+VERSION = "1.1.25"
+PUBLISHED_VERSION = "1.1.25"
+IMAGE_VERSION = "1.1.21"
+OFFICIAL_SHA = "97309dad7fdf91b6bc8476dbbeec47635096d57f7713655c13532880a324d16a"
 
 
 def load_module(name: str, path: Path):
@@ -41,7 +41,7 @@ class PublicReleaseTest(unittest.TestCase):
         self.assertTrue(overview.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
         for readme in ("README.md", "README.en.md"):
             self.assertIn(
-                f"assets/fact-check-x-overview.png?v={VERSION}",
+                f"assets/fact-check-x-overview.png?v={IMAGE_VERSION}",
                 (ROOT / readme).read_text(encoding="utf-8"),
             )
 
@@ -64,8 +64,8 @@ class PublicReleaseTest(unittest.TestCase):
             PUBLISHED_VERSION,
         )
         self.assertEqual(
-            manifest["distribution"]["workbuddy"]["version"],
-            WORKBUDDY_VERSION,
+            manifest["distribution"]["workbuddy"]["status"],
+            "not_updated_in_this_release",
         )
         self.assertFalse(manifest["publishGate"]["githubUploadAllowed"])
 
@@ -200,7 +200,7 @@ class PublicReleaseTest(unittest.TestCase):
                 self.assertNotIn("](references/", skill)
                 self.assertNotIn("V8", skill)
                 self.assertIn(
-                    f"https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v={VERSION}",
+                    f"https://raw.githubusercontent.com/ASI2030/Fact-Check-X/main/assets/fact-check-x-overview.png?v={IMAGE_VERSION}",
                     skill,
                 )
                 for platform in (

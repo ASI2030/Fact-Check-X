@@ -14,6 +14,7 @@ export const ReferenceSchema = z.object({
     ]).optional(),
     content: z.string().optional(),
     sourceContentScope: z.enum(["platform_excerpt", "document_extraction"]).optional(),
+    platformExcerpt: z.string().optional(),
     originUrl: z.string().optional(),
     origin_url: z.string().optional(),
     resourceUrl: z.string().optional(),
@@ -92,6 +93,8 @@ export const PlatformResultSchema = z
     sourceMentions: z.array(SourceMentionSchema).default([]),
     sourceCountAudit: SourceCountAuditSchema.optional(),
     artifacts: ArtifactPathsSchema.optional(),
+    captureLifecycle: z.record(z.unknown()).optional(),
+    selectorRecovery: z.record(z.unknown()).optional(),
     durationMs: z.number().int().nonnegative().optional(),
     error: z.string().optional()
 })
@@ -115,6 +118,7 @@ export const RunResultSchema = z.object({
     schemaVersion: z.literal("1"),
     question: z.string().min(1),
     createdAt: z.string().min(1),
+    recovery: z.record(z.unknown()).optional(),
     platforms: z.array(PlatformResultSchema).min(1)
 });
 export function parseRunResult(input) {

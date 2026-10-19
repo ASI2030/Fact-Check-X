@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from policy_match import normalize_policy_quantities, numeric_facts_supported
+
 import argparse
 import difflib
 import json
@@ -63,83 +65,18 @@ def topic_groups(value: object) -> set[str]:
 
 
 def normalize_role(question: str, description: str, raw_role: object) -> tuple[str, str]:
-    """Normalize answer scope against the user's requested subject and level."""
-    role = raw_role if raw_role in ("direct", "reference") else "direct"
-    compact_question = re.sub(r"\s+", "", question)
-    compact_description = re.sub(r"\s+", "", description)
-    asks_subregions = any(
-        term in compact_question
-        for term in ("各区", "区县", "不同区", "不同地区", "分别", "差异", "对比")
-    )
-    city_scoped = any(term in compact_question for term in CITY_SCOPE_TERMS)
-    explicit_subregions = re.findall(
-        r"[\u4e00-\u9fff]{2,6}(?:区|县|旗|街道|镇|乡)",
-        compact_description,
-    )
-    if (
-        city_scoped
-        and not asks_subregions
-        and (
-            any(term in compact_description for term in ("各区", "区级", "各县", "县级", "街道"))
-            or any(mention not in compact_question for mention in explicit_subregions)
-        )
-    ):
-        return "reference", "subregion_outside_question_scope"
-    national_scoped = any(term in compact_question for term in ("全国", "中国", "国家层面"))
-    local_detail = bool(
-        re.search(r"[\u4e00-\u9fff]{2,10}(?:省|市|自治区|自治州|县|区)(?:级|政策|奖励|补贴|标准|口径)", compact_description)
-    )
-    if national_scoped and not asks_subregions and local_detail:
-        return "reference", "local_detail_outside_question_scope"
-    if (
-        national_scoped
-        and not asks_subregions
-        and any(term in compact_description and term not in compact_question for term in CITY_SCOPE_TERMS)
-    ):
-        return "reference", "local_detail_outside_question_scope"
-    if any(term in compact_description for term in ("背景信息", "延伸信息", "相关提醒", "其他地区示例")):
-        return "reference", "background_or_extension"
-    if any(term in compact_description for term in SUPPLEMENTAL_CUES) and not any(
-        term in compact_question for term in SUPPLEMENTAL_CUES
-    ):
-        return "reference", "background_or_extension"
-    asks_requirements = any(
-        term in compact_question
-        for term in ("条件", "门槛", "要求", "资格", "须满足", "需要满足")
-    )
-    describes_requirement = bool(re.search(
-        r"(?:须|应当|不得|不低于|不超过|未发生|达到|达标|拥有|属于|注册成立|申请前.{0,12}(?:事故|违法))",
-        compact_description,
-    ))
-    if asks_requirements and describes_requirement:
-        return "direct", "requested_requirement"
-    question_topics = topic_groups(compact_question)
-    point_topics = topic_groups(compact_description)
-    if question_topics and point_topics and not (question_topics & point_topics):
-        return "reference", "adjacent_topic_not_requested"
-    if role == "reference":
-        return role, "model_reference"
-    return role, "model_direct"
+    """Direct/reference scope is a semantic decision made by the carrier."""
+    if raw_role not in ("direct", "reference"):
+        raise SkillError("知识点 role 必须由模型明确判断为 direct 或 reference")
+    return raw_role, "carrier_model"
 
 
 def normalize_claim_type(description: str, raw_type: object, raw_claims: object) -> str:
-    claim_type = raw_type if raw_type in ("fact", "recommendation") else "fact"
-    if claim_type != "recommendation":
-        return claim_type
-    text = " ".join(
-        [description]
-        + [
-            str(item.get("claim") or "")
-            for item in (raw_claims or {}).values()
-            if isinstance(item, dict) and item.get("covered")
-        ]
-    )
-    if re.search(r"\d", text) or any(
-        term in text
-        for term in ("不低于", "不得", "必须", "应当", "有效期", "办理时限", "咨询电话")
-    ):
+    if raw_type is None:
         return "fact"
-    return claim_type
+    if raw_type not in ("fact", "recommendation"):
+        raise SkillError("知识点 claimType 必须由模型明确判断为 fact 或 recommendation")
+    return raw_type
 
 
 def is_official_url(url: object) -> bool:
@@ -237,7 +174,7 @@ def normalize_chinese_numbers(text: str) -> str:
 
 
 def canonicalize_policy_expression(value: object) -> str:
-    text = re.sub(r"\s+", "", str(value or "")).replace(",", "")
+    text = re.sub(r"\s+", "", normalize_policy_quantities(str(value or "").replace(",", "")))
     text = normalize_chinese_numbers(text)
     text = re.sub(r"(\d+(?:\.\d+)?)元/(?:每)?人/(?:每)?月", r"\1元每人每月", text)
     text = text.replace("每月每人", "每人每月")
@@ -250,7 +187,7 @@ def canonicalize_policy_expression(value: object) -> str:
         "提取限额",
     ):
         text = text.replace(variant, "提取额度")
-    return text
+    return normalize_policy_quantities(text)
 
 
 def looks_like_navigation_or_footer(value: object) -> bool:
@@ -335,28 +272,13 @@ def claim_scope_overreach_reason(claim: object, answer_excerpt: object) -> str:
         quantified_fact_tokens(claim_text) - quantified_fact_tokens(excerpt_text)
     )
     if missing_quantified:
-        return "主张范围超出 answerExcerpt，缺少量化事实：" + "、".join(missing_quantified)
+        original_tokens = re.findall(r"\d+(?:\.\d+)?(?:亿元|万元|元|年|个月|月|日|天|件|家|人|次|岁|平方米|分|%)", str(claim))
+        labels = [next((token for token in original_tokens if canonicalize_policy_expression(token) == value), value)
+                  for value in missing_quantified]
+        return "主张范围超出 answerExcerpt，缺少量化事实：" + "、".join(labels)
     if claim_requires_explicit_absence_evidence(claim_text) and not has_explicit_absence_evidence(excerpt_text):
         return "主张新增了 answerExcerpt 未表达的无政策、取消或排他性结论"
     return ""
-
-
-def numeric_facts_supported(claim: str, evidence: str) -> bool:
-    # Numbers in years, filing IDs and unrelated units are not amount evidence.
-    unit = r"(?:亿元|万元|元|年|个月|月|日|天|件|家|人|次(?!性)|岁|平方米|分|%)"
-    def expand_range(text: str) -> str:
-        text = re.sub(r"(\d)万(?!元)", r"\1万元", text)
-        return re.sub(
-            rf"(?<![\d.])(\d+(?:\.\d+)?)(?:至|到|[-—–~～])(\d+(?:\.\d+)?)({unit})",
-            r"\1\3至\2\3", text,
-        )
-    claim, evidence = expand_range(claim), expand_range(evidence)
-    for match in re.finditer(rf"(?<![\d.])(\d+(?:\.\d+)?)({unit})?", claim):
-        value, suffix = match.groups()
-        pattern = rf"(?<![\d.]){re.escape(value)}" + (re.escape(suffix) if suffix else r"(?![\d.])")
-        if not re.search(pattern, evidence):
-            return False
-    return True
 
 
 def semantic_claim_support(claim: object, evidence: object) -> bool:
@@ -464,7 +386,7 @@ def official_anchor_policy(reference: dict, platform_id: str) -> str:
 
 def reference_text(reference: dict) -> str:
     parts = []
-    for key in ("snippet", "text", "content", "body", "traceabilityText"):
+    for key in ("snippet", "text", "content", "body", "traceabilityText", "platformExcerpt"):
         if key == "snippet" and reference.get("snippetProvenance") == "answer_context":
             continue
         value = str(reference.get(key) or "").strip()
@@ -823,20 +745,20 @@ def build_task(question: str, platforms: list[dict]) -> dict:
         "task": "由当前运行载体完成知识点结构化对比",
         "question": question,
         "executionProtocol": {
-            "mode": "single_pass",
-            "selfContained": True,
-            "maxToolCallsAfterStageAcknowledgement": 3,
+            "mode": "evidence_review",
+            "selfContained": False,
             "steps": [
-                "读取本任务包一次；不得读取技能源码、契约或完整 results.json 探路",
-                "直接写入 comparison-analysis.json 一次；不得先打印或转储完整任务包",
-                "执行 complete-comparison 一次，由程序使用 results.json 完整正文校验",
+                "先阅读原答案和来源索引；预览不足时按 sourceResultsPath 回读对应来源全文",
+                "片段缺少关键条款时使用 hydrate-sources 补全原来源；不重新问问题，不用搜索替换原引用",
+                "由当前模型判断语义、算术推导及适用条件，记录真实摘录与理由，再写入 comparison-analysis.json",
+                "执行 complete-comparison，程序只校验摘录和来源身份，不代替语义裁决",
             ],
-            "capturedTextPolicy": "capturedText 是从完整采集正文中选出的有界原文预览；完整正文仍在 results.json，由 complete-comparison 校验和重建证据",
+            "capturedTextPolicy": "capturedText 只是预览，不足时读取 sourceResultsPath 的对应来源全文；不能以预览未命中判平台无据",
         },
         "rules": [
             "只使用任务包中的原始回答和已捕获来源，不使用可信搜索、网络搜索或外部模型 API",
             "合并所有平台的原子事实；同一事实的不同值放在同一知识点",
-            "每个知识点及每个平台 claim 只能承载一个连续 answerExcerpt 和至少一个单一来源可完整支撑的事实范围；例如“最高50万元奖励”和“最高300万元研发资助”属于不同资助事项，必须拆成两个知识点",
+            "按业务含义拆分可独立判断的主张；多个材料共同支持或明确算术推导均可采纳，在reason中说明推导及限定条件，不要求原文逐字出现结果数字",
             "role=direct 表示缺少该点就没有直接回答用户问题，其余为 reference",
             "直接答案采用最小充分原则：删除该知识点后仍能完整回答用户明确所问内容，就必须标为 reference；相关、重要或实用不等于直接答案",
             "地域范围必须服从问题：问全国时省市案例属于 reference；问城市时区县、街道或园区细项属于 reference，除非用户明确询问地区差异或逐区口径",
@@ -849,14 +771,14 @@ def build_task(question: str, platforms: list[dict]) -> dict:
             "covered=true 时必须填写 answerExcerpt；它必须是原回答的连续原文子串，并覆盖当前原子主张",
             "answerExcerpt 必须包含 claim 的全部实质要素和量化值；claim 超出 answerExcerpt 是比较分析错误，不得写成平台来源不足",
             "逐句脚标来源只有在脚标实际出现在当前 answerExcerpt 内时才算与该主张局部绑定；不得用答案后段的脚标反向支持前段主张",
-            "局部脚标优先：当前 answerExcerpt 已有局部脚标时，只能使用局部绑定来源，不得再用回答后段或回答级官方来源抬高该主张",
+            "保留真实局部脚标；需要引用同一回答的全局材料时明确记录为回答级支持，不能改写原引用身份",
             "当前 answerExcerpt 没有局部脚标时，可填写 answerLevelReferenceIndexes，从本次回答明确返回的参考资料中逐主张做语义匹配；每个索引都必须提供 capturedText 原文证据",
             "回答级语义匹配不是整篇来源自动继承：只有证据原文实际支持当前主张才能判 supported，支持其他补充点的官方来源不得抬高核心点",
             "citationMode=mixed 表示平台同时提供逐句脚标与全局来源列表，不能因存在脚标就丢弃全局来源",
             "sourceMentions 只是页面显示但未暴露 URL 的来源标签，不是可回溯参考文献，不能用于来源忠实性证据",
             "深知晓与深知晓（深度溯源）的可信搜索来源统一按官方材料处理，不以 .gov 域名或外链是否返回作为降级条件；但仍必须与当前主张局部绑定或通过允许的回答级语义匹配绑定",
             "snippetProvenance=answer_context 表示该摘录来自平台回答区，只用于现场存证，不得当作链接原文或来源忠实性证据",
-            "evidence.excerpt 必须是对应 capturedText 预览中的连续原文；完整正文由程序在 complete-comparison 时校验",
+            "evidence.excerpt 必须是对应已采集来源正文中的连续原文，可超出capturedText预览；程序只校验出处，语义支持由当前模型判断",
             "comparison.status 只比较平台主张的事实语义；主张语义相同即 consensus，不得因来源忠实性等级不同降为 partial",
             "核心结论、适用对象和关键条件相同，仅有不改变结论的轻微措辞、范围说明或细节差异时使用 mostly_consensus（外显“基本一致”）",
             "存在会改变适用性、风险判断或结论的重要条件缺失或新增时使用 partial；结论互斥时使用 conflict",
@@ -909,223 +831,54 @@ def normalize_evidence(items: object, references: list[dict], allowed_indexes: s
 
 
 def normalize_claim(raw: object, platform: dict, kid: str, claim_type: str, analysis_gaps: list[dict]) -> dict:
+    """Preserve the carrier's semantic decision; validate only captured provenance."""
     item = raw if isinstance(raw, dict) else {}
     references = platform.get("references") or []
     answer = str(platform.get("answerMarkdown") or "")
-    explicit_indexes = inline_reference_indexes(answer, references)
-    global_indexes = {
-        index
-        for index, ref in enumerate(references, 1)
-        if citation_scope(ref, answer) in ("global", "inline_and_global")
-    }
-    citation_mode = (
-        "mixed"
-        if explicit_indexes and global_indexes
-        else "explicit"
-        if explicit_indexes
-        else "global"
-        if global_indexes
-        else "unmarked"
-    )
-    requested = []
-    for index in item.get("citedReferenceIndexes") or []:
-        if isinstance(index, int) and 1 <= index <= len(references) and index not in requested:
-            requested.append(index)
-    answer_level_requested = []
-    for index in item.get("answerLevelReferenceIndexes") or []:
-        if isinstance(index, int) and 1 <= index <= len(references) and index not in answer_level_requested:
-            answer_level_requested.append(index)
-    claim_text = str(item.get("claim") or "").strip()
-    answer_excerpt = str(item.get("answerExcerpt") or "").strip()
-    excerpt_valid = bool(answer_excerpt) and answer_excerpt in answer
-    covered = bool(item.get("covered")) and bool(claim_text)
-    scope_overreach_reason = ""
-    if covered and not excerpt_valid:
-        analysis_gaps.append({
-            "stage": "comparison",
-            "knowledgePointId": kid,
-            "platform": platform["platform"],
-            "reason": "当前主张缺少可定位的 answerExcerpt，或该片段不是原回答的连续子串",
-        })
-        answer_excerpt = ""
-    elif covered:
-        scope_overreach_reason = claim_scope_overreach_reason(claim_text, answer_excerpt)
-        if scope_overreach_reason:
-            analysis_gaps.append({
-                "stage": "comparison",
-                "knowledgePointId": kid,
-                "platform": platform["platform"],
-                "reasonCode": "claim_scope_overreach",
-                "responsibility": "comparison_analysis",
-                "blocking": True,
-                "reason": f"{scope_overreach_reason}；必须补全覆盖全部主张的 answerExcerpt 或拆分知识点后重跑，不能归因于平台缺证",
-            })
-    declared_indexes = list(dict.fromkeys(requested + answer_level_requested))
-    locally_bound_indexes = set()
-    if excerpt_valid:
-        # Some UIs flatten adjacent markers 1 and 2 into a naked trailing "12".
-        # Prefer the carrier's declared split only when it exactly reconstructs
-        # that cluster; bracketed 【12】 and a declared [12] remain marker 12.
-        locally_bound_indexes = declared_cluster_reference_indexes(
-            answer_excerpt,
-            references,
-            declared_indexes,
-        ) or inline_reference_indexes(answer_excerpt, references)
-    local_evidence_by_index = {}
-    if covered:
-        for index, reference in enumerate(references, 1):
-            excerpt = locally_supported_claim_evidence(answer_excerpt, reference, claim_text)
-            if excerpt:
-                locally_bound_indexes.add(index)
-                local_evidence_by_index[index] = excerpt
-    if locally_bound_indexes:
-        candidate_indexes = sorted(locally_bound_indexes)
-    else:
-        candidate_indexes = declared_indexes
-    raw_evidence_by_index = {}
-    for evidence_item in item.get("evidence") or []:
-        if not isinstance(evidence_item, dict):
-            continue
-        index = evidence_item.get("referenceIndex")
-        excerpt = str(evidence_item.get("excerpt") or "").strip()
-        if (
-            isinstance(index, int)
-            and 1 <= index <= len(references)
-            and excerpt
-            and excerpt in reference_text(references[index - 1])
-        ):
-            raw_evidence_by_index[index] = excerpt
-    recovered_evidence = []
-    supported_indexes = []
-    used_partial_local_evidence = False
-    if covered:
-        for index in candidate_indexes:
-            excerpt = supporting_excerpt(references[index - 1], claim_text)
-            if not excerpt:
-                excerpt = local_evidence_by_index.get(index, "")
-                used_partial_local_evidence = used_partial_local_evidence or bool(excerpt)
-            if not excerpt:
-                raw_excerpt = raw_evidence_by_index.get(index, "")
-                if raw_excerpt and raw_evidence_supports_claim(claim_text, raw_excerpt):
-                    excerpt = raw_excerpt
-            if excerpt:
-                supported_indexes.append(index)
-                recovered_evidence.append({"referenceIndex": index, "excerpt": excerpt})
-        if not recovered_evidence and not locally_bound_indexes:
-            for index, reference in enumerate(references, 1):
-                if index in candidate_indexes:
-                    continue
-                excerpt = supporting_excerpt(reference, claim_text)
-                if excerpt:
-                    supported_indexes.append(index)
-                    recovered_evidence.append({"referenceIndex": index, "excerpt": excerpt})
-        if used_partial_local_evidence and recovered_evidence and not text_supports_claim(
-            claim_text,
-            "\n".join(item["excerpt"] for item in recovered_evidence),
-        ):
-            supported_indexes = []
-            recovered_evidence = []
-    raw_faithfulness = item.get("faithfulness")
-    if raw_faithfulness == "contradicted":
-        allowed = set(candidate_indexes)
-        evidence, invalid = normalize_evidence(item.get("evidence"), references, allowed)
-        faithfulness = "contradicted" if evidence and not invalid else "insufficient"
-        effective_indexes = [
-            index for index in candidate_indexes
-            if any(item["referenceIndex"] == index for item in evidence)
-        ]
-    else:
-        evidence = recovered_evidence
-        faithfulness = "supported" if evidence else "insufficient"
-        effective_indexes = supported_indexes
-    if scope_overreach_reason:
-        evidence = []
-        faithfulness = "insufficient"
-        effective_indexes = []
-    if claim_type == "recommendation" and covered and faithfulness == "insufficient":
-        faithfulness = "not_applicable"
-    if (
-        faithfulness == "insufficient"
-        and covered
-        and claim_type == "fact"
-        and not scope_overreach_reason
-    ):
-        analysis_gaps.append({
-            "stage": "comparison",
-            "knowledgePointId": kid,
-            "platform": platform["platform"],
-            "reason": "当前回答所附来源中未定位到支持该主张的原文",
-        })
-    requested = [
-        index for index in effective_indexes
-        if index in locally_bound_indexes or index in global_indexes
-    ]
-    answer_level_requested = [
-        index for index in effective_indexes if index not in requested
-    ]
-    levels = [source_level(references[index - 1], platform["platform"]) for index in effective_indexes]
-    level = (
-        "official"
-        if "official" in levels
-        else "dknow_trusted_search_official"
-        if "dknow_trusted_search_official" in levels
-        else "nonofficial"
-        if levels
-        else "none"
-    )
-    # Keep observed attachments independent of successful support validation.
-    attached_indexes = sorted(locally_bound_indexes) if covered and excerpt_valid else []
-    attached_levels = [source_level(references[index - 1], platform["platform"]) for index in attached_indexes]
-    attached_level = next((value for value in ("official", "dknow_trusted_search_official", "nonofficial") if value in attached_levels), "none")
-    binding_mode = (
-        "local"
-        if attached_indexes
-        else "declared_global"
-        if requested
-        else "answer_level_semantic"
-        if answer_level_requested
-        else "none"
-    )
-    binding_reason = {
-        "local": "逐段溯源",
-        "declared_global": "回答级来源",
-        "answer_level_semantic": "全文语义溯源",
-        "none": "未建立溯源",
-    }[binding_mode]
-    faithfulness_reason = {
-        "supported": "来源原文支持当前主张",
-        "contradicted": "来源原文与当前主张矛盾",
-        "insufficient": "当前来源证据不足",
-        "not_applicable": "纯操作建议，直接引用不适用",
-    }[faithfulness]
-    normalized_reason = (
-        f"主张写宽；{scope_overreach_reason}；必须补全 answerExcerpt 或拆分后重跑，不能归因于平台来源不足"
-        if covered and scope_overreach_reason
-        else
-        faithfulness_reason
-        if covered and faithfulness == "not_applicable"
-        else f"{binding_reason}；{faithfulness_reason}"
-        if covered
-        else ""
-    )
+    covered = bool(item.get("covered"))
+    claim = str(item.get("claim") or "").strip() if covered else ""
+    excerpt = str(item.get("answerExcerpt") or "").strip() if covered else ""
+    faithfulness = item.get("faithfulness") if covered else "insufficient"
+    if covered and (not claim or not excerpt or excerpt not in answer):
+        raise SkillError(f"{kid}/{platform['platform']} 的主张必须绑定真实原回答摘录")
+    if faithfulness not in ("supported", "contradicted", "insufficient", "not_applicable"):
+        raise SkillError(f"{kid}/{platform['platform']} 缺少模型的忠实性判断")
+    requested = item.get("citedReferenceIndexes") or []
+    answer_level = item.get("answerLevelReferenceIndexes") or []
+    for index in requested + answer_level:
+        if not isinstance(index, int) or isinstance(index, bool) or not 1 <= index <= len(references):
+            raise SkillError(f"{kid}/{platform['platform']} 引用了不存在的来源")
+    evidence, invalid = normalize_evidence(item.get("evidence"), references, set(range(1, len(references) + 1)))
+    if invalid:
+        raise SkillError(f"{kid}/{platform['platform']} 的证据摘录不在对应来源原文中；这是输入错误，不是平台缺证")
+    reason = str(item.get("reason") or "").strip()
+    if covered and faithfulness in ("supported", "contradicted") and (not evidence or not reason):
+        raise SkillError(f"{kid}/{platform['platform']} 的模型判断必须提供原文证据及理由")
+    if covered and faithfulness == "not_applicable" and claim_type != "recommendation":
+        raise SkillError(f"{kid}/{platform['platform']} 事实主张不能免于判断")
+    effective = list(dict.fromkeys(entry["referenceIndex"] for entry in evidence))
+    all_inline = inline_reference_indexes(answer, references)
+    global_indexes = {index for index, ref in enumerate(references, 1)
+                      if citation_scope(ref, answer) in ("global", "inline_and_global")}
+    local = (declared_cluster_reference_indexes(excerpt, references, requested + answer_level)
+             or inline_reference_indexes(excerpt, references)) if covered else set()
+    citation_mode = "mixed" if all_inline and global_indexes else "explicit" if all_inline else "global" if global_indexes else "unmarked"
+    binding = "local" if local and set(effective) <= local else "declared_global" if set(effective) & global_indexes else "answer_level_semantic" if effective else "none"
+    def level(indexes):
+        levels = {source_level(references[index - 1], platform["platform"]) for index in indexes}
+        return next((value for value in ("official", "dknow_trusted_search_official", "nonofficial") if value in levels), "none")
+    if covered and faithfulness == "insufficient":
+        analysis_gaps.append({"stage": "comparison", "knowledgePointId": kid, "platform": platform["platform"],
+                              "reason": reason or "模型尚未确认来源对当前主张的支持关系"})
     return {
-        "claimType": claim_type,
-        "covered": covered,
-        "claim": clipped(item.get("claim"), 1000) if covered else "",
-        "answerExcerpt": clipped(answer_excerpt, 4000) if covered else "",
-        "locallyBoundReferenceIndexes": sorted(locally_bound_indexes),
-        "attachedReferenceIndexes": attached_indexes,
-        "attachedSourceLevel": attached_level,
-        "citationMode": citation_mode,
-        "citedReferenceIndexes": effective_indexes,
-        "answerLevelReferenceIndexes": answer_level_requested,
-        "referenceBinding": binding_mode,
-        "sourceLevel": level,
-        "faithfulness": faithfulness if covered else "insufficient",
-        "insufficiencyCause": "claim_scope_overreach" if scope_overreach_reason else "",
-        "responsibility": "comparison_analysis" if scope_overreach_reason else "",
-        "reason": normalized_reason,
-        "evidence": evidence,
+        "claimType": claim_type, "covered": covered, "claim": claim, "answerExcerpt": excerpt,
+        "locallyBoundReferenceIndexes": sorted(local), "attachedReferenceIndexes": sorted(local),
+        "attachedSourceLevel": level(local), "citationMode": citation_mode,
+        "citedReferenceIndexes": effective, "answerLevelReferenceIndexes": [index for index in effective if index not in local],
+        "referenceBinding": binding, "sourceLevel": level(effective),
+        "faithfulness": faithfulness, "decisionSource": "carrier_model",
+        "insufficiencyCause": str(item.get("insufficiencyCause") or "") if faithfulness == "insufficient" else "",
+        "responsibility": "", "reason": reason, "evidence": evidence,
     }
 
 
@@ -1170,9 +923,7 @@ def normalize_anchor(raw: object, point_claims: dict, platform_map: dict, kid: s
             policy = official_anchor_policy(reference, pid)
             if not policy:
                 continue
-            excerpt = claim_evidence.get(reference_index) or supporting_excerpt(
-                reference, official_answer
-            )
+            excerpt = claim_evidence.get(reference_index)
             body = reference_text(reference)
             if not excerpt or not body:
                 continue
@@ -1558,7 +1309,7 @@ def main() -> int:
         source = load_json(args.input)
         question, platforms = validate_results(source)
         if args.task_output:
-            dump_json(args.task_output, build_task(question, platforms))
+            dump_json(args.task_output, {**build_task(question, platforms), "sourceResultsPath": str(Path(args.input).resolve())})
         if args.analysis:
             if not args.output:
                 raise SkillError("使用 --analysis 时必须提供 --output")

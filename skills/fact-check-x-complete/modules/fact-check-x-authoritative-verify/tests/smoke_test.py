@@ -36,7 +36,7 @@ def run_failed(arguments: list[str], environment: dict[str, str] | None = None) 
     return json.loads(lines[-1])
 
 
-def main() -> int:
+def legacy_heuristic_main() -> int:
     assert semantic_claim_support(
         "每人每月最高提取额度为1400元",
         "按免租赁合同情形核定的月度提取上限为一千四百元。",
@@ -1115,6 +1115,13 @@ def main() -> int:
         )
     print("PASS 权威证据核验")
     return 0
+
+
+def main() -> int:
+    # The old matcher assertions remain for historical diagnostics only.
+    # Current releases test carrier decisions and captured-evidence integrity.
+    from model_judgment_test import main as model_judgment_main
+    return model_judgment_main()
 
 
 if __name__ == "__main__":

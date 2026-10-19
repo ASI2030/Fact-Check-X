@@ -175,8 +175,8 @@ def main() -> int:
         assert set(located["skills"]) == {"collector", "comparison", "authority"}
         capture_stage = run(command("prepare-comparison", "--results", str(results), "--run-dir", str(run_dir)))
         assert capture_stage["stage"] == "capture_completed"
-        assert capture_stage["analysisExecution"]["mode"] == "single_pass"
-        assert capture_stage["analysisExecution"]["maxToolCallsAfterStageAcknowledgement"] == 3
+        assert capture_stage["analysisExecution"]["mode"] == "evidence_review"
+        assert "maxToolCallsAfterStageAcknowledgement" not in capture_stage["analysisExecution"]
         assert len(capture_stage["analysisExecution"]["instructions"]) == 3
         assert capture_stage["artifacts"]["answerReferenceReport"] == str((run_dir / "capture" / "report.html").resolve())
         assert capture_stage["deliverables"][0]["path"] == str((run_dir / "01-capture-report.html").resolve())
@@ -216,6 +216,7 @@ def main() -> int:
         overwide_analysis["knowledgePoints"][0]["claims"]["dknowc-chat"]["claim"] = (
             "每人每月最高提取1400元，并另有最高300万元研发资助"
         )
+        overwide_analysis["knowledgePoints"][0]["claims"]["dknowc-chat"]["answerExcerpt"] = "原答中并不存在这一段话"
         overwide_path = Path(temp) / "overwide-comparison-analysis.json"
         overwide_path.write_text(
             json.dumps(overwide_analysis, ensure_ascii=False), encoding="utf-8"
@@ -232,7 +233,7 @@ def main() -> int:
             "--analysis", str(overwide_path),
             "--run-dir", str(overwide_run),
         ))
-        assert "原子性门禁" in json.dumps(overwide_failure, ensure_ascii=False)
+        assert "answerExcerpt" in json.dumps(overwide_failure, ensure_ascii=False)
         assert not (overwide_run / "comparison-gate.json").exists()
         assert "打开各方答案聚合（未核验）" in comparison_stage["checkpoint"]["message"]
         assert (run_dir / "02-comparison-report.html").exists()

@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "fact-check-x/archive-replay-baseline@1",
+  "updatedAt": "2026-09-20T09:56:11.210Z",
+  "samples": {
+    "2026-09-19-22-13-05/factcheck-gxq-20260919/dknowc-chat": {
+      "id": "2026-09-19-22-13-05/factcheck-gxq-20260919/dknowc-chat",
+      "platform": "dknowc-chat",
+      "answerChars": 2248,
+      "markersInAnswer": 12,
+      "markersResolved": 12,
+      "coverage": 1,
+      "references": 12,
+      "duplicateMarkers": 0,
+      "referencesWithoutUrl": 0,
+      "percentEncodedFields": 0,
+      "visibleSubset": 0.875,
+      "rejectedByGate": null
+    },
+    "2026-09-19-22-13-05/factcheck-gxq-20260919/doubao": {
+      "id": "2026-09-19-22-13-05/factcheck-gxq-20260919/doubao",
+      "platform": "doubao",
+      "answerChars": 595,
+      "markersInAnswer": 3,
+      "markersResolved": 0,
+      "coverage": 0,
+      "references": 0,
+      "duplicateMarkers": 0,
+      "referencesWithoutUrl": 0,
+      "percentEncodedFields": 0,
+      "visibleSubset": 0.9,
+      "rejectedByGate": null
+    },
+    "2026-09-19-23-51-33/fcx-hitech-20260919/dknowc-chat": {
+      "id": "2026-09-19-23-51-33/fcx-hitech-20260919/dknowc-chat",
+      "platform": "dknowc-chat",
+      "answerChars": 3362,
+      "markersInAnswer": 13,
+      "markersResolved": 13,
+      "coverage": 1,
+      "references": 13,
+      "duplicateMarkers": 0,
+      "referencesWithoutUrl": 0,
+      "percentEncodedFields": 0,
+      "visibleSubset": 0.75,
+      "rejectedByGate": null
+    },
+    "2026-09-19-23-51-33/fcx-hitech-20260919/doubao": {
+      "id": "2026-09-19-23-51-33/fcx-hitech-20260919/doubao",
+      "platform": "doubao",
+      "answerChars": 599,
+      "markersInAnswer": 4,
+      "markersResolved": 0,
+      "coverage": 0,
+      "references": 0,
+      "duplicateMarkers": 0,
+      "referencesWithoutUrl": 0,
+      "percentEncodedFields": 0,
+      "visibleSubset": 0.95,
+      "rejectedByGate": null
+    },
+    "2026-09-20-00-26-42/fcx-gongshang/dknowc-chat": {
+      "id": "2026-09-20-00-26-42/fcx-gongshang/dknowc-chat",
+      "platform": "dknowc-chat",
+      "answerChars": 4039,
+      "markersInAnswer": 21,
+      "markersResolved": 21,
+      "coverage": 1,
+      "references": 21,
+      "duplicateMarkers": 0,
+      "referencesWithoutUrl": 0,
+      "percentEncodedFields": 0,
+      "visibleSubset": 0.975,
+      "rejectedByGate": null
+    },
+    "2026-09-20-00-26-42/fcx-gongshang/doubao": {
+      "id": "2026-09-20-00-26-42/fcx-gongshang/doubao",
+      "platform": "doubao",
+      "answerChars": 37,
+      "markersInAnswer": 0,
+      "markersResolved": 0,
+      "coverage": null,
+      "references": 0,
+      "duplicateMarkers": 0,
+      "referencesWithoutUrl": 0,
+      "percentEncodedFields": 0,
+      "visibleSubset": 1,
+      "rejectedByGate": null
+    }
+  }
+}
