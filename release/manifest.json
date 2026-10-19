@@ -80,15 +80,18 @@
       "installedSmoke": "passed"
     },
     "skillhub": {
-      "status": "submitted_pending_review",
+      "status": "published_install_verified",
       "url": "https://skillhub.cn/skills/user_186e37d0/fact-check-x",
       "version": "1.1.25",
       "versionId": 445422,
       "submittedPackageSha256": "93401705873ba567834a8f67fc5714128a6d2366d733abcc2c24c390845ec2e3",
-      "contentAuditStatus": "pending",
-      "securityScanStatus": "pending",
-      "publicInstalledVersion": "1.1.24",
-      "newVersionInstallVerified": false
+      "contentAuditStatus": "public_version_available",
+      "securityScanStatus": "public_reports_benign",
+      "publicInstalledVersion": "1.1.25",
+      "newVersionInstallVerified": true,
+      "managedFilesMatched": 128,
+      "installedSmoke": "passed",
+      "signedPackageVerified": true
     },
     "workbuddy": {
       "status": "not_updated_in_this_release"

@@ -57,7 +57,7 @@ class PublicReleaseTest(unittest.TestCase):
         )
         self.assertIn(
             manifest["distribution"]["skillhub"]["status"],
-            {"submitted_pending_review", "approved"},
+            {"submitted_pending_review", "approved", "published_install_verified"},
         )
         self.assertEqual(
             manifest["distribution"]["skillhub"]["version"],
